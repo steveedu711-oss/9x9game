@@ -1,0 +1,711 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>九宮虎姬 v2・乘法討伐戰</title>
+<link rel="stylesheet" href="assets/common.css">
+<style>
+body{padding-bottom:16px}
+.wrap{width:min(96vw,620px);display:flex;flex-direction:column;gap:10px}
+
+/* 上方關卡列 */
+.topbar{display:flex;gap:8px;align-items:center}
+.topbar .chip{
+  background:linear-gradient(180deg,#2e1c47,#1a1029);border:1px solid var(--line);
+  border-radius:12px;padding:6px 12px;font-size:13px;font-weight:800;color:var(--gold2);
+}
+.topbar .chip b{color:var(--dim);font-weight:500;font-size:11px;margin-right:4px}
+.topbar .grow{flex:1}
+
+/* 戰場 */
+.field{
+  position:relative;width:100%;height:min(46vh,340px);border-radius:20px;overflow:hidden;
+  border:2px solid var(--line);box-shadow:0 16px 46px #000a,inset 0 0 60px #0008;
+  background:
+    radial-gradient(70% 50% at 50% 100%,#4a2a6e 0%,transparent 70%),
+    linear-gradient(180deg,#2a1740 0%,#180e26 100%);
+}
+.field::after{  /* 地板 */
+  content:"";position:absolute;left:0;right:0;bottom:0;height:26%;
+  background:linear-gradient(180deg,#00000000,#00000066),
+             repeating-linear-gradient(90deg,#ffffff08 0 2px,transparent 2px 46px);
+}
+.field.shake{animation:fieldShake .32s}
+@keyframes fieldShake{
+  20%{transform:translate(-6px,3px)}45%{transform:translate(7px,-3px)}
+  70%{transform:translate(-4px,-2px)}100%{transform:none}
+}
+.field.hurt::before{
+  content:"";position:absolute;inset:0;z-index:6;pointer-events:none;
+  box-shadow:inset 0 0 90px #f8717199;animation:hurtflash .5s ease-out forwards;
+}
+@keyframes hurtflash{to{opacity:0}}
+
+.fighter{position:absolute;bottom:8%;z-index:3;pointer-events:none;transition:transform .12s ease-out}
+#hero2{left:4%;height:62%;filter:drop-shadow(0 10px 18px #000a)}
+#cat2{left:22%;height:30%;opacity:0;transform:translateX(-40px);filter:drop-shadow(0 8px 14px #000a)}
+#mob{right:4%;height:56%;filter:drop-shadow(0 10px 18px #000a);
+  animation:mobIdle 2.2s ease-in-out infinite alternate}
+@keyframes mobIdle{to{transform:translateY(-10px) scale(1.02)}}
+#mob.hit{animation:mobHit .3s;filter:brightness(2.4) drop-shadow(0 0 20px #fff)}
+@keyframes mobHit{30%{transform:translateX(26px) rotate(6deg)}100%{transform:none}}
+#mob.die{animation:mobDie .7s ease-in forwards}
+@keyframes mobDie{
+  30%{transform:translateY(-14px) rotate(-10deg);filter:brightness(2)}
+  100%{transform:translateY(40px) rotate(80deg) scale(.2);opacity:0}
+}
+#mob.attack{animation:mobAtk .5s ease-in-out}
+@keyframes mobAtk{40%{transform:translateX(-90px) scale(1.06)}100%{transform:none}}
+
+/* 斬擊特效 */
+.slash{
+  position:absolute;z-index:5;pointer-events:none;width:46%;height:56%;right:6%;bottom:12%;
+  background:conic-gradient(from 210deg at 30% 40%,#ffffff00 0deg,#fff8d0ee 24deg,#ffffff00 60deg);
+  filter:blur(1px) drop-shadow(0 0 14px #ffe9a8);
+  opacity:0;transform:scale(.6) rotate(-25deg);
+}
+.slash.on{animation:slash .35s ease-out}
+@keyframes slash{
+  0%{opacity:0;transform:scale(.5) rotate(-40deg)}
+  35%{opacity:1;transform:scale(1.15) rotate(-8deg)}
+  100%{opacity:0;transform:scale(1.4) rotate(12deg)}
+}
+.dmg{
+  position:absolute;z-index:7;font-size:clamp(22px,5.4vw,38px);font-weight:900;color:#fff;
+  text-shadow:0 3px 0 #b8320f,0 0 18px #ff8a3d;pointer-events:none;
+  animation:dmgUp .85s cubic-bezier(.2,1.4,.4,1) forwards;
+}
+@keyframes dmgUp{
+  0%{transform:scale(.4);opacity:0}
+  25%{transform:scale(1.25);opacity:1}
+  100%{transform:translateY(-70px) scale(1);opacity:0}
+}
+.dmg.crit{color:#fff3c4;text-shadow:0 3px 0 #a86200,0 0 26px #ffcf5c;font-size:clamp(30px,7vw,52px)}
+
+/* 血條 */
+.bars{position:absolute;left:0;right:0;top:0;z-index:4;padding:10px 12px;display:flex;
+  flex-direction:column;gap:6px}
+.bar{background:#00000066;border:1px solid #ffffff22;border-radius:99px;height:16px;
+  position:relative;overflow:hidden}
+.bar i{position:absolute;inset:0;transform-origin:left;transition:transform .35s cubic-bezier(.2,1,.3,1)}
+.bar span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:800;color:#fff;text-shadow:0 1px 3px #000;letter-spacing:1px}
+.bar.mob i{background:linear-gradient(90deg,#f87171,#dc2626)}
+.bar.hero i{background:linear-gradient(90deg,#4ade80,#16a34a)}
+.bar.timerbar{height:8px}
+.bar.timerbar i{background:linear-gradient(90deg,#facc15,#f97316)}
+
+/* 題目與答案 */
+.qbox{
+  border-radius:18px;padding:12px;text-align:center;
+  background:linear-gradient(180deg,#3b2456,#20132f);border:2px solid var(--line);
+  box-shadow:0 10px 30px #0008,inset 0 1px 0 #ffffff18;position:relative;overflow:hidden;
+}
+.qbox .q{font-size:clamp(30px,7.4vw,50px);font-weight:900;color:#fff;
+  text-shadow:0 3px 0 #7a4a00,0 8px 22px #000a;letter-spacing:2px}
+.qbox .q em{font-style:normal;color:var(--gold)}
+.qbox .weak{font-size:12px;color:#ffd0a8;margin-top:2px}
+.qbox.in{animation:qin .3s cubic-bezier(.2,1.5,.4,1)}
+@keyframes qin{from{transform:translateY(-14px) scale(.94);opacity:0}}
+
+.ans{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.ans button{
+  height:clamp(56px,13vw,74px);border-radius:16px;cursor:pointer;border:1px solid var(--line);
+  background:linear-gradient(180deg,#3a2557,#251739);color:#fff;
+  font-size:clamp(22px,5.4vw,32px);font-weight:900;box-shadow:0 5px 0 #17102a;
+  transition:transform .1s,background .2s;
+}
+.ans button:active{transform:translateY(4px);box-shadow:0 1px 0 #17102a}
+.ans button.right{background:linear-gradient(180deg,#86efac,#16a34a);color:#04240f;box-shadow:0 5px 0 #0d5c26}
+.ans button.wrong{background:linear-gradient(180deg,#fca5a5,#dc2626);color:#3a0505;box-shadow:0 5px 0 #7f1d1d}
+.ans button:disabled{cursor:default}
+
+/* 必殺技 */
+.ult{
+  display:flex;align-items:center;gap:10px;border-radius:16px;padding:8px 12px;
+  background:linear-gradient(180deg,#2e1c47,#1a1029);border:1px solid var(--line);
+}
+.ult .bar2{flex:1;height:12px;border-radius:99px;background:#241638;overflow:hidden}
+.ult .bar2 i{display:block;height:100%;width:0;border-radius:99px;
+  background:linear-gradient(90deg,#6ea8ff,#f6c453);transition:width .3s ease}
+.ult button{
+  padding:10px 16px;border-radius:12px;border:none;cursor:pointer;font-weight:900;font-size:15px;
+  color:#3a2400;background:linear-gradient(180deg,#fff0c4,var(--gold));box-shadow:0 4px 0 #a97a12;
+}
+.ult button:disabled{filter:grayscale(.7) brightness(.6);cursor:default}
+.ult button.ready{animation:ultReady .7s ease-in-out infinite alternate}
+@keyframes ultReady{to{box-shadow:0 4px 0 #a97a12,0 0 26px #f6c453}}
+
+/* 必殺技全螢幕演出 */
+.ultfx{
+  position:fixed;inset:0;z-index:19;display:none;align-items:center;justify-content:center;
+  background:#000000cc;pointer-events:none;
+}
+.ultfx.on{display:flex;animation:fade .2s}
+.ultfx .line{position:absolute;inset:0;
+  background:repeating-linear-gradient(100deg,#ffffff22 0 6px,transparent 6px 22px);
+  animation:speed .5s linear infinite}
+@keyframes speed{to{transform:translateX(-28px)}}
+.ultfx img{height:min(46vh,360px);animation:ultCat .9s cubic-bezier(.2,1.4,.4,1)}
+@keyframes ultCat{
+  0%{transform:translateX(-60vw) scale(.6) rotate(-20deg);opacity:0}
+  40%{transform:none;opacity:1}
+  100%{transform:translateX(50vw) scale(1.1);opacity:0}
+}
+.ultfx b{position:absolute;font-size:clamp(30px,9vw,68px);color:#fff;letter-spacing:6px;
+  text-shadow:0 4px 0 #a83a00,0 0 40px #ffb547;animation:ultText .9s ease-out}
+@keyframes ultText{from{transform:scale(.4);opacity:0}60%{transform:scale(1.1)}}
+
+/* 等級與經驗 */
+.lvchip{display:flex;align-items:center;gap:6px}
+.expbar{width:70px;height:7px;border-radius:99px;background:#241638;overflow:hidden}
+.expbar i{display:block;height:100%;width:0;border-radius:99px;
+  background:linear-gradient(90deg,#6ea8ff,#f6c453);transition:width .4s ease}
+.bagbtn{cursor:pointer;position:relative;font-family:inherit}
+.dot2{display:none;position:absolute;top:-4px;right:-4px;width:10px;height:10px;border-radius:50%;
+  background:#f87171;box-shadow:0 0 8px #f87171}
+.dot2.on{display:block;animation:pulse .7s infinite alternate}
+
+/* 掉落提示 */
+.drop{
+  position:absolute;left:50%;top:38%;transform:translate(-50%,-50%);z-index:9;pointer-events:none;
+  background:linear-gradient(180deg,#2f1d48ee,#1a1028ee);border:2px solid var(--gold);
+  border-radius:14px;padding:10px 18px;text-align:center;display:none;box-shadow:0 10px 30px #000b;
+}
+.drop.on{display:block;animation:dropIn .5s cubic-bezier(.2,1.6,.4,1)}
+@keyframes dropIn{from{transform:translate(-50%,-20%) scale(.6);opacity:0}}
+.drop b{display:block;font-size:16px;font-weight:900}
+.drop small{font-size:12px;color:var(--dim)}
+.drop .rar{font-size:11px;font-weight:800}
+
+/* 裝備視窗 */
+.gearwin{position:fixed;inset:0;z-index:22;display:none;align-items:center;justify-content:center;
+  background:#0b0714e8;backdrop-filter:blur(6px);padding:14px}
+.gearwin.on{display:flex;animation:fade .25s}
+.gearbox{
+  width:min(94vw,520px);max-height:92vh;overflow:auto;border-radius:20px;padding:18px;
+  background:linear-gradient(180deg,#2f1d48,#1a1028);border:1px solid var(--line);
+  box-shadow:0 20px 60px #000b;animation:cardin .35s cubic-bezier(.2,1.5,.4,1);
+}
+.gearbox h2{font-size:20px;color:var(--gold);letter-spacing:2px;text-align:center;margin-bottom:4px}
+.power{display:flex;gap:6px;margin:10px 0}
+.power div{flex:1;background:#241638;border:1px solid var(--line);border-radius:10px;
+  padding:6px 2px;text-align:center;font-size:13px;font-weight:800;color:var(--gold2)}
+.power div b{display:block;font-size:10px;color:var(--dim);font-weight:500}
+.slots{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.slot{
+  background:#241638;border:1px dashed var(--line);border-radius:12px;padding:8px;text-align:center;
+  min-height:86px;display:flex;flex-direction:column;justify-content:center;gap:2px;cursor:pointer;
+}
+.slot .ic{font-size:22px}
+.slot .nm{font-size:12px;font-weight:800}
+.slot .st2{font-size:10px;color:var(--dim);line-height:1.4}
+.slot.empty .nm{color:#6b578a}
+.baglist{margin-top:12px;display:flex;flex-direction:column;gap:6px}
+.bagitem{
+  display:flex;align-items:center;gap:8px;background:#241638;border:1px solid var(--line);
+  border-radius:10px;padding:8px 10px;
+}
+.bagitem .ic{font-size:20px}
+.bagitem .info{flex:1;text-align:left}
+.bagitem .info b{display:block;font-size:13px}
+.bagitem .info small{font-size:11px;color:var(--dim)}
+.bagitem button{
+  padding:6px 10px;border-radius:8px;border:1px solid var(--line);cursor:pointer;
+  background:#3a2456;color:var(--gold2);font-size:12px;font-weight:800;
+}
+.bagitem button.eq{background:linear-gradient(180deg,#fff0c4,var(--gold));color:#3a2400;border:none}
+.bagitem.better{box-shadow:0 0 0 2px #4ade8066 inset}
+.empty-tip{text-align:center;color:var(--dim);font-size:12px;padding:14px}
+
+.tip{font-size:12px;color:var(--dim);text-align:center;line-height:1.7}
+.tip b{color:var(--gold2)}
+</style>
+</head>
+<body>
+<h1>九 宮 虎 姬 v2 ・ 乘 法 討 伐 戰</h1>
+<div class="vers"></div>
+
+<div class="wrap">
+  <div class="topbar">
+    <div class="chip lvchip"><b>Lv</b><span id="lv">1</span>
+      <div class="expbar"><i id="expBar"></i></div>
+    </div>
+    <div class="chip"><b>金幣</b><span id="gold">0</span></div>
+    <div class="chip"><b>關卡</b><span id="stage">1-1</span></div>
+    <div class="grow"></div>
+    <button class="chip bagbtn" id="bagBtn">🎒 裝備 <i class="dot2" id="bagDot"></i></button>
+  </div>
+
+  <div class="field" id="field">
+    <div class="bars">
+      <div class="bar mob"><i id="mobHp"></i><span id="mobHpText">敵人</span></div>
+      <div class="bar timerbar"><i id="mobTimer"></i></div>
+      <div class="bar hero"><i id="heroHp"></i><span id="heroHpText">虎姬</span></div>
+    </div>
+    <img class="fighter" id="hero2" src="assets/fx_hero_ready.png" alt="">
+    <img class="fighter" id="cat2" src="assets/fx_cat_attack.png" alt="">
+    <img class="fighter" id="mob" src="assets/mob_slime.png" alt="">
+    <div class="slash" id="slash"></div>
+    <div class="drop" id="drop"></div>
+  </div>
+
+  <div class="qbox" id="qbox">
+    <div class="q" id="q">準備好了嗎？</div>
+    <div class="weak" id="weakTip"></div>
+  </div>
+
+  <div class="ans" id="ans"></div>
+
+  <div class="ult">
+    <span style="font-size:13px;font-weight:800;color:var(--gold2)">必殺技</span>
+    <div class="bar2"><i id="ultBar"></i></div>
+    <button id="ultBtn" disabled>小虎撲擊</button>
+  </div>
+
+  <button class="btn" id="start">開 始 討 伐</button>
+
+  <p class="tip">
+    答對就出手，<b>答得越快傷害越高</b>；敵人上方的黃條倒數完會反擊。<br>
+    每隻敵人都有<b>害怕的乘法表</b>，打中弱點是<b>兩倍傷害</b>。連續答對集滿必殺技，Boss 留著用最划算。
+  </p>
+</div>
+
+<div class="ultfx" id="ultfx">
+  <div class="line"></div>
+  <img id="ultCat" src="assets/fx_cat_attack.png" alt="">
+  <b>小虎撲擊！</b>
+</div>
+
+<div class="gearwin" id="gearwin">
+  <div class="gearbox">
+    <h2>裝 備</h2>
+    <div class="power" id="power"></div>
+    <div class="slots" id="slots"></div>
+    <div class="baglist" id="baglist"></div>
+    <button class="btn" id="closeGear" style="width:100%;margin-top:14px">關 閉</button>
+    <button class="btn ghost" id="resetSave" style="width:100%;margin-top:8px;height:40px">清除存檔重新開始</button>
+  </div>
+</div>
+
+<div class="over" id="over">
+  <div class="card">
+    <h2 id="ovTitle">討伐失敗</h2>
+    <div class="big" id="ovBig">1-1</div>
+    <div class="line">打倒的敵人 <span id="ovKill">0</span></div>
+    <div class="line">造成的總傷害 <span id="ovDmg">0</span></div>
+    <div class="line">答對／答錯 <span id="ovQA">0 / 0</span></div>
+    <div class="line">最快作答 <span id="ovFast">—</span></div>
+    <div class="line">獲得金幣 <span id="ovGold">0</span></div>
+    <div class="weak"><h3>最該再練的乘法</h3><ul id="ovWeak"></ul></div>
+    <button class="btn" id="again">再 挑 戰 一 次</button>
+  </div>
+</div>
+
+<script src="assets/common.js"></script>
+<script>
+/* ---------- 敵人：每隻怕不同的乘法表，打弱點兩倍傷害 ---------- */
+const MOBS = [
+  {img:'assets/mob_slime.png', name:'黏黏怪',   hp:110, atk:10, weak:[2,3,4,5], exp:26, drop:0.45},
+  {img:'assets/mob_rock.png',  name:'石頭怪',   hp:170, atk:14, weak:[6,7],     exp:38, drop:0.55},
+  {img:'assets/mob_slime.png', name:'紫黏怪',   hp:230, atk:16, weak:[8,9],     exp:52, drop:0.65},
+  {img:'assets/mob_boss.png',  name:'虎王石像', hp:400, atk:22, weak:[7,8,9],   exp:120, drop:1, boss:true}
+];
+const ANSWER_TIME = 9;
+
+let P = Save.power();                 // 目前能力（基礎＋裝備）
+let maxHp = P.hp, heroHp = P.hp;
+let wave = Save.d.wave, round = Save.d.round;
+let mob = null, mobHp = 0;
+let qa = 1, qb = 1, ans = 0, qStart = 0, locked = true, running = false;
+let ult = 0, combo = 0, kills = 0, totalDmg = 0, right = 0, wrong = 0, fastest = null;
+let earnGold = 0, earnExp = 0, drops = [];
+let mobTimer = ANSWER_TIME, loop = null;
+
+const F = () => $('field');
+const setBar = (el, r) => el.style.transform = 'scaleX(' + Math.max(0, Math.min(1, r)) + ')';
+
+/* ---------- 角色逐格動畫 ---------- */
+const HERO_FRAMES = {
+  ready:'assets/fx_hero_ready.png', swing:'assets/fx_hero_swing.png',
+  after:'assets/fx_hero_after.png', hurt:'assets/fx_hero_hurt.png'
+};
+const ready = {};
+for(const src of [...Object.values(HERO_FRAMES), ...MOBS.map(m=>m.img), 'assets/fx_cat_attack.png']){
+  const im = new Image(); im.onload = () => ready[src] = true; im.src = src;
+}
+const heroFrame = k => { if(ready[HERO_FRAMES[k]]) $('hero2').src = HERO_FRAMES[k]; };
+
+function heroSwing(onHit){
+  const h = $('hero2');
+  heroFrame('ready');
+  h.style.transform = 'translateX(10px) scale(1.03)';
+  setTimeout(()=>{ heroFrame('swing'); h.style.transform = 'translateX(120px) scale(1.08)'; }, 90);
+  setTimeout(()=>{
+    heroFrame('after');
+    $('slash').classList.remove('on'); void $('slash').offsetWidth; $('slash').classList.add('on');
+    onHit && onHit();
+  }, 230);
+  setTimeout(()=>{ h.style.transform = 'translateX(40px)'; }, 380);
+  setTimeout(()=>{ heroFrame('ready'); h.style.transform = ''; }, 520);
+}
+function heroHurtAnim(){
+  const h = $('hero2');
+  heroFrame('hurt');
+  h.style.transform = 'translateX(-26px) rotate(-6deg)';
+  setTimeout(()=>{ h.style.transform = 'translateX(-8px)'; }, 220);
+  setTimeout(()=>{ heroFrame('ready'); h.style.transform = ''; }, 520);
+}
+function catRush(){
+  const c = $('cat2');
+  c.style.transition = 'none'; c.style.opacity = '0'; c.style.transform = 'translateX(-60px) scale(.7)';
+  requestAnimationFrame(()=>{
+    c.style.transition = 'transform .5s cubic-bezier(.2,1.5,.4,1),opacity .15s';
+    c.style.opacity = '1'; c.style.transform = 'translateX(190px) scale(1.15)';
+    setTimeout(()=>{ c.style.opacity = '0'; c.style.transform = 'translateX(240px) scale(.8)'; }, 480);
+  });
+}
+function shake(){ F().classList.remove('shake'); void F().offsetWidth; F().classList.add('shake'); }
+function dmgText(text, crit){
+  const d = document.createElement('div');
+  d.className = 'dmg' + (crit ? ' crit' : '');
+  d.textContent = text;
+  d.style.right = (12 + Math.random()*14) + '%';
+  d.style.bottom = (44 + Math.random()*10) + '%';
+  F().appendChild(d);
+  setTimeout(()=>d.remove(), 900);
+}
+
+/* ---------- 存檔面板 ---------- */
+function paintTop(){
+  $('lv').textContent = Save.d.lv;
+  $('gold').textContent = Save.d.gold;
+  $('expBar').style.width = (Save.d.exp / Save.needExp() * 100) + '%';
+  $('stage').textContent = round + '-' + (wave+1);
+  $('bagDot').classList.toggle('on', hasBetter());
+}
+function hasBetter(){
+  return Save.d.bag.some(it => {
+    const cur = Save.d.gear[it.slot];
+    return !cur || it.score > cur.score;
+  });
+}
+function paintGear(){
+  P = Save.power();
+  $('power').innerHTML =
+    '<div><b>攻擊</b>' + P.atk + '</div>' +
+    '<div><b>血量</b>' + P.hp + '</div>' +
+    '<div><b>爆擊</b>' + P.crit + '%</div>' +
+    '<div><b>必殺充能</b>' + P.ult + '</div>';
+  const slotName = {weapon:'武器', armor:'防具', charm:'飾品'};
+  $('slots').innerHTML = ['weapon','armor','charm'].map(k => {
+    const it = Save.d.gear[k];
+    if(!it) return '<div class="slot empty"><div class="ic">➕</div><div class="nm">' +
+      slotName[k] + '</div><div class="st2">還沒有裝備</div></div>';
+    return '<div class="slot" style="border-style:solid;border-color:' + it.color + '">' +
+      '<div class="ic">' + it.icon + '</div>' +
+      '<div class="nm" style="color:' + it.color + '">' + it.name + '</div>' +
+      '<div class="st2">' + gearLine(it) + '</div></div>';
+  }).join('');
+
+  const bag = Save.d.bag.slice().sort((a,b)=>b.score-a.score);
+  $('baglist').innerHTML = bag.length ? bag.map(it => {
+    const cur = Save.d.gear[it.slot];
+    const better = !cur || it.score > cur.score;
+    return '<div class="bagitem' + (better ? ' better' : '') + '">' +
+      '<div class="ic">' + it.icon + '</div>' +
+      '<div class="info"><b style="color:' + it.color + '">' + it.name +
+        ' <span class="rar">' + it.rarity + '</span>' + (better ? ' ⬆' : '') + '</b>' +
+        '<small>' + gearLine(it) + '</small></div>' +
+      '<button class="eq" data-eq="' + it.id + '">裝備</button>' +
+      '<button data-sell="' + it.id + '">賣 ' + sellPrice(it) + '</button></div>';
+  }).join('') : '<div class="empty-tip">背包是空的，打倒敵人就會掉裝備</div>';
+  paintTop();
+}
+const sellPrice = it => Math.max(5, Math.round(it.score * 0.8));
+function equip(id){
+  const i = Save.d.bag.findIndex(x => x.id === id);
+  if(i < 0) return;
+  const it = Save.d.bag.splice(i,1)[0];
+  const old = Save.d.gear[it.slot];
+  if(old) Save.d.bag.push(old);
+  Save.d.gear[it.slot] = it;
+  Save.put(); paintGear();
+  Sfx.ok(3);
+  // 換裝會改變最大血量，戰鬥中同步補上差額
+  const np = Save.power();
+  if(running){ heroHp = Math.min(np.hp, heroHp + Math.max(0, np.hp - maxHp)); }
+  maxHp = np.hp;
+  paintHeroBar();
+}
+function sell(id){
+  const i = Save.d.bag.findIndex(x => x.id === id);
+  if(i < 0) return;
+  Save.d.gold += sellPrice(Save.d.bag[i]);
+  Save.d.bag.splice(i,1);
+  Save.put(); paintGear(); Sfx.tick();
+}
+$('baglist').addEventListener('click', e => {
+  const eq = e.target.closest('[data-eq]'), sl = e.target.closest('[data-sell]');
+  if(eq) equip(eq.dataset.eq);
+  else if(sl) sell(sl.dataset.sell);
+});
+$('bagBtn').onclick = () => { paintGear(); $('gearwin').classList.add('on'); };
+$('closeGear').onclick = () => $('gearwin').classList.remove('on');
+$('resetSave').onclick = () => {
+  if(!confirm('確定要清除存檔嗎？等級、金幣、裝備都會不見。')) return;
+  Save.reset();
+  round = 1; wave = 0;
+  P = Save.power(); maxHp = P.hp; heroHp = P.hp;
+  paintGear(); setMob(); paintHeroBar();
+  $('gearwin').classList.remove('on');
+};
+
+function paintHeroBar(){
+  setBar($('heroHp'), heroHp / maxHp);
+  $('heroHpText').textContent = '虎姬 Lv' + Save.d.lv + '　' + heroHp + ' / ' + maxHp;
+}
+
+/* ---------- 出題 ---------- */
+function newQ(){
+  const w = mob.weak;
+  const useWeak = Math.random() < .7;
+  qa = useWeak ? w[(Math.random()*w.length)|0] : 2 + (Math.random()*8|0);
+  qb = 2 + (Math.random()*8|0);
+  ans = qa * qb;
+  $('q').innerHTML = qa + ' <em>×</em> ' + qb + ' <em>=</em> ?';
+  $('weakTip').textContent = w.includes(qa) || w.includes(qb)
+    ? '⚡ 這題打中 ' + mob.name + ' 的弱點，傷害兩倍' : '';
+  const box = $('qbox');
+  box.classList.remove('in'); void box.offsetWidth; box.classList.add('in');
+
+  const cand = new Set([ans]);
+  for(const v of [qa*(qb+1), qa*(qb-1), (qa+1)*qb, (qa-1)*qb, ans+qa, ans-qb, ans+2, ans-3].sort(()=>Math.random()-.5)){
+    if(v > 0 && !cand.has(v)) cand.add(v);
+    if(cand.size >= 4) break;
+  }
+  const list = [...cand].slice(0,4).sort(()=>Math.random()-.5);
+  const box2 = $('ans');
+  box2.innerHTML = '';
+  for(const v of list){
+    const b = document.createElement('button');
+    b.textContent = v;
+    b.onclick = () => answer(v, b);
+    box2.appendChild(b);
+  }
+  qStart = performance.now();
+  mobTimer = ANSWER_TIME;
+  locked = false;
+}
+function answer(v, btn){
+  if(locked || !running) return;
+  locked = true;
+  const took = (performance.now() - qStart)/1000;
+  [...$('ans').children].forEach(b => b.disabled = true);
+
+  if(v === ans){
+    right++;
+    if(fastest === null || took < fastest) fastest = took;
+    combo++; Stats.mark(qa + '×' + qb, true);
+    btn.classList.add('right');
+    const isWeak = mob.weak.includes(qa) || mob.weak.includes(qb);
+    const speed = Math.max(1, Math.round((ANSWER_TIME - took) * 0.9));
+    const isCrit = Math.random()*100 < P.crit;
+    let dmg = Math.round((P.atk*0.7 + speed) * (isWeak ? 2 : 1) * (1 + Math.min(combo,8)*0.06) * (isCrit ? 1.8 : 1));
+    Sfx.ok(combo);
+    heroSwing(()=>{
+      mobHp = Math.max(0, mobHp - dmg);
+      totalDmg += dmg;
+      $('mob').classList.remove('hit'); void $('mob').offsetWidth; $('mob').classList.add('hit');
+      dmgText((isCrit ? '爆擊 ' : '') + '-' + dmg, isWeak || isCrit);
+      shake();
+      setBar($('mobHp'), mobHp / mob.hp);
+      $('mobHpText').textContent = mob.name + '　' + mobHp + ' / ' + mob.hp;
+      ult = Math.min(100, ult + P.ult);
+      paintUlt();
+      if(mobHp <= 0) return killMob();
+      setTimeout(newQ, 460);
+    });
+    if(combo % 3 === 0) Char.react(true, true);
+  }else{
+    wrong++; combo = 0;
+    Stats.mark(qa + '×' + qb, false);
+    btn.classList.add('wrong');
+    [...$('ans').children].forEach(b => { if(+b.textContent === ans) b.classList.add('right'); });
+    Sfx.bad();
+    setTimeout(mobAttack, 420);
+  }
+}
+function mobAttack(){
+  if(!running) return;
+  $('mob').classList.remove('attack'); void $('mob').offsetWidth; $('mob').classList.add('attack');
+  setTimeout(()=>{
+    heroHurtAnim();
+    heroHp = Math.max(0, heroHp - mob.atk);
+    paintHeroBar();
+    F().classList.remove('hurt'); void F().offsetWidth; F().classList.add('hurt');
+    shake(); Sfx.lose();
+    Char.react(false);
+    if(heroHp <= 0) return over(false);
+    setTimeout(newQ, 700);
+  }, 260);
+}
+
+/* ---------- 打倒敵人：經驗、金幣、掉裝備 ---------- */
+function showDrop(html){
+  const d = $('drop');
+  d.innerHTML = html;
+  d.classList.remove('on'); void d.offsetWidth; d.classList.add('on');
+  setTimeout(()=>d.classList.remove('on'), 1600);
+}
+function killMob(){
+  Sfx.win();
+  kills++;
+  Save.d.totalKill++;
+  const gold = 18 + wave*8 + (mob.boss ? 70 : 0) + (round-1)*10;
+  const exp  = Math.round(mob.exp * (1 + (round-1)*0.35));
+  Save.d.gold += gold;
+  earnGold += gold; earnExp += exp;
+  const ups = Save.addExp(exp);
+
+  $('mob').classList.add('die');
+  Char.react(true, true, mob.boss ? '把 Boss 打倒了！' : '打倒一隻！');
+  Char.cat(true);
+  dmgText('+' + gold + ' 金幣', true);
+
+  // 掉裝備：Boss 必掉，小怪看機率；打越後面越容易出好貨
+  let dropped = null;
+  if(Math.random() < mob.drop){
+    dropped = rollGear(Save.d.lv, (round-1)*0.25 + (mob.boss ? 0.6 : 0));
+    Save.d.bag.push(dropped);
+    drops.push(dropped);
+  }
+  Save.put();
+
+  setTimeout(()=>{
+    if(ups > 0){
+      P = Save.power();
+      const before = maxHp; maxHp = P.hp;
+      heroHp = Math.min(maxHp, heroHp + (maxHp - before) + 25);   // 升級順便回一點血
+      paintHeroBar();
+      showDrop('<b style="color:var(--gold)">升級！Lv ' + Save.d.lv + '</b>' +
+               '<small>攻擊與血量提升，回復 25 點血</small>');
+      Sfx.win();
+    }else if(dropped){
+      showDrop('<b style="color:' + dropped.color + '">' + dropped.icon + ' ' + dropped.name +
+               ' <span class="rar">' + dropped.rarity + '</span></b>' +
+               '<small>' + gearLine(dropped) + '</small>');
+    }
+    paintTop();
+  }, 500);
+
+  setTimeout(()=>{
+    $('mob').classList.remove('die','hit');
+    wave++;
+    if(wave >= MOBS.length){ round++; wave = 0; }
+    Save.d.round = round; Save.d.wave = wave; Save.put();
+    if(mob.boss){ return over(true); }
+    setMob();
+    newQ();
+  }, 1400);
+}
+function setMob(){
+  mob = {...MOBS[wave]};
+  mob.hp = Math.round(mob.hp * (1 + (round-1)*0.5));
+  mob.atk = Math.round(mob.atk * (1 + (round-1)*0.3));
+  mobHp = mob.hp;
+  if(ready[mob.img]) $('mob').src = mob.img;
+  setBar($('mobHp'), 1);
+  $('mobHpText').textContent = mob.name + '　' + mobHp + ' / ' + mob.hp;
+  paintTop();
+}
+function paintUlt(){
+  $('ultBar').style.width = ult + '%';
+  const btn = $('ultBtn');
+  btn.disabled = ult < 100 || !running;
+  btn.classList.toggle('ready', ult >= 100 && running);
+}
+function useUlt(){
+  if(ult < 100 || !running || !mob) return;
+  ult = 0; paintUlt(); locked = true;
+  $('ultfx').classList.add('on');
+  Sfx.win();
+  catRush();
+  setTimeout(()=>{
+    const dmg = Math.round(mob.hp * 0.3 + P.atk * 2.2);
+    mobHp = Math.max(0, mobHp - dmg);
+    totalDmg += dmg;
+    dmgText('-' + dmg, true);
+    setBar($('mobHp'), mobHp / mob.hp);
+    $('mobHpText').textContent = mob.name + '　' + mobHp + ' / ' + mob.hp;
+    shake();
+    $('ultfx').classList.remove('on');
+    if(mobHp <= 0) return killMob();
+    setTimeout(newQ, 500);
+  }, 900);
+}
+function tick(){
+  if(!running || locked){ paintTimer(); return; }
+  mobTimer = Math.max(0, mobTimer - 0.1);
+  paintTimer();
+  if(mobTimer <= 0){
+    locked = true;
+    wrong++; combo = 0;
+    Stats.mark(qa + '×' + qb, false);
+    [...$('ans').children].forEach(b => { b.disabled = true; if(+b.textContent === ans) b.classList.add('right'); });
+    mobAttack();
+  }
+}
+const paintTimer = () => $('mobTimer').style.transform = 'scaleX(' + (mobTimer/ANSWER_TIME) + ')';
+
+function start(){
+  P = Save.power();
+  maxHp = P.hp; heroHp = P.hp;
+  running = true; locked = true;
+  ult = 0; combo = 0;
+  kills = 0; totalDmg = 0; right = 0; wrong = 0; fastest = null;
+  earnGold = 0; earnExp = 0; drops = [];
+  Save.d.playCount++; Save.put();
+  $('over').classList.remove('on');
+  $('mob').classList.remove('die','hit');
+  paintHeroBar();
+  setMob(); paintUlt(); newQ();
+  clearInterval(loop); loop = setInterval(tick, 100);
+  Sfx.next();
+  $('start').textContent = '重 新 開 始';
+}
+function over(win){
+  running = false; clearInterval(loop); loop = null;
+  Save.put();
+  $('ovTitle').textContent = win ? '討伐成功！' : '討伐失敗';
+  $('ovBig').textContent = win ? '🏆 第 ' + round + ' 輪' : round + '-' + (wave+1);
+  $('ovKill').textContent = kills + ' 隻';
+  $('ovDmg').textContent = totalDmg;
+  $('ovQA').textContent = right + ' / ' + wrong;
+  $('ovFast').textContent = fastest === null ? '—' : fastest.toFixed(2) + ' 秒';
+  $('ovGold').textContent = earnGold + ' 金幣　經驗 +' + earnExp +
+    (drops.length ? '　裝備 ×' + drops.length : '');
+  $('ovWeak').innerHTML = Stats.weakHTML(6);
+  setTimeout(()=>$('over').classList.add('on'), 700);
+}
+
+$('start').onclick = start;
+$('again').onclick = start;
+$('ultBtn').onclick = useUlt;
+document.addEventListener('keydown', e => {
+  const n = +e.key;
+  if(n >= 1 && n <= 4){ const b = $('ans').children[n-1]; b && b.click(); }
+  if(e.key === ' ') useUlt();
+});
+
+versionBar('index2.html');
+startCoins();
+paintGear();
+setMob(); paintTimer(); paintUlt();
+maxHp = P.hp; heroHp = P.hp;
+paintHeroBar();
+
+</script>
+</body>
+</html>

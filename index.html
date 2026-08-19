@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>九宮虎姬・乘法遊戲</title>
+<link rel="stylesheet" href="assets/common.css">
+<style>
+body{gap:14px}
+.wrap{width:min(96vw,620px);display:flex;flex-direction:column;gap:12px}
+
+.logo{text-align:center;margin-top:4px}
+.logo h1{font-size:clamp(22px,5.4vw,34px);letter-spacing:6px}
+.logo p{font-size:12px;color:var(--dim);letter-spacing:2px;margin-top:2px}
+
+/* 玩家卡 */
+.player{
+  display:flex;gap:12px;align-items:center;padding:14px;border-radius:18px;
+  background:linear-gradient(180deg,#3b2456,#20132f);border:1px solid var(--line);
+  box-shadow:0 12px 34px #0008,inset 0 1px 0 #ffffff14;
+}
+.player img{width:74px;height:74px;object-fit:cover;object-position:top center;
+  border-radius:50%;border:2px solid var(--gold);background:#241638}
+.player .info{flex:1;min-width:0}
+.player .info .row1{display:flex;align-items:baseline;gap:8px}
+.player .info b{font-size:18px;color:var(--gold2)}
+.player .info .lv{
+  flex:none;font-size:12px;color:#3a2400;font-weight:800;padding:2px 10px;border-radius:99px;
+  background:linear-gradient(180deg,var(--gold2),var(--gold));
+}
+.player .info .row1{align-items:center}
+.player .expbar{height:8px;border-radius:99px;background:#241638;margin:6px 0 4px;overflow:hidden}
+.player .expbar i{display:block;height:100%;border-radius:99px;
+  background:linear-gradient(90deg,#6ea8ff,#f6c453);transition:width .5s ease}
+.player small{font-size:11px;color:var(--dim)}
+.gearrow{display:flex;gap:4px;margin-top:6px;flex-wrap:wrap}
+.gearrow span{font-size:11px;padding:2px 8px;border-radius:99px;background:#241638;
+  border:1px solid var(--line)}
+
+/* 遊戲卡 */
+.games{display:flex;flex-direction:column;gap:12px}
+.game{
+  display:flex;gap:12px;align-items:center;padding:14px;border-radius:18px;cursor:pointer;
+  background:linear-gradient(135deg,#33204d,#1d1230);border:1px solid var(--line);
+  text-decoration:none;color:var(--text);position:relative;overflow:hidden;
+  transition:transform .18s ease,box-shadow .18s ease,border-color .18s;
+}
+.game:hover{transform:translateY(-3px);box-shadow:0 14px 34px #000a;border-color:var(--gold)}
+.game::after{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(105deg,transparent 35%,#ffffff18 50%,transparent 65%);
+  transform:translateX(-140%);
+}
+.game:hover::after{animation:sheen .7s ease-out}
+@keyframes sheen{to{transform:translateX(140%)}}
+.game .ic{
+  width:64px;height:64px;flex:none;border-radius:16px;display:flex;align-items:center;
+  justify-content:center;font-size:32px;background:#241638;border:1px solid var(--line);
+  background-size:78% 78%;background-position:center;background-repeat:no-repeat;
+}
+.game .txt{flex:1;min-width:0}
+.game .txt b{display:block;font-size:17px;color:var(--gold2);letter-spacing:1px}
+.game .txt small{display:block;font-size:12px;color:var(--dim);line-height:1.6;margin-top:2px}
+.game .txt .rec{font-size:11px;color:var(--gold);margin-top:4px}
+.game .go{font-size:22px;color:var(--gold)}
+.game.new::before{
+  content:"新";position:absolute;top:8px;right:8px;background:var(--bad);color:#fff;
+  font-size:10px;font-weight:800;padding:2px 8px;border-radius:99px;
+}
+
+/* 練習狀況 */
+.panel{
+  padding:14px;border-radius:18px;background:linear-gradient(180deg,#2e1c47,#1a1029);
+  border:1px solid var(--line);
+}
+.panel h3{font-size:14px;color:var(--gold);margin-bottom:8px;letter-spacing:1px}
+.panel h3+ul{margin-bottom:4px}
+.panel .nums{display:flex;gap:8px;margin-bottom:10px}
+.panel .nums div{flex:1;background:#241638;border:1px solid var(--line);border-radius:10px;
+  padding:8px 2px;text-align:center}
+.panel .nums b{display:block;font-size:10px;color:var(--dim);font-weight:500}
+.panel .nums span{font-size:17px;font-weight:800;color:var(--gold2)}
+.panel ul{list-style:none;display:flex;flex-wrap:wrap;gap:6px}
+.panel li{background:#3a2456;border:1px solid var(--line);border-radius:8px;padding:4px 9px;font-size:13px}
+.panel li i{font-style:normal;color:var(--bad);font-size:11px}
+.clearbtn{
+  margin-top:12px;width:100%;height:40px;border-radius:12px;cursor:pointer;
+  background:#2a1a40;border:1px solid var(--line);color:var(--dim);font-size:13px;font-weight:700;
+}
+</style>
+</head>
+<body>
+<img class="hero" id="hero" src="assets/princess.png" alt="">
+
+<div class="wrap">
+  <div class="logo">
+    <h1>九 宮 虎 姬</h1>
+    <p>乘 法 練 習 遊 戲</p>
+  </div>
+
+  <div class="player">
+    <img id="pface" src="assets/hero_cheer.png" alt="">
+    <div class="info">
+      <div class="row1"><b>虎姬</b><span class="lv" id="plv">Lv 1</span></div>
+      <div class="expbar"><i id="pexp"></i></div>
+      <small id="pexpText">經驗 0 / 75</small>
+      <div class="gearrow" id="pgear"></div>
+    </div>
+    <div style="text-align:right">
+      <div style="font-size:11px;color:var(--dim)">金幣</div>
+      <div style="font-size:20px;font-weight:800;color:var(--gold2)" id="pgold">0</div>
+    </div>
+  </div>
+
+  <div class="games">
+    <a class="game" href="index2.html">
+      <div class="ic">⚔️</div>
+      <div class="txt">
+        <b>乘法討伐戰</b>
+        <small>答對就出手打怪，答錯被反擊。打中敵人害怕的乘法表傷害兩倍，還會掉裝備、升等級。</small>
+        <div class="rec" id="rec2">還沒開始</div>
+      </div>
+      <div class="go">›</div>
+    </a>
+
+    <a class="game new" href="index3.html">
+      <div class="ic" id="ic3"></div>
+      <div class="txt">
+        <b>寶石轉盤</b>
+        <small>轉出 4 顆以上連在一起的寶石就消除，接著問你「消掉幾顆 × 每顆幾分」，算對才拿得到分數。</small>
+        <div class="rec" id="rec3">還沒開始</div>
+      </div>
+      <div class="go">›</div>
+    </a>
+
+    <a class="game" href="index4.html">
+      <div class="ic">🔢</div>
+      <div class="txt">
+        <b>消除盤</b>
+        <small>出一題「6 × 7」，把盤面上所有 42 點掉，限時 60 秒衝分數。最單純的速度練習。</small>
+        <div class="rec" id="rec4">還沒開始</div>
+      </div>
+      <div class="go">›</div>
+    </a>
+  </div>
+
+  <div class="panel">
+    <h3>練習狀況（存在這台電腦）</h3>
+    <div class="nums">
+      <div><b>答對</b><span id="sOk">0</span></div>
+      <div><b>答錯</b><span id="sBad">0</span></div>
+      <div><b>正確率</b><span id="sRate">—</span></div>
+      <div><b>打倒敵人</b><span id="sKill">0</span></div>
+    </div>
+    <h3>最該再練的乘法</h3>
+    <ul id="sWeak"></ul>
+    <button class="clearbtn" id="clearAll">清除所有紀錄（等級、裝備、答題紀錄）</button>
+  </div>
+</div>
+
+<script src="assets/common.js"></script>
+<script>
+function paintPlayer(){
+  const d = Save.d;
+  $('plv').textContent = 'Lv ' + d.lv;
+  $('pgold').textContent = d.gold;
+  $('pexp').style.width = (d.exp / Save.needExp() * 100) + '%';
+  $('pexpText').textContent = '經驗 ' + d.exp + ' / ' + Save.needExp();
+  const g = d.gear, names = {weapon:'武器', armor:'防具', charm:'飾品'};
+  $('pgear').innerHTML = ['weapon','armor','charm'].map(k => {
+    const it = g[k];
+    return it ? '<span style="color:' + it.color + '">' + it.icon + ' ' + it.name + '</span>'
+              : '<span style="color:#6b578a">' + names[k] + '：無</span>';
+  }).join('');
+}
+function paintRecords(){
+  const d = Save.d;
+  $('rec2').textContent = d.totalKill > 0
+    ? '打到第 ' + d.round + '-' + (d.wave+1) + ' 關　累計打倒 ' + d.totalKill + ' 隻'
+    : '還沒開始';
+  const v3 = Best.get('v3_best'), v1 = Best.get('v1_score');
+  $('rec3').textContent = v3 ? '最高一轉得分 ' + v3 : '還沒開始';
+  $('rec4').textContent = v1 ? '最高分 ' + v1 : '還沒開始';
+}
+function paintStats(){
+  let ok = 0, bad = 0;
+  for(const v of Object.values(Stats.data)){ ok += v.ok||0; bad += v.bad||0; }
+  $('sOk').textContent = ok;
+  $('sBad').textContent = bad;
+  $('sRate').textContent = (ok+bad) ? Math.round(ok/(ok+bad)*100) + '%' : '—';
+  $('sKill').textContent = Save.d.totalKill;
+  $('sWeak').innerHTML = Stats.weakHTML(8);
+}
+$('clearAll').onclick = () => {
+  if(!confirm('確定要清除所有紀錄嗎？等級、金幣、裝備、答題紀錄都會不見。')) return;
+  Save.reset();
+  try{ localStorage.removeItem('mul99_stats'); }catch(e){}
+  Stats.data = {};
+  paintPlayer(); paintRecords(); paintStats();
+};
+/* 有生好的寶石圖就拿來當轉盤那張卡的圖示 */
+(() => {
+  const im = new Image();
+  im.onload = () => { $('ic3').style.backgroundImage = 'url(assets/sym_amethyst.png)'; };
+  im.onerror = () => { $('ic3').textContent = '💎'; };
+  im.src = 'assets/sym_amethyst.png';
+})();
+
+startCoins();
+paintPlayer(); paintRecords(); paintStats();
+</script>
+</body>
+</html>
