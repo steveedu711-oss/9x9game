@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>九宮虎姬 v2・乘法討伐戰</title>
+<title>小虎乘法大冒險・打怪大作戰</title>
 <link rel="stylesheet" href="assets/common.css">
 <style>
 body{padding-bottom:16px}
@@ -224,7 +224,7 @@ body{padding-bottom:16px}
 </style>
 </head>
 <body>
-<h1>九 宮 虎 姬 v2 ・ 乘 法 討 伐 戰</h1>
+<h1>打 怪 大 作 戰</h1>
 <div class="vers"></div>
 
 <div class="wrap">
@@ -242,7 +242,7 @@ body{padding-bottom:16px}
     <div class="bars">
       <div class="bar mob"><i id="mobHp"></i><span id="mobHpText">敵人</span></div>
       <div class="bar timerbar"><i id="mobTimer"></i></div>
-      <div class="bar hero"><i id="heroHp"></i><span id="heroHpText">虎姬</span></div>
+      <div class="bar hero"><i id="heroHp"></i><span id="heroHpText">小勇者</span></div>
     </div>
     <img class="fighter" id="hero2" src="assets/fx_hero_ready.png" alt="">
     <img class="fighter" id="cat2" src="assets/fx_cat_attack.png" alt="">
@@ -264,7 +264,7 @@ body{padding-bottom:16px}
     <button id="ultBtn" disabled>小虎撲擊</button>
   </div>
 
-  <button class="btn" id="start">開 始 討 伐</button>
+  <button class="btn" id="start">開 始 冒 險</button>
 
   <p class="tip">
     答對就出手，<b>答得越快傷害越高</b>；敵人上方的黃條倒數完會反擊。<br>
@@ -291,7 +291,7 @@ body{padding-bottom:16px}
 
 <div class="over" id="over">
   <div class="card">
-    <h2 id="ovTitle">討伐失敗</h2>
+    <h2 id="ovTitle">這次沒過關</h2>
     <div class="big" id="ovBig">1-1</div>
     <div class="line">打倒的敵人 <span id="ovKill">0</span></div>
     <div class="line">造成的總傷害 <span id="ovDmg">0</span></div>
@@ -464,7 +464,7 @@ $('resetSave').onclick = () => {
 
 function paintHeroBar(){
   setBar($('heroHp'), heroHp / maxHp);
-  $('heroHpText').textContent = '虎姬 Lv' + Save.d.lv + '　' + heroHp + ' / ' + maxHp;
+  $('heroHpText').textContent = '小勇者 Lv' + Save.d.lv + '　' + heroHp + ' / ' + maxHp;
 }
 
 /* ---------- 出題 ---------- */
@@ -678,7 +678,7 @@ function start(){
 function over(win){
   running = false; clearInterval(loop); loop = null;
   Save.put();
-  $('ovTitle').textContent = win ? '討伐成功！' : '討伐失敗';
+  $('ovTitle').textContent = win ? '全部打倒了！' : '這次沒過關';
   $('ovBig').textContent = win ? '🏆 第 ' + round + ' 輪' : round + '-' + (wave+1);
   $('ovKill').textContent = kills + ' 隻';
   $('ovDmg').textContent = totalDmg;

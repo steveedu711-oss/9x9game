@@ -1,4 +1,4 @@
-/* 九宮虎姬 共用程式：角色演出、音效、背景金幣、答題紀錄、飄分粒子
+/* 小虎乘法大冒險 共用程式：角色演出、音效、背景金幣、答題紀錄、飄分粒子
    三個玩法版本共用同一份，改這裡三版一起改 */
 
 const $ = id => document.getElementById(id);
@@ -244,9 +244,9 @@ function startCoins(){
 /* 版本切換列 */
 const VERSIONS = [
   {f:'index.html',  n:'🏠 大廳'},
-  {f:'index2.html', n:'⚔️ 討伐戰'},
-  {f:'index3.html', n:'💎 寶石轉盤'},
-  {f:'index4.html', n:'🔢 消除盤'}
+  {f:'index2.html', n:'⚔️ 打怪大作戰'},
+  {f:'index3.html', n:'💎 寶石消消樂'},
+  {f:'index4.html', n:'🔢 找答案挑戰'}
 ];
 function versionBar(current){
   const el = document.querySelector('.vers');
