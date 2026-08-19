@@ -31,11 +31,37 @@ body{padding-bottom:16px}
   background:linear-gradient(180deg,#00000000,#00000066),
              repeating-linear-gradient(90deg,#ffffff08 0 2px,transparent 2px 46px);
 }
-.field.shake{animation:fieldShake .32s}
-@keyframes fieldShake{
-  20%{transform:translate(-6px,3px)}45%{transform:translate(7px,-3px)}
-  70%{transform:translate(-4px,-2px)}100%{transform:none}
+/* 鏡頭：沿攻擊方向先被推開再回彈，同時推近一點點（zoom punch）。
+   一般擊、弱點擊、爆擊三種強度，衰減都很快，畫面才不會糊掉 */
+.field.cam1{animation:impactCam .3s cubic-bezier(.36,.07,.19,.97)}
+.field.cam2{animation:impactCamMid .38s cubic-bezier(.36,.07,.19,.97)}
+.field.cam3{animation:impactCamHeavy .46s cubic-bezier(.36,.07,.19,.97)}
+@keyframes impactCam{
+  0%{transform:none}
+  12%{transform:scale(1.025) translateX(7px)}
+  34%{transform:scale(1.012) translateX(-5px)}
+  60%{transform:translateX(3px)}
+  100%{transform:none}
 }
+@keyframes impactCamMid{
+  0%{transform:none}
+  10%{transform:scale(1.05) translateX(13px)}
+  30%{transform:scale(1.02) translateX(-9px)}
+  52%{transform:scale(1.008) translateX(6px)}
+  74%{transform:translateX(-3px)}
+  100%{transform:none}
+}
+@keyframes impactCamHeavy{
+  0%{transform:none}
+  8%{transform:scale(1.085) translateX(20px) rotate(.5deg)}
+  26%{transform:scale(1.04) translateX(-14px) rotate(-.4deg)}
+  46%{transform:scale(1.015) translateX(9px)}
+  68%{transform:translateX(-5px)}
+  100%{transform:none}
+}
+/* 擊殺：短暫慢動作＋壓暗，收尾才有份量 */
+.field.slowmo .fighter{animation-duration:1.6s !important}
+.field.slowmo::after{background:#00000066;transition:background .2s}
 .field.hurt::before{
   content:"";position:absolute;inset:0;z-index:6;pointer-events:none;
   box-shadow:inset 0 0 90px #f8717199;animation:hurtflash .5s ease-out forwards;
@@ -43,6 +69,23 @@ body{padding-bottom:16px}
 @keyframes hurtflash{to{opacity:0}}
 
 .fighter{position:absolute;bottom:8%;z-index:3;pointer-events:none;transition:transform .12s ease-out}
+/* 衝刺殘影：留在原地淡出，看得出移動軌跡 */
+.afterimg{
+  position:absolute;bottom:8%;z-index:2;pointer-events:none;opacity:.55;
+  filter:brightness(1.6) saturate(.4) drop-shadow(0 0 10px #ffe9a8);
+  animation:afterimg .34s ease-out forwards;
+}
+@keyframes afterimg{to{opacity:0;transform:translateX(-26px) scale(.97)}}
+/* 衝刺速度線 */
+.speedlines{
+  position:absolute;inset:0;z-index:4;pointer-events:none;opacity:0;
+  background:repeating-linear-gradient(92deg,
+    transparent 0 26px,#ffffff30 26px 28px,transparent 28px 54px);
+  mask-image:radial-gradient(ellipse at 70% 50%,#000 10%,transparent 72%);
+  -webkit-mask-image:radial-gradient(ellipse at 70% 50%,#000 10%,transparent 72%);
+}
+.speedlines.on{animation:speedl .26s ease-out}
+@keyframes speedl{0%{opacity:0;transform:translateX(30px)}35%{opacity:1}100%{opacity:0;transform:translateX(-40px)}}
 .gshadow{
   position:absolute;bottom:7%;z-index:2;pointer-events:none;height:14px;border-radius:50%;
   background:radial-gradient(ellipse,#000000aa 0%,#00000055 45%,transparent 72%);
@@ -117,16 +160,19 @@ body{padding-bottom:16px}
 
 /* 斬擊特效 */
 .slash{
-  position:absolute;z-index:5;pointer-events:none;width:46%;height:56%;right:6%;bottom:12%;
-  background:conic-gradient(from 210deg at 30% 40%,#ffffff00 0deg,#fff8d0ee 24deg,#ffffff00 60deg);
-  filter:blur(1px) drop-shadow(0 0 14px #ffe9a8);
-  opacity:0;transform:scale(.6) rotate(-25deg);
+  position:absolute;z-index:5;pointer-events:none;width:52%;height:78%;right:2%;bottom:6%;
+  background:
+    conic-gradient(from 196deg at 26% 34%,#ffffff00 0deg,#ffffffee 10deg,#fff3c8cc 20deg,#ffffff00 46deg),
+    conic-gradient(from 206deg at 26% 34%,#ffffff00 0deg,#ffd98a88 26deg,#ffffff00 52deg);
+  filter:blur(.6px) drop-shadow(0 0 18px #ffe9a8) drop-shadow(0 0 40px #ffb84d66);
+  opacity:0;transform:scale(.55) rotate(-38deg);
 }
 .slash.on{animation:slash .35s ease-out}
 @keyframes slash{
-  0%{opacity:0;transform:scale(.5) rotate(-40deg)}
-  35%{opacity:1;transform:scale(1.15) rotate(-8deg)}
-  100%{opacity:0;transform:scale(1.4) rotate(12deg)}
+  0%{opacity:0;transform:scale(.5) rotate(-46deg)}
+  18%{opacity:1;transform:scale(1.05) rotate(-18deg)}
+  55%{opacity:.85;transform:scale(1.22) rotate(6deg)}
+  100%{opacity:0;transform:scale(1.45) rotate(22deg)}
 }
 .dmg{
   position:absolute;z-index:7;font-size:clamp(22px,5.4vw,38px);font-weight:900;color:#fff;
@@ -309,6 +355,7 @@ body{padding-bottom:16px}
     <img class="fighter" id="cat2" src="assets/fx_cat_attack.png" alt="">
     <img class="fighter" id="mob" src="assets/mob_slime.png" alt="">
     <div class="slash" id="slash"></div>
+    <div class="speedlines" id="speedlines"></div>
     <div class="impact" id="impact"></div>
     <div class="drop" id="drop"></div>
   </div>
@@ -404,18 +451,45 @@ for(const src of [...Object.values(HERO_FRAMES), ...MOBS.map(m=>m.img), 'assets/
 }
 const heroFrame = k => { if(ready[HERO_FRAMES[k]]) $('hero2').src = HERO_FRAMES[k]; };
 
+function afterImage(){
+  const h = $('hero2');
+  const img = document.createElement('img');
+  img.className = 'afterimg';
+  img.src = h.src;
+  img.style.left = h.style.left || getComputedStyle(h).left;
+  img.style.height = getComputedStyle(h).height;
+  img.style.transform = h.style.transform;
+  F().appendChild(img);
+  setTimeout(()=>img.remove(), 360);
+}
+/* 攻擊節奏照動畫原理走：先往後蓄力，再衝出去，命中後收招回位 */
 function heroSwing(onHit){
   const h = $('hero2');
   heroFrame('ready');
-  h.style.transform = 'translateX(10px) scale(1.03)';
-  setTimeout(()=>{ heroFrame('swing'); h.style.transform = 'translateX(120px) scale(1.08)'; }, 90);
-  setTimeout(()=>{
+  h.style.transition = 'transform .13s cubic-bezier(.3,.9,.5,1)';
+  h.style.transform = 'translateX(-18px) scale(1.02,.97)';        // 1) 預備：往後拉、下蹲
+
+  setTimeout(()=>{                                                 // 2) 衝刺
+    heroFrame('swing');
+    h.style.transition = 'transform .1s cubic-bezier(.5,0,.9,.4)';
+    h.style.transform = 'translateX(132px) scale(1.06,.98)';
+    $('speedlines').classList.remove('on'); void $('speedlines').offsetWidth;
+    $('speedlines').classList.add('on');
+    afterImage();
+    setTimeout(afterImage, 45);
+  }, 130);
+
+  setTimeout(()=>{                                                 // 3) 命中
     heroFrame('after');
     $('slash').classList.remove('on'); void $('slash').offsetWidth; $('slash').classList.add('on');
     onHit && onHit();
-  }, 230);
-  setTimeout(()=>{ h.style.transform = 'translateX(40px)'; }, 380);
-  setTimeout(()=>{ heroFrame('ready'); h.style.transform = ''; }, 520);
+  }, 240);
+
+  setTimeout(()=>{                                                 // 4) 收招
+    h.style.transition = 'transform .22s cubic-bezier(.2,1.1,.4,1)';
+    h.style.transform = 'translateX(58px) scale(.99,1.02)';
+  }, 400);
+  setTimeout(()=>{ heroFrame('ready'); h.style.transform = ''; }, 620);
 }
 function heroHurtAnim(){
   const h = $('hero2');
@@ -451,8 +525,9 @@ function shards(pt, n, crit){
   for(let i=0;i<n;i++){
     const d = document.createElement('div');
     d.className = 'shard';
-    const ang = (-140 + Math.random()*220) * Math.PI/180;   // 主要往左上與四周噴
-    const dist = 40 + Math.random()*(crit ? 130 : 85);
+    // 沿攻擊方向（由左往右）噴出去，扇形 ±55 度，這樣看得出這一下是從哪個方向打的
+    const ang = (-55 + Math.random()*110) * Math.PI/180;
+    const dist = 50 + Math.random()*(crit ? 150 : 95);
     d.style.setProperty('--sx', Math.cos(ang)*dist + 'px');
     d.style.setProperty('--sy', (Math.sin(ang)*dist + 30) + 'px');   // 尾端受重力往下掉
     d.style.setProperty('--sr', (Math.random()*720-360) + 'deg');
@@ -466,18 +541,23 @@ function shards(pt, n, crit){
     setTimeout(()=>d.remove(), 900);
   }
 }
-function hitEffect(crit, weak){
+/* 命中：停頓 → 方向性鏡頭 → 爆閃 → 沿攻擊向量噴粒子。
+   停頓長度照業界慣例：一般 3~5 幀、重擊 8 幀上下、致命一擊 0.25 秒 */
+function hitEffect(crit, weak, lethal){
   const m = $('mob'), f = F();
   m.classList.remove('hit'); void m.offsetWidth; m.classList.add('hit');
   const pt = mobCenter();
   impactAt(pt);
-  shards(pt, crit ? 18 : weak ? 13 : 9, crit);
-  // 命中停頓：越重的一擊停越久
-  f.classList.add('freeze', 'punch');
-  setTimeout(()=>f.classList.remove('freeze'), crit ? 120 : weak ? 90 : 65);
-  setTimeout(()=>f.classList.remove('punch'), 220);
-  shake();
-  Sfx.hit(crit);
+  shards(pt, lethal ? 26 : crit ? 20 : weak ? 14 : 10, crit || lethal);
+
+  const stop = lethal ? 250 : crit ? 150 : weak ? 110 : 80;
+  const cam  = lethal ? 'cam3' : crit ? 'cam3' : weak ? 'cam2' : 'cam1';
+  f.classList.add('freeze');
+  setTimeout(()=>f.classList.remove('freeze'), stop);
+  f.classList.remove('cam1','cam2','cam3'); void f.offsetWidth;
+  f.classList.add(cam);
+  setTimeout(()=>f.classList.remove(cam), 500);
+  Sfx.hit(crit || lethal);
 }
 function dmgText(text, crit){
   const d = document.createElement('div');
@@ -629,7 +709,7 @@ function answer(v, btn){
     heroSwing(()=>{
       mobHp = Math.max(0, mobHp - dmg);
       totalDmg += dmg;
-      hitEffect(isCrit, isWeak);
+      hitEffect(isCrit, isWeak, mobHp <= 0);
       dmgText((isCrit ? '爆擊 ' : '') + '-' + dmg, isWeak || isCrit);
       setHp('mobHp', mobHp / mob.hp);
       $('mobHpText').textContent = mob.name + '　' + mobHp + ' / ' + mob.hp;
@@ -657,7 +737,8 @@ function mobAttack(){
     paintHeroBar();
     Sfx.hurt();
     F().classList.remove('hurt'); void F().offsetWidth; F().classList.add('hurt');
-    shake(); Sfx.lose();
+    F().classList.remove('cam2'); void F().offsetWidth; F().classList.add('cam2');
+    setTimeout(()=>F().classList.remove('cam2'), 420);
     Char.react(false);
     if(heroHp <= 0) return over(false);
     setTimeout(newQ, 700);
@@ -682,6 +763,8 @@ function killMob(){
   const ups = Save.addExp(exp);
 
   $('mob').classList.add('die');
+  F().classList.add('slowmo');
+  setTimeout(()=>F().classList.remove('slowmo'), 700);
   Char.react(true, true, mob.boss ? '把 Boss 打倒了！' : '打倒一隻！');
   Char.cat(true);
   dmgText('+' + gold + ' 金幣', true);
@@ -748,7 +831,7 @@ function useUlt(){
     const dmg = Math.round(mob.hp * 0.3 + P.atk * 2.2);
     mobHp = Math.max(0, mobHp - dmg);
     totalDmg += dmg;
-    hitEffect(true, true);
+    hitEffect(true, true, mobHp <= 0);
     dmgText('-' + dmg, true);
     setHp('mobHp', mobHp / mob.hp);
     $('mobHpText').textContent = mob.name + '　' + mobHp + ' / ' + mob.hp;
