@@ -43,13 +43,70 @@ body{padding-bottom:16px}
 @keyframes hurtflash{to{opacity:0}}
 
 .fighter{position:absolute;bottom:8%;z-index:3;pointer-events:none;transition:transform .12s ease-out}
+.gshadow{
+  position:absolute;bottom:7%;z-index:2;pointer-events:none;height:14px;border-radius:50%;
+  background:radial-gradient(ellipse,#000000aa 0%,#00000055 45%,transparent 72%);
+  filter:blur(2px);
+}
+#shHero{left:5%;width:15%}
+#shMob{right:5%;width:16%;animation:shMob 2.2s ease-in-out infinite alternate}
+@keyframes shMob{to{transform:scale(.86);opacity:.75}}
 #hero2{left:4%;height:62%;filter:drop-shadow(0 10px 18px #000a)}
 #cat2{left:22%;height:30%;opacity:0;transform:translateX(-40px);filter:drop-shadow(0 8px 14px #000a)}
 #mob{right:4%;height:56%;filter:drop-shadow(0 10px 18px #000a);
   animation:mobIdle 2.2s ease-in-out infinite alternate}
 @keyframes mobIdle{to{transform:translateY(-10px) scale(1.02)}}
-#mob.hit{animation:mobHit .3s;filter:brightness(2.4) drop-shadow(0 0 20px #fff)}
-@keyframes mobHit{30%{transform:translateX(26px) rotate(6deg)}100%{transform:none}}
+/* 受擊：擠壓 → 被打飛 → 晃回來，中間夾白閃再轉紅 */
+#mob.hit{animation:mobHit .46s cubic-bezier(.2,1.2,.4,1), mobFlash .42s linear}
+@keyframes mobHit{
+  0%{transform:none}
+  7%{transform:translateX(-6px) scale(1.14,.86)}      /* 先被壓扁 */
+  22%{transform:translateX(38px) rotate(9deg) scale(.9,1.12)}
+  45%{transform:translateX(14px) rotate(-5deg) scale(1.04,.96)}
+  68%{transform:translateX(22px) rotate(3deg)}
+  100%{transform:none}
+}
+@keyframes mobFlash{
+  0%,14%{filter:brightness(7) saturate(0) drop-shadow(0 0 26px #fff)}
+  34%{filter:brightness(1.7) saturate(4) sepia(.7) hue-rotate(-35deg) drop-shadow(0 0 22px #ff4d4d)}
+  70%{filter:brightness(1.15) saturate(1.6) drop-shadow(0 0 12px #ff6b6b)}
+  100%{filter:none}
+}
+/* 命中停頓：整個戰場的動畫定格幾十毫秒，重量感就是從這裡來的 */
+.field.freeze .fighter,
+.field.freeze .shard,
+.field.freeze .impact,
+.field.freeze .dmg{animation-play-state:paused !important}
+.field.punch{animation:punch .16s ease-out}
+@keyframes punch{40%{transform:scale(1.035)}100%{transform:none}}
+
+/* 命中爆閃 */
+.impact{
+  position:absolute;z-index:6;pointer-events:none;width:130px;height:130px;
+  transform:translate(-50%,-50%) scale(.2);opacity:0;
+  background:
+    radial-gradient(circle,#ffffffee 0%,#fff6c4aa 22%,transparent 62%),
+    conic-gradient(from 0deg,transparent 0deg,#fff 6deg,transparent 12deg,transparent 84deg,
+      #fff 90deg,transparent 96deg,transparent 174deg,#fff 180deg,transparent 186deg,
+      transparent 264deg,#fff 270deg,transparent 276deg);
+  filter:blur(.4px);
+}
+.impact.on{animation:impact .3s ease-out forwards}
+@keyframes impact{
+  0%{opacity:0;transform:translate(-50%,-50%) scale(.2) rotate(0)}
+  25%{opacity:1;transform:translate(-50%,-50%) scale(1.1) rotate(18deg)}
+  100%{opacity:0;transform:translate(-50%,-50%) scale(1.7) rotate(34deg)}
+}
+/* 碎片 */
+.shard{
+  position:absolute;z-index:6;pointer-events:none;width:9px;height:9px;border-radius:2px;
+  background:#ffe9a8;box-shadow:0 0 8px #ffd06688;
+  animation:shard .58s cubic-bezier(.15,.7,.4,1) forwards;
+}
+@keyframes shard{
+  0%{transform:translate(0,0) rotate(0) scale(1);opacity:1}
+  100%{transform:translate(var(--sx),var(--sy)) rotate(var(--sr)) scale(.3);opacity:0}
+}
 #mob.die{animation:mobDie .7s ease-in forwards}
 @keyframes mobDie{
   30%{transform:translateY(-14px) rotate(-10deg);filter:brightness(2)}
@@ -92,6 +149,8 @@ body{padding-bottom:16px}
 .bar span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
   font-size:11px;font-weight:800;color:#fff;text-shadow:0 1px 3px #000;letter-spacing:1px}
 .bar.mob i{background:linear-gradient(90deg,#f87171,#dc2626)}
+/* 掉血殘影：白條慢半拍才追上，看得出「這一下扣了多少」 */
+.bar .ghost{background:#ffffffcc;transition:transform .55s cubic-bezier(.4,0,.2,1) .22s}
 .bar.hero i{background:linear-gradient(90deg,#4ade80,#16a34a)}
 .bar.timerbar{height:8px}
 .bar.timerbar i{background:linear-gradient(90deg,#facc15,#f97316)}
@@ -240,14 +299,17 @@ body{padding-bottom:16px}
 
   <div class="field" id="field">
     <div class="bars">
-      <div class="bar mob"><i id="mobHp"></i><span id="mobHpText">敵人</span></div>
+      <div class="bar mob"><i class="ghost" id="mobHpGhost"></i><i id="mobHp"></i><span id="mobHpText">敵人</span></div>
       <div class="bar timerbar"><i id="mobTimer"></i></div>
-      <div class="bar hero"><i id="heroHp"></i><span id="heroHpText">小勇者</span></div>
+      <div class="bar hero"><i class="ghost" id="heroHpGhost"></i><i id="heroHp"></i><span id="heroHpText">小勇者</span></div>
     </div>
+    <div class="gshadow" id="shHero"></div>
+    <div class="gshadow" id="shMob"></div>
     <img class="fighter" id="hero2" src="assets/fx_hero_ready.png" alt="">
     <img class="fighter" id="cat2" src="assets/fx_cat_attack.png" alt="">
     <img class="fighter" id="mob" src="assets/mob_slime.png" alt="">
     <div class="slash" id="slash"></div>
+    <div class="impact" id="impact"></div>
     <div class="drop" id="drop"></div>
   </div>
 
@@ -325,6 +387,11 @@ let mobTimer = ANSWER_TIME, loop = null;
 
 const F = () => $('field');
 const setBar = (el, r) => el.style.transform = 'scaleX(' + Math.max(0, Math.min(1, r)) + ')';
+/* 血條連殘影一起更新：紅條立刻掉，白條慢半拍追上 */
+function setHp(who, r){
+  setBar($(who), r);
+  setBar($(who + 'Ghost'), r);
+}
 
 /* ---------- 角色逐格動畫 ---------- */
 const HERO_FRAMES = {
@@ -367,6 +434,51 @@ function catRush(){
   });
 }
 function shake(){ F().classList.remove('shake'); void F().offsetWidth; F().classList.add('shake'); }
+
+/* ---------- 打擊感 ----------
+   命中停頓 → 爆閃 → 碎片 → 擠壓變形 → 震動，五件事疊起來才有「打到東西」的感覺 */
+function mobCenter(){
+  const f = F().getBoundingClientRect(), m = $('mob').getBoundingClientRect();
+  return {x: m.left - f.left + m.width*0.42, y: m.top - f.top + m.height*0.45};
+}
+function impactAt(pt){
+  const el = $('impact');
+  el.style.left = pt.x + 'px';
+  el.style.top  = pt.y + 'px';
+  el.classList.remove('on'); void el.offsetWidth; el.classList.add('on');
+}
+function shards(pt, n, crit){
+  for(let i=0;i<n;i++){
+    const d = document.createElement('div');
+    d.className = 'shard';
+    const ang = (-140 + Math.random()*220) * Math.PI/180;   // 主要往左上與四周噴
+    const dist = 40 + Math.random()*(crit ? 130 : 85);
+    d.style.setProperty('--sx', Math.cos(ang)*dist + 'px');
+    d.style.setProperty('--sy', (Math.sin(ang)*dist + 30) + 'px');   // 尾端受重力往下掉
+    d.style.setProperty('--sr', (Math.random()*720-360) + 'deg');
+    d.style.left = (pt.x + (Math.random()*30-15)) + 'px';
+    d.style.top  = (pt.y + (Math.random()*30-15)) + 'px';
+    const sz = 6 + Math.random()*(crit ? 9 : 6);
+    d.style.width = d.style.height = sz + 'px';
+    d.style.animationDuration = (.45 + Math.random()*.3) + 's';
+    if(crit && i % 3 === 0) d.style.background = '#fff';
+    F().appendChild(d);
+    setTimeout(()=>d.remove(), 900);
+  }
+}
+function hitEffect(crit, weak){
+  const m = $('mob'), f = F();
+  m.classList.remove('hit'); void m.offsetWidth; m.classList.add('hit');
+  const pt = mobCenter();
+  impactAt(pt);
+  shards(pt, crit ? 18 : weak ? 13 : 9, crit);
+  // 命中停頓：越重的一擊停越久
+  f.classList.add('freeze', 'punch');
+  setTimeout(()=>f.classList.remove('freeze'), crit ? 120 : weak ? 90 : 65);
+  setTimeout(()=>f.classList.remove('punch'), 220);
+  shake();
+  Sfx.hit(crit);
+}
 function dmgText(text, crit){
   const d = document.createElement('div');
   d.className = 'dmg' + (crit ? ' crit' : '');
@@ -463,7 +575,7 @@ $('resetSave').onclick = () => {
 };
 
 function paintHeroBar(){
-  setBar($('heroHp'), heroHp / maxHp);
+  setHp('heroHp', heroHp / maxHp);
   $('heroHpText').textContent = '小勇者 Lv' + Save.d.lv + '　' + heroHp + ' / ' + maxHp;
 }
 
@@ -517,10 +629,9 @@ function answer(v, btn){
     heroSwing(()=>{
       mobHp = Math.max(0, mobHp - dmg);
       totalDmg += dmg;
-      $('mob').classList.remove('hit'); void $('mob').offsetWidth; $('mob').classList.add('hit');
+      hitEffect(isCrit, isWeak);
       dmgText((isCrit ? '爆擊 ' : '') + '-' + dmg, isWeak || isCrit);
-      shake();
-      setBar($('mobHp'), mobHp / mob.hp);
+      setHp('mobHp', mobHp / mob.hp);
       $('mobHpText').textContent = mob.name + '　' + mobHp + ' / ' + mob.hp;
       ult = Math.min(100, ult + P.ult);
       paintUlt();
@@ -544,6 +655,7 @@ function mobAttack(){
     heroHurtAnim();
     heroHp = Math.max(0, heroHp - mob.atk);
     paintHeroBar();
+    Sfx.hurt();
     F().classList.remove('hurt'); void F().offsetWidth; F().classList.add('hurt');
     shake(); Sfx.lose();
     Char.react(false);
@@ -616,7 +728,7 @@ function setMob(){
   mob.atk = Math.round(mob.atk * (1 + (round-1)*0.3));
   mobHp = mob.hp;
   if(ready[mob.img]) $('mob').src = mob.img;
-  setBar($('mobHp'), 1);
+  setHp('mobHp', 1);
   $('mobHpText').textContent = mob.name + '　' + mobHp + ' / ' + mob.hp;
   paintTop();
 }
@@ -636,8 +748,9 @@ function useUlt(){
     const dmg = Math.round(mob.hp * 0.3 + P.atk * 2.2);
     mobHp = Math.max(0, mobHp - dmg);
     totalDmg += dmg;
+    hitEffect(true, true);
     dmgText('-' + dmg, true);
-    setBar($('mobHp'), mobHp / mob.hp);
+    setHp('mobHp', mobHp / mob.hp);
     $('mobHpText').textContent = mob.name + '　' + mobHp + ' / ' + mob.hp;
     shake();
     $('ultfx').classList.remove('on');

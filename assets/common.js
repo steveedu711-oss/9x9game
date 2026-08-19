@@ -141,7 +141,44 @@ const Sfx = {
   next: () => { beep(660,.12,'sine',.09); setTimeout(()=>beep(880,.16,'sine',.09), 110); },
   win:  () => { [523,659,784,1046].forEach((f,i)=>setTimeout(()=>beep(f,.22,'sine',.09), i*110)); },
   lose: () => { beep(392,.2,'sine',.09); setTimeout(()=>beep(294,.32,'sine',.09), 190); },
-  tick: () => beep(300,.05,'square',.05)
+  tick: () => beep(300,.05,'square',.05),
+  /* 打擊音：低頻悶響＋高頻碎裂，兩層疊起來才有份量 */
+  hit: (crit) => {
+    try{
+      _ac = _ac || new (window.AudioContext || window.webkitAudioContext)();
+      const t = _ac.currentTime;
+      // 低頻：頻率快速下滑，像重擊
+      const o = _ac.createOscillator(), g = _ac.createGain();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(crit ? 220 : 160, t);
+      o.frequency.exponentialRampToValueAtTime(40, t + .18);
+      g.gain.setValueAtTime(crit ? .3 : .22, t);
+      g.gain.exponentialRampToValueAtTime(.0001, t + .2);
+      o.connect(g); g.connect(_ac.destination); o.start(t); o.stop(t + .22);
+      // 高頻：白噪音短爆，做碎裂感
+      const len = Math.floor(_ac.sampleRate * .09);
+      const buf = _ac.createBuffer(1, len, _ac.sampleRate);
+      const data = buf.getChannelData(0);
+      for(let i=0;i<len;i++) data[i] = (Math.random()*2-1) * Math.pow(1 - i/len, 2.5);
+      const n = _ac.createBufferSource(); n.buffer = buf;
+      const ng = _ac.createGain(); ng.gain.value = crit ? .22 : .14;
+      const hp = _ac.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 1400;
+      n.connect(hp); hp.connect(ng); ng.connect(_ac.destination); n.start(t);
+    }catch(e){}
+  },
+  hurt: () => {
+    try{
+      _ac = _ac || new (window.AudioContext || window.webkitAudioContext)();
+      const t = _ac.currentTime;
+      const o = _ac.createOscillator(), g = _ac.createGain();
+      o.type = 'square';
+      o.frequency.setValueAtTime(300, t);
+      o.frequency.exponentialRampToValueAtTime(70, t + .25);
+      g.gain.setValueAtTime(.16, t);
+      g.gain.exponentialRampToValueAtTime(.0001, t + .28);
+      o.connect(g); g.connect(_ac.destination); o.start(t); o.stop(t + .3);
+    }catch(e){}
+  }
 };
 
 /* ---------- 角色演出 ---------- */
