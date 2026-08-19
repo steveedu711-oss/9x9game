@@ -31,7 +31,7 @@ const Best = {
 /* ---------- 存檔：關掉瀏覽器再打開也接得回來 ---------- */
 const SAVE_KEY = 'mul99_save';
 const DEFAULT_SAVE = {
-  lv:1, exp:0, gold:0,
+  lv:1, exp:0, gold:0, hero:'tiger',
   gear:{weapon:null, armor:null, charm:null},
   bag:[],
   round:1, wave:0,
@@ -53,13 +53,15 @@ const Save = {
   needExp(){ return 40 + this.d.lv * 35; },
   /* 基礎能力＋裝備加成 */
   power(){
-    const g = this.d.gear;
-    let atk = 8 + (this.d.lv-1)*2, hp = 100 + (this.d.lv-1)*12, crit = 5, ult = 11;
+    const g = this.d.gear, h = heroOf(this.d.hero);
+    let atk = 8 + (this.d.lv-1)*2 + h.atk;
+    let hp  = 100 + (this.d.lv-1)*12 + h.hp;
+    let crit = 5 + h.crit, ult = 11 + h.ult;
     for(const k of ['weapon','armor','charm']){
       const it = g[k]; if(!it) continue;
       atk += it.atk||0; hp += it.hp||0; crit += it.crit||0; ult += it.ult||0;
     }
-    return {atk, hp, crit, ult};
+    return {atk, hp: Math.max(40, hp), crit, ult, spell: h.spell, hero: h};
   },
   addExp(n){
     this.d.exp += n;
@@ -69,6 +71,20 @@ const Save = {
     return ups;
   }
 };
+
+/* ---------- 可選角色 ----------
+   小虎姬有四格分解動作；其他三個是單張圖，攻擊動作用變形做 */
+const HEROES = [
+  {key:'tiger',  name:'小虎姬',   icon:'🐯', img:'assets/fx_hero_ready.png', frames:true,
+   desc:'什麼都會一點', atk:2,  hp:0,   crit:0,  ult:0, spell:1},
+  {key:'mage',   name:'星星法師', icon:'🔮', img:'assets/char_mage.png',
+   desc:'魔法特別強',   atk:-1, hp:-10, crit:0,  ult:3, spell:1.45},
+  {key:'knight', name:'勇氣騎士', icon:'🛡️', img:'assets/char_knight.png',
+   desc:'很耐打',       atk:-1, hp:32,  crit:0,  ult:0, spell:1},
+  {key:'archer', name:'神射手',   icon:'🏹', img:'assets/char_archer.png',
+   desc:'常常爆擊',     atk:0,  hp:-6,  crit:12, ult:2, spell:1}
+];
+const heroOf = k => HEROES.find(h => h.key === k) || HEROES[0];
 
 /* ---------- 裝備 ---------- */
 const RARITY = [

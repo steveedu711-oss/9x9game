@@ -83,6 +83,25 @@ body{gap:14px}
 .panel ul{list-style:none;display:flex;flex-wrap:wrap;gap:6px}
 .panel li{background:#3a2456;border:1px solid var(--line);border-radius:8px;padding:4px 9px;font-size:13px}
 .panel li i{font-style:normal;color:var(--bad);font-size:11px}
+.heroes{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.hcard{
+  background:#241638;border:1px solid var(--line);border-radius:14px;padding:8px 4px;
+  text-align:center;cursor:pointer;transition:transform .15s,border-color .2s,background .2s;
+  position:relative;overflow:hidden;
+}
+.hcard:hover{transform:translateY(-3px)}
+.hcard img{width:100%;height:74px;object-fit:contain;object-position:bottom center;
+  filter:drop-shadow(0 6px 10px #0008)}
+.hcard .ph{font-size:34px;line-height:74px}
+.hcard b{display:block;font-size:13px;color:var(--gold2);margin-top:2px}
+.hcard small{display:block;font-size:10px;color:var(--dim);line-height:1.4}
+.hcard .buff{font-size:10px;color:var(--ok);margin-top:2px}
+.hcard.on{
+  background:linear-gradient(180deg,#4a3168,#2a1a3f);border-color:var(--gold);
+  box-shadow:0 0 0 2px #f6c45355,0 8px 22px #0008;
+}
+.hcard.on::after{content:"出戰中";position:absolute;top:4px;right:4px;font-size:9px;font-weight:800;
+  background:var(--gold);color:#3a2400;border-radius:99px;padding:1px 6px}
 .clearbtn{
   margin-top:12px;width:100%;height:40px;border-radius:12px;cursor:pointer;
   background:#2a1a40;border:1px solid var(--line);color:var(--dim);font-size:13px;font-weight:700;
@@ -110,6 +129,11 @@ body{gap:14px}
       <div style="font-size:11px;color:var(--dim)">金幣</div>
       <div style="font-size:20px;font-weight:800;color:var(--gold2)" id="pgold">0</div>
     </div>
+  </div>
+
+  <div class="panel">
+    <h3>選一個角色出戰</h3>
+    <div class="heroes" id="heroes"></div>
   </div>
 
   <div class="games">
@@ -162,7 +186,12 @@ body{gap:14px}
 <script>
 function paintPlayer(){
   const d = Save.d;
+  const h = heroOf(d.hero);
   $('plv').textContent = 'Lv ' + d.lv;
+  const face = $('pface');
+  face.onerror = () => { face.src = 'assets/hero_cheer.png'; };
+  face.src = h.frames ? 'assets/hero_cheer.png' : h.img;
+  document.querySelector('.row1 b').textContent = h.name;
   $('pgold').textContent = d.gold;
   $('pexp').style.width = (d.exp / Save.needExp() * 100) + '%';
   $('pexpText').textContent = '經驗 ' + d.exp + ' / ' + Save.needExp();
@@ -173,6 +202,46 @@ function paintPlayer(){
               : '<span style="color:#6b578a">' + names[k] + '：無</span>';
   }).join('');
 }
+function paintHeroes(){
+  const box = $('heroes');
+  box.innerHTML = '';
+  for(const h of HEROES){
+    const buffs = [];
+    if(h.atk) buffs.push('攻擊 ' + (h.atk > 0 ? '+' : '') + h.atk);
+    if(h.hp)  buffs.push('血量 ' + (h.hp > 0 ? '+' : '') + h.hp);
+    if(h.crit) buffs.push('爆擊 +' + h.crit + '%');
+    if(h.spell !== 1) buffs.push('魔法 ×' + h.spell);
+
+    const card = document.createElement('div');
+    card.className = 'hcard' + (Save.d.hero === h.key ? ' on' : '');
+    card.dataset.h = h.key;
+
+    const img = document.createElement('img');
+    img.src = h.img;
+    img.alt = '';
+    img.onerror = () => {                    // 圖還沒生好就退回 emoji，不要破圖
+      const ph = document.createElement('div');
+      ph.className = 'ph';
+      ph.textContent = h.icon;
+      img.replaceWith(ph);
+    };
+    card.appendChild(img);
+
+    const b = document.createElement('b');   b.textContent = h.name;
+    const sm = document.createElement('small'); sm.textContent = h.desc;
+    const bf = document.createElement('div'); bf.className = 'buff'; bf.textContent = buffs.join('／');
+    card.append(b, sm, bf);
+    box.appendChild(card);
+  }
+}
+$('heroes').addEventListener('click', e => {
+  const c = e.target.closest('.hcard');
+  if(!c) return;
+  Save.d.hero = c.dataset.h;
+  Save.put();
+  paintHeroes(); paintPlayer();
+  Sfx.ok(3);
+});
 function paintRecords(){
   const d = Save.d;
   $('rec2').textContent = d.totalKill > 0
@@ -207,7 +276,7 @@ $('clearAll').onclick = () => {
 })();
 
 startCoins();
-paintPlayer(); paintRecords(); paintStats();
+paintHeroes(); paintPlayer(); paintRecords(); paintStats();
 </script>
 </body>
 </html>
