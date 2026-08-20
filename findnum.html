@@ -411,7 +411,9 @@ function beep(freq, dur, type, gain){
     ac = ac || new (window.AudioContext || window.webkitAudioContext)();
     const o = ac.createOscillator(), g = ac.createGain();
     o.type = type || 'triangle'; o.frequency.value = freq;
-    g.gain.setValueAtTime(gain || .12, ac.currentTime);
+    const gv = (gain || .12) * (window.__audio ? window.__audio.sfx : 1);
+    if(gv <= 0) return;
+    g.gain.setValueAtTime(gv, ac.currentTime);
     g.gain.exponentialRampToValueAtTime(.0001, ac.currentTime + dur);
     o.connect(g); g.connect(ac.destination);
     o.start(); o.stop(ac.currentTime + dur);
@@ -773,6 +775,7 @@ for(let y=0;y<ROWS;y++) for(let x=0;x<COLS;x++) grid[y][x] = newCell((y+1)*(x+1)
 paint();
 tick(true);
 </script>
+<script src="assets/audio.js"></script>
 <script src="assets/lock.js"></script>
 </body>
 </html>

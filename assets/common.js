@@ -140,12 +140,16 @@ function gearLine(it){
 
 /* ---------- 音效（WebAudio 現場合成，不用外部檔案） ---------- */
 let _ac = null;
+/* 音量設定由 assets/audio.js 提供（沒載入時就當作全開） */
+function sfxGain(){ const a = window.__audio; return a ? a.sfx : 1; }
 function beep(freq, dur, type, gain){
   try{
     _ac = _ac || new (window.AudioContext || window.webkitAudioContext)();
     const o = _ac.createOscillator(), g = _ac.createGain();
     o.type = type || 'triangle'; o.frequency.value = freq;
-    g.gain.setValueAtTime(gain || .12, _ac.currentTime);
+    const gv = (gain || .12) * sfxGain();
+    if(gv <= 0) return;
+    g.gain.setValueAtTime(gv, _ac.currentTime);
     g.gain.exponentialRampToValueAtTime(.0001, _ac.currentTime + dur);
     o.connect(g); g.connect(_ac.destination);
     o.start(); o.stop(_ac.currentTime + dur);
@@ -168,7 +172,9 @@ const Sfx = {
       o.type = 'sine';
       o.frequency.setValueAtTime(crit ? 220 : 160, t);
       o.frequency.exponentialRampToValueAtTime(40, t + .18);
-      g.gain.setValueAtTime(crit ? .3 : .22, t);
+      const gv = (crit ? .3 : .22) * sfxGain();
+      if(gv <= 0) return;
+      g.gain.setValueAtTime(gv, t);
       g.gain.exponentialRampToValueAtTime(.0001, t + .2);
       o.connect(g); g.connect(_ac.destination); o.start(t); o.stop(t + .22);
       // 高頻：白噪音短爆，做碎裂感
@@ -177,7 +183,7 @@ const Sfx = {
       const data = buf.getChannelData(0);
       for(let i=0;i<len;i++) data[i] = (Math.random()*2-1) * Math.pow(1 - i/len, 2.5);
       const n = _ac.createBufferSource(); n.buffer = buf;
-      const ng = _ac.createGain(); ng.gain.value = crit ? .22 : .14;
+      const ng = _ac.createGain(); ng.gain.value = (crit ? .22 : .14) * sfxGain();
       const hp = _ac.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 1400;
       n.connect(hp); hp.connect(ng); ng.connect(_ac.destination); n.start(t);
     }catch(e){}
@@ -190,7 +196,9 @@ const Sfx = {
       o.type = 'square';
       o.frequency.setValueAtTime(300, t);
       o.frequency.exponentialRampToValueAtTime(70, t + .25);
-      g.gain.setValueAtTime(.16, t);
+      const gv = .16 * sfxGain();
+      if(gv <= 0) return;
+      g.gain.setValueAtTime(gv, t);
       g.gain.exponentialRampToValueAtTime(.0001, t + .28);
       o.connect(g); g.connect(_ac.destination); o.start(t); o.stop(t + .3);
     }catch(e){}
