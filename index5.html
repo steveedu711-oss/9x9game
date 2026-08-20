@@ -1,0 +1,462 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>飆速賽車 ・ 小虎乘法大冒險</title>
+<link rel="stylesheet" href="assets/common.css">
+<style>
+body{gap:8px}
+.wrap{width:min(96vw,560px);display:flex;flex-direction:column;gap:8px}
+
+/* ---- 賽道舞台 ---- */
+.stage{
+  position:relative;width:100%;height:min(58vh,430px);border-radius:20px;overflow:hidden;
+  border:1px solid var(--line);box-shadow:0 18px 46px #000a,inset 0 1px 0 #ffffff14;
+  background:linear-gradient(180deg,#1b1030 0%,#3b1f5e 38%,#6b2f6e 52%,#2a1440 53%,#170d24 100%);
+  touch-action:none;user-select:none;
+}
+/* 遠景：星空與山 */
+.sky{position:absolute;left:0;right:0;top:0;height:53%;pointer-events:none}
+.sky::before{
+  content:"";position:absolute;inset:0;
+  background:radial-gradient(circle at 50% 96%,#ffd98a55,transparent 60%),
+             radial-gradient(2px 2px at 12% 22%,#ffffff88,transparent),
+             radial-gradient(2px 2px at 32% 12%,#ffffff66,transparent),
+             radial-gradient(1.6px 1.6px at 58% 28%,#ffffff77,transparent),
+             radial-gradient(2px 2px at 78% 16%,#ffffff66,transparent),
+             radial-gradient(1.6px 1.6px at 88% 34%,#ffffff55,transparent);
+}
+.sun{
+  position:absolute;left:50%;bottom:0;transform:translate(-50%,42%);width:150px;height:150px;border-radius:50%;
+  background:radial-gradient(circle,#ffe9a8,#f69053 60%,#f6905300 72%);opacity:.75;
+}
+.mts{position:absolute;left:-6%;right:-6%;bottom:0;height:44%;
+  background:linear-gradient(180deg,#40245f,#241338);
+  clip-path:polygon(0 100%,0 62%,9% 40%,17% 58%,26% 26%,35% 52%,44% 33%,52% 55%,
+    61% 22%,70% 50%,79% 36%,88% 58%,96% 44%,100% 62%,100% 100%);
+  filter:drop-shadow(0 -2px 14px #a855f744);
+}
+.mts2{position:absolute;left:-8%;right:-8%;bottom:0;height:30%;opacity:.75;
+  background:linear-gradient(180deg,#573a7d,#2b1747);
+  clip-path:polygon(0 100%,0 70%,12% 44%,23% 66%,34% 38%,46% 62%,58% 40%,70% 64%,
+    82% 46%,92% 66%,100% 52%,100% 100%);
+}
+/* 路面 */
+.road{
+  position:absolute;left:0;right:0;bottom:0;height:47%;overflow:hidden;
+  background:linear-gradient(180deg,#4a2f6b 0%,#3a2456 30%,#281a3c 66%,#1a1029 100%);
+}
+.road::after{
+  content:"";position:absolute;inset:0;
+  background:radial-gradient(70% 120% at 50% 120%,#f6c45322,transparent 70%);
+}
+.lines{position:absolute;inset:0;perspective:220px;perspective-origin:50% 0}
+.linesInner{
+  position:absolute;left:-60%;right:-60%;top:0;bottom:-40%;transform:rotateX(66deg);
+  transform-origin:50% 0;
+  /* 四條車道邊線：投影後正好落在三個車道的邊界 */
+  background:
+    linear-gradient(90deg,transparent calc(50% - 125px * var(--k,1)),#ffffff2e calc(50% - 125px * var(--k,1)) calc(50% - 121px * var(--k,1)),transparent calc(50% - 121px * var(--k,1))),
+    linear-gradient(90deg,transparent calc(50% - 45px * var(--k,1)),#ffffff2e calc(50% - 45px * var(--k,1)) calc(50% - 41px * var(--k,1)),transparent calc(50% - 41px * var(--k,1))),
+    linear-gradient(90deg,transparent calc(50% + 41px * var(--k,1)),#ffffff2e calc(50% + 41px * var(--k,1)) calc(50% + 45px * var(--k,1)),transparent calc(50% + 45px * var(--k,1))),
+    linear-gradient(90deg,transparent calc(50% + 121px * var(--k,1)),#ffffff2e calc(50% + 121px * var(--k,1)) calc(50% + 125px * var(--k,1)),transparent calc(50% + 125px * var(--k,1))),
+    repeating-linear-gradient(180deg,#ffe9a833 0 26px,transparent 26px 70px);
+  animation:roadRun .5s linear infinite;
+}
+@keyframes roadRun{to{background-position:0 0,0 0,0 0,0 0,0 96px}}
+.edge{position:absolute;bottom:0;width:38%;height:100%;pointer-events:none;
+  background:linear-gradient(90deg,#f6c45326,transparent)}
+.edge.r{right:0;transform:scaleX(-1)}
+
+/* 速度線 */
+.speed{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .2s}
+.speed i{position:absolute;width:2px;border-radius:2px;background:linear-gradient(180deg,transparent,#ffe9a8,transparent);
+  animation:zoom .45s linear infinite}
+@keyframes zoom{from{transform:translateY(-40px) scaleY(.4);opacity:0}
+  40%{opacity:1}to{transform:translateY(120px) scaleY(1.8);opacity:0}}
+.stage.fast .speed{opacity:.85}
+
+/* 玩家車 */
+.car{
+  position:absolute;bottom:6%;left:50%;width:clamp(78px,20vw,104px);z-index:6;
+  transform:translateX(-50%);transition:transform .18s cubic-bezier(.2,1.5,.4,1);
+  filter:drop-shadow(0 10px 14px #000b);pointer-events:none;
+}
+.car .rider{width:64%;margin:0 auto -12% auto;display:block;position:relative;z-index:2}
+.car .ph{font-size:44px;text-align:center;line-height:1;position:relative;z-index:2}
+/* 卡丁車車體（純 CSS，不另外生圖） */
+.kart{position:relative;width:100%;height:38px;z-index:1}
+.kart .body{
+  position:absolute;left:6%;right:6%;top:4px;height:26px;border-radius:12px 12px 9px 9px;
+  background:linear-gradient(180deg,#ff8a5c,#e0452f 58%,#8f1f1a);
+  border:2px solid #5d130f;box-shadow:inset 0 3px 0 #ffffff55,0 4px 10px #000a;
+}
+.kart .body::after{
+  content:"";position:absolute;left:16%;right:16%;top:-7px;height:10px;border-radius:8px 8px 0 0;
+  background:linear-gradient(180deg,#ffe9a8,#f6c453);border:2px solid #7a4a00;border-bottom:none;
+}
+.kart .wheel{
+  position:absolute;bottom:-2px;width:20px;height:20px;border-radius:50%;
+  background:radial-gradient(circle at 40% 35%,#5b5b6b,#191922 62%);
+  border:2px solid #0d0d14;box-shadow:0 3px 6px #000a;
+}
+.kart .wheel.l{left:-4px}
+.kart .wheel.r{right:-4px}
+.kart .lamp{
+  position:absolute;left:50%;transform:translateX(-50%);bottom:-4px;width:34%;height:6px;border-radius:99px;
+  background:linear-gradient(90deg,#ff6b6b,#ffd08a,#ff6b6b);box-shadow:0 0 12px #ff8a5caa;
+}
+.car .shadow{position:absolute;left:50%;bottom:-8px;transform:translateX(-50%);width:82%;height:14px;border-radius:50%;
+  background:radial-gradient(ellipse,#000000aa,transparent 70%)}
+.car .boost{
+  position:absolute;left:50%;bottom:-6px;transform:translateX(-50%);width:44px;height:70px;opacity:0;
+  background:radial-gradient(ellipse at 50% 0,#ffe9a8,#f6905399 45%,transparent 72%);
+  filter:blur(2px);
+}
+.car.go .boost{animation:boost .5s ease-out}
+@keyframes boost{0%{opacity:1;height:20px}100%{opacity:0;height:110px}}
+.car.hit .inner{animation:carHit .5s}
+@keyframes carHit{0%,100%{transform:rotate(0)}20%{transform:rotate(-13deg) translateX(-12px)}
+  50%{transform:rotate(11deg) translateX(10px)}80%{transform:rotate(-5deg)}}
+
+/* 答案閘門 */
+.gate{
+  position:absolute;left:50%;top:0;z-index:5;transform-origin:50% 100%;pointer-events:none;
+  will-change:transform;
+}
+.gate .board{
+  min-width:74px;padding:8px 12px;border-radius:14px;text-align:center;
+  font-size:30px;font-weight:900;font-variant-numeric:tabular-nums;color:#3a2400;
+  background:linear-gradient(180deg,#fff6d8,#f6c453 62%,#d99a22);
+  border:3px solid #7a4a00;box-shadow:0 6px 0 #7a4a00,0 12px 26px #000a;
+}
+.gate .pole{width:8px;height:26px;margin:0 auto;background:linear-gradient(90deg,#6b5030,#c9a86a,#6b5030)}
+.gate.good .board{background:linear-gradient(180deg,#d9ffe6,#4ade80 62%,#1f9d55);border-color:#12603a;
+  box-shadow:0 6px 0 #12603a,0 0 34px #4ade8099}
+.gate.bad .board{background:linear-gradient(180deg,#ffdcdc,#f87171 62%,#b03030);border-color:#6b1414;
+  box-shadow:0 6px 0 #6b1414,0 0 30px #f8717199}
+.gate.pop .board{animation:gatePop .3s ease-out}
+@keyframes gatePop{50%{transform:scale(1.25)}}
+
+/* 題目 */
+.qbar{
+  position:absolute;left:50%;top:10px;transform:translateX(-50%);z-index:8;padding:6px 20px;border-radius:99px;
+  background:#120b1cc9;border:1px solid var(--gold);backdrop-filter:blur(6px);
+  font-size:clamp(20px,5vw,28px);font-weight:900;color:var(--gold2);letter-spacing:2px;
+  text-shadow:0 2px 10px #000;white-space:nowrap;
+}
+.qbar.pulse{animation:qp .4s cubic-bezier(.2,1.6,.4,1)}
+@keyframes qp{from{transform:translateX(-50%) scale(.7);opacity:0}}
+.hud{position:absolute;left:10px;top:10px;z-index:8;font-size:13px;font-weight:800;color:var(--gold2);
+  text-shadow:0 2px 6px #000;line-height:1.7}
+.hud .hp{letter-spacing:2px;font-size:16px}
+.hud2{position:absolute;right:10px;top:10px;z-index:8;text-align:right;font-size:13px;
+  font-weight:800;color:var(--gold2);text-shadow:0 2px 6px #000;line-height:1.7}
+.big{font-size:22px;font-variant-numeric:tabular-nums}
+
+.flash{position:absolute;inset:0;z-index:9;pointer-events:none;opacity:0}
+.flash.ok{background:radial-gradient(circle at 50% 80%,#4ade8066,transparent 65%);animation:fl .45s}
+.flash.no{background:radial-gradient(circle at 50% 80%,#f8717177,transparent 65%);animation:fl .45s}
+@keyframes fl{from{opacity:1}to{opacity:0}}
+.stage.shake{animation:stShake .32s}
+@keyframes stShake{20%{transform:translate(-7px,4px)}45%{transform:translate(6px,-3px)}
+  70%{transform:translate(-3px,2px)}100%{transform:none}}
+
+.ctrls{display:flex;gap:8px}
+.ctrls button{
+  flex:1;height:56px;border-radius:16px;border:1px solid var(--line);cursor:pointer;
+  background:linear-gradient(180deg,#3b2456,#20132f);color:var(--gold2);font-size:24px;font-weight:900;
+  box-shadow:0 4px 0 #150c22;
+}
+.ctrls button:active{transform:translateY(3px);box-shadow:none}
+.combo{
+  position:absolute;left:50%;top:34%;transform:translateX(-50%);z-index:9;pointer-events:none;
+  font-size:clamp(26px,7vw,44px);font-weight:900;color:#fff;opacity:0;white-space:nowrap;
+  text-shadow:0 0 18px #f6c453,0 4px 0 #a9540f,0 8px 22px #000;
+}
+.combo.on{animation:cb .8s cubic-bezier(.2,1.5,.4,1)}
+@keyframes cb{0%{opacity:0;transform:translateX(-50%) scale(.4) rotate(-8deg)}
+  30%{opacity:1;transform:translateX(-50%) scale(1.15) rotate(3deg)}
+  70%{opacity:1;transform:translateX(-50%) scale(1)}
+  100%{opacity:0;transform:translateX(-50%) scale(1.1) translateY(-24px)}}
+</style>
+</head>
+<body>
+<img class="hero" id="hero" src="assets/princess.png" alt="">
+<div class="say" id="say"></div>
+
+<h1>🏎️ 飆速賽車</h1>
+<nav class="vers"></nav>
+
+<div class="wrap">
+  <div class="levels" id="levels"></div>
+
+  <div class="stage" id="stage">
+    <div class="sky"><div class="sun"></div><div class="mts2"></div><div class="mts"></div></div>
+    <div class="road">
+      <div class="lines"><div class="linesInner"></div></div>
+      <div class="edge"></div><div class="edge r"></div>
+    </div>
+    <div class="speed" id="speed"></div>
+    <div class="qbar pulse" id="qbar">準備出發</div>
+    <div class="hud"><div class="hp" id="hp">❤️❤️❤️</div><div>第 <span id="qno">0</span> 題</div></div>
+    <div class="hud2"><div>分數</div><div class="big" id="score">0</div></div>
+    <div class="combo" id="combo"></div>
+    <div class="flash" id="flash"></div>
+    <div class="car" id="car"><div class="boost"></div><div class="inner" id="carInner"><img class="rider" id="carImg" src="assets/char_knight.png" alt=""><div class="kart"><div class="body"></div><div class="wheel l"></div><div class="wheel r"></div><div class="lamp"></div></div></div><div class="shadow"></div></div>
+    <img class="cat" id="cat" src="assets/cat_jump.png" alt="">
+  </div>
+
+  <div class="ctrls">
+    <button id="bl">◀</button>
+    <button class="btn" id="start" style="flex:1.4">開始比賽</button>
+    <button id="br">▶</button>
+  </div>
+
+  <div class="stats">
+    <div class="st"><b>最高分</b><span id="best">0</span></div>
+    <div class="st"><b>連續答對</b><span id="cmb">0</span></div>
+    <div class="st"><b>本場答對</b><span id="okn">0</span></div>
+  </div>
+  <p class="note">開車撞上<b>正確答案</b>的牌子就加速加分，撞錯的會打滑扣一顆愛心。<br>
+  用左右按鈕、鍵盤 ← →，或直接點畫面左右半邊換車道。</p>
+</div>
+
+<div class="over" id="over"><div class="card">
+  <h2 id="oTitle">比賽結束</h2>
+  <div class="big" id="oScore">0</div>
+  <div class="line">答對題數 <span id="oOk">0</span></div>
+  <div class="line">最長連續答對 <span id="oCombo">0</span></div>
+  <div class="line">獲得金幣 <span id="oGold">0</span></div>
+  <div class="line">獲得經驗 <span id="oExp">0</span></div>
+  <div class="weak"><h3>最該再練的乘法</h3><ul id="oWeak"></ul></div>
+  <button class="btn" id="again">再比一場</button>
+  <button class="btn ghost" style="margin-top:8px;width:100%;height:44px" onclick="location.href='index.html'">回大廳</button>
+</div></div>
+
+<script src="assets/common.js"></script>
+<script>
+versionBar('index5.html');
+
+function r(a,b){ return a + ((Math.random()*(b-a+1))|0); }
+
+/* ---- 難度 ---- */
+const LEVELS = [
+  {k:'easy', n:'新手', d:'2～5 的乘法', ms:3000, pick:()=>[r(2,5), r(2,9)]},
+  {k:'mid',  n:'進階', d:'2～9 的乘法', ms:2500, pick:()=>[r(2,9), r(2,9)]},
+  {k:'hard', n:'高手', d:'6～9 難題',   ms:2050, pick:()=>[r(6,9), r(3,9)]}
+];
+let lvIdx = 1;
+$('levels').innerHTML = LEVELS.map((l,i)=>
+  '<div class="lv' + (i===lvIdx?' on':'') + '" data-i="' + i + '">' + l.n + '<b>' + l.d + '</b></div>').join('');
+$('levels').onclick = e => {
+  const el = e.target.closest('.lv'); if(!el || running) return;
+  lvIdx = +el.dataset.i;
+  [...$('levels').children].forEach((c,i)=>c.classList.toggle('on', i===lvIdx));
+  Sfx.tick();
+};
+
+/* ---- 車子換成選到的角色 ---- */
+(() => {
+  const h = heroOf(Save.d.hero);
+  const img = $('carImg');
+  img.onerror = () => {
+    const ph = document.createElement('div');
+    ph.className = 'ph'; ph.textContent = h.icon;
+    img.replaceWith(ph);
+  };
+  img.src = h.frames ? 'assets/fx_hero_ready.png' : h.img;
+})();
+
+/* ---- 速度線 ---- */
+(() => {
+  const box = $('speed');
+  for(let i=0;i<16;i++){
+    const s = document.createElement('i');
+    s.style.left = (Math.random()*100) + '%';
+    s.style.top = (46 + Math.random()*50) + '%';
+    s.style.height = (24 + Math.random()*40) + 'px';
+    s.style.animationDelay = (Math.random()*.45) + 's';
+    box.appendChild(s);
+  }
+})();
+
+/* ---- 遊戲狀態 ---- */
+const stage = $('stage'), car = $('car');
+let lane = 1, running = false, hp = 3, score = 0, combo = 0, bestCombo = 0, okCount = 0, qno = 0;
+let gates = [], cur = null, raf = 0, lastT = 0;
+
+const LANE_X = [-108, 0, 108];   // scale=1 時的水平位移
+const HORIZON = 0.53;            // 地平線在舞台高度的比例
+
+function setLane(i){
+  lane = Math.max(0, Math.min(2, i));
+  const w = stage.clientWidth;
+  stage.style.setProperty('--k', (w/460).toFixed(3));
+  car.style.transform = 'translateX(calc(-50% + ' + (LANE_X[lane] * 1.3 * w / 460).toFixed(1) + 'px)) rotate(' + ((lane-1)*5) + 'deg)';
+  Sfx.tick();
+}
+$('bl').onclick = () => running && setLane(lane-1);
+$('br').onclick = () => running && setLane(lane+1);
+addEventListener('keydown', e => {
+  if(!running) return;
+  if(e.key === 'ArrowLeft'){ setLane(lane-1); e.preventDefault(); }
+  if(e.key === 'ArrowRight'){ setLane(lane+1); e.preventDefault(); }
+});
+stage.addEventListener('pointerdown', e => {
+  if(!running) return;
+  const rect = stage.getBoundingClientRect();
+  setLane(e.clientX - rect.left < rect.width/2 ? lane-1 : lane+1);
+});
+
+/* ---- 出題 ---- */
+function nextQuestion(){
+  const L = LEVELS[lvIdx];
+  const pair = L.pick(), a = pair[0], b = pair[1];
+  const ans = a*b;
+  const wrongs = new Set();
+  let guard = 0;
+  while(wrongs.size < 2 && guard++ < 60){
+    const d = [-1,1,-2,2,a,-a,b,-b][(Math.random()*8)|0];
+    const w = ans + d;
+    if(w > 0 && w !== ans) wrongs.add(w);
+  }
+  while(wrongs.size < 2) wrongs.add(ans + wrongs.size + 3);
+  const opts = [ans, ...wrongs];
+  for(let i=opts.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; const t=opts[i]; opts[i]=opts[j]; opts[j]=t; }
+
+  qno++; $('qno').textContent = qno;
+  const qb = $('qbar');
+  qb.textContent = a + ' × ' + b + ' = ?';
+  qb.classList.remove('pulse'); void qb.offsetWidth; qb.classList.add('pulse');
+
+  gates.forEach(g => g.remove()); gates = [];
+  for(let i=0;i<3;i++){
+    const g = document.createElement('div');
+    g.className = 'gate';
+    g.innerHTML = '<div class="board">' + opts[i] + '</div><div class="pole"></div>';
+    stage.appendChild(g);
+    gates.push(g);
+  }
+  cur = {a:a, b:b, ans:ans, key: a + '×' + b, opts:opts, p:0, ms:L.ms, done:false, els:gates};
+}
+
+/* ---- 每幀更新 ---- */
+function frame(t){
+  if(!running) return;
+  const dt = Math.min(60, t - lastT); lastT = t;
+  if(cur && !cur.done){
+    cur.p += dt / cur.ms;
+    const H = stage.clientHeight, W = stage.clientWidth;
+    const p = cur.p;
+    const s = 0.24 + Math.pow(p, 1.7) * 1.06;
+    const y = H * HORIZON + (H * (0.99 - HORIZON)) * Math.pow(p, 2.1);
+    for(let i=0;i<3;i++){
+      const g = cur.els[i];
+      const x = LANE_X[i] * s * (W/460);
+      g.style.transform = 'translate(-50%,-100%) translate(' + x + 'px,' + y + 'px) scale(' + s.toFixed(3) + ')';
+      g.style.opacity = Math.min(1, p*4);
+    }
+    if(p >= 1){ cur.done = true; judge(); }
+  }
+  raf = requestAnimationFrame(frame);
+}
+
+function judge(){
+  const picked = cur.opts[lane];
+  const ok = picked === cur.ans;
+  Stats.mark(cur.key, ok);
+  cur.els[cur.opts.indexOf(cur.ans)].classList.add('good','pop');
+  if(!ok) cur.els[lane].classList.add('bad','pop');
+
+  const fl = $('flash');
+  fl.className = 'flash ' + (ok ? 'ok' : 'no');
+  setTimeout(()=>{ fl.className = 'flash'; }, 460);
+
+  if(ok){
+    combo++; okCount++; bestCombo = Math.max(bestCombo, combo);
+    const gain = 10 + combo * 2;
+    score += gain;
+    car.classList.remove('go'); void car.offsetWidth; car.classList.add('go');
+    stage.classList.add('fast');
+    setTimeout(()=>stage.classList.remove('fast'), 700);
+    Sfx.ok(combo); Sfx.hit(combo >= 5);
+    sparks(stage, car.getBoundingClientRect(), 10 + Math.min(combo,8)*2, combo>=5 ? '#4ade80' : '#ffe9a8');
+    floatText(stage, car.getBoundingClientRect(), '+' + gain, '#4ade80');
+    if(combo >= 3){
+      const c = $('combo');
+      c.textContent = combo + ' 連擊！';
+      c.classList.remove('on'); void c.offsetWidth; c.classList.add('on');
+      Char.cat(combo >= 6);
+    }
+    Char.react(true, combo >= 3);
+  }else{
+    combo = 0; hp--;
+    car.classList.remove('hit'); void car.offsetWidth; car.classList.add('hit');
+    stage.classList.remove('shake'); void stage.offsetWidth; stage.classList.add('shake');
+    Sfx.hurt(); Sfx.bad();
+    sparks(stage, car.getBoundingClientRect(), 16, '#f87171');
+    floatText(stage, car.getBoundingClientRect(), cur.ans, '#ffe9a8');
+    Char.react(false);
+  }
+  paint();
+  setTimeout(() => {
+    if(!running) return;
+    if(hp <= 0){ finish(); return; }
+    nextQuestion();
+  }, ok ? 620 : 900);
+}
+
+function paint(){
+  $('score').textContent = score;
+  $('hp').textContent = '❤️'.repeat(Math.max(0,hp)) + '🖤'.repeat(Math.max(0, 3-hp));
+  $('cmb').textContent = combo;
+  $('okn').textContent = okCount;
+  $('best').textContent = Best.get('v5_score');
+}
+
+function start(){
+  running = true; hp = 3; score = 0; combo = 0; bestCombo = 0; okCount = 0; qno = 0;
+  gates.forEach(g=>g.remove()); gates = [];
+  $('start').textContent = '比賽中…';
+  $('start').disabled = true;
+  setLane(1); paint();
+  nextQuestion();
+  lastT = performance.now();
+  cancelAnimationFrame(raf); raf = requestAnimationFrame(frame);
+}
+function finish(){
+  running = false;
+  cancelAnimationFrame(raf);
+  gates.forEach(g=>g.remove()); gates = [];
+  $('start').textContent = '再比一場'; $('start').disabled = false;
+  $('qbar').textContent = '比賽結束';
+  Best.set('v5_score', score);
+
+  const gold = Math.round(score * 0.35), exp = Math.round(score * 0.5);
+  Save.d.gold += gold;
+  const ups = Save.addExp(exp);
+  Save.d.playCount++; Save.put();
+
+  $('oTitle').textContent = okCount >= 10 ? '車神等級！' : (okCount >= 5 ? '跑得不錯！' : '再挑戰一次');
+  $('oScore').textContent = score;
+  $('oOk').textContent = okCount;
+  $('oCombo').textContent = bestCombo;
+  $('oGold').textContent = gold;
+  $('oExp').textContent = exp + (ups ? '（升 ' + ups + ' 級！）' : '');
+  $('oWeak').innerHTML = Stats.weakHTML(8);
+  $('over').classList.add('on');
+  okCount >= 5 ? Sfx.win() : Sfx.lose();
+  paint();
+}
+$('start').onclick = () => { $('over').classList.remove('on'); start(); };
+$('again').onclick = () => { $('over').classList.remove('on'); start(); };
+addEventListener('resize', () => setLane(lane));
+
+startCoins();
+setLane(1);
+paint();
+</script>
+</body>
+</html>

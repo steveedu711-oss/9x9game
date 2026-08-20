@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>記憶翻牌 ・ 小虎乘法大冒險</title>
+<link rel="stylesheet" href="assets/common.css">
+<style>
+body{gap:8px}
+.wrap{width:min(96vw,560px);display:flex;flex-direction:column;gap:10px}
+
+.board{
+  position:relative;display:grid;gap:8px;padding:12px;border-radius:20px;
+  background:linear-gradient(180deg,#2e1c47,#170d24);border:1px solid var(--line);
+  box-shadow:0 18px 46px #000a,inset 0 1px 0 #ffffff14;
+  grid-template-columns:repeat(4,1fr);
+}
+.board::before{
+  content:"";position:absolute;inset:0;border-radius:20px;pointer-events:none;
+  background:radial-gradient(70% 60% at 50% 0,#f6c45318,transparent 70%);
+}
+
+/* 卡片：3D 翻面 */
+.cd{position:relative;aspect-ratio:3/4;perspective:700px;cursor:pointer}
+.cdIn{
+  position:absolute;inset:0;transform-style:preserve-3d;
+  transition:transform .45s cubic-bezier(.2,1.3,.4,1);
+}
+.cd.up .cdIn,.cd.done .cdIn{transform:rotateY(180deg)}
+.face{
+  position:absolute;inset:0;border-radius:14px;backface-visibility:hidden;
+  display:flex;align-items:center;justify-content:center;overflow:hidden;
+  box-shadow:0 6px 16px #0009;
+}
+/* 牌背 */
+.back{
+  background:linear-gradient(150deg,#4a3168,#2a1a3f 60%,#3b2456);
+  border:2px solid #6b4aa0;
+}
+.back img{width:64%;height:64%;object-fit:contain;filter:drop-shadow(0 4px 8px #0008);opacity:.95}
+.back .ph{font-size:30px}
+.back::after{
+  content:"";position:absolute;inset:0;
+  background:linear-gradient(115deg,transparent 38%,#ffffff26 50%,transparent 62%);
+  transform:translateX(-130%);
+}
+.cd:hover .back::after{animation:sheen .8s ease-out}
+@keyframes sheen{to{transform:translateX(130%)}}
+/* 牌面 */
+.front{
+  transform:rotateY(180deg);color:#3a2400;font-weight:900;line-height:1.1;text-align:center;
+  background:linear-gradient(180deg,#fff6d8,#f6c453 62%,#dca62c);border:2px solid #b98a1c;
+  font-size:clamp(15px,4.2vw,23px);font-variant-numeric:tabular-nums;padding:2px;
+}
+.front.ansCard{background:linear-gradient(180deg,#dbe9ff,#8fb6ff 62%,#4d7fd6);border-color:#3a63b0;color:#10224a}
+.cd.done{cursor:default}
+.cd.done .front{
+  background:linear-gradient(180deg,#d9ffe6,#4ade80 62%,#1f9d55);border-color:#12603a;color:#08331c;
+  box-shadow:0 0 26px #4ade8088;
+}
+.cd.done{animation:matched .6s cubic-bezier(.2,1.5,.4,1)}
+@keyframes matched{40%{transform:scale(1.14)}100%{transform:scale(1)}}
+.cd.gone{opacity:.42;filter:saturate(.6)}
+.cd.wrong .cdIn{animation:wrongShake .45s}
+@keyframes wrongShake{20%{transform:rotateY(180deg) translateX(-8px)}
+  50%{transform:rotateY(180deg) translateX(7px)}80%{transform:rotateY(180deg) translateX(-4px)}}
+
+/* 提問條 */
+.qbox{
+  min-height:44px;display:flex;align-items:center;justify-content:center;gap:10px;
+  padding:8px 14px;border-radius:14px;background:#241638;border:1px solid var(--line);
+  font-size:clamp(15px,3.6vw,19px);font-weight:800;color:var(--gold2);text-align:center;
+}
+.qbox.ok{border-color:var(--ok);color:var(--ok);animation:qpop .35s cubic-bezier(.2,1.6,.4,1)}
+.qbox.no{border-color:var(--bad);color:var(--bad);animation:qpop .35s}
+@keyframes qpop{from{transform:scale(.86)}}
+
+.combo{
+  position:absolute;left:50%;top:38%;transform:translateX(-50%);z-index:9;pointer-events:none;
+  font-size:clamp(24px,6.5vw,40px);font-weight:900;color:#fff;opacity:0;white-space:nowrap;
+  text-shadow:0 0 18px #f6c453,0 4px 0 #a9540f,0 8px 22px #000;
+}
+.combo.on{animation:cb .8s cubic-bezier(.2,1.5,.4,1)}
+@keyframes cb{0%{opacity:0;transform:translateX(-50%) scale(.4)}
+  30%{opacity:1;transform:translateX(-50%) scale(1.15)}
+  70%{opacity:1;transform:translateX(-50%) scale(1)}
+  100%{opacity:0;transform:translateX(-50%) scale(1.1) translateY(-24px)}}
+@media (max-width:380px){ .board{gap:6px;padding:8px} }
+</style>
+</head>
+<body>
+<img class="hero" id="hero" src="assets/princess.png" alt="">
+<div class="say" id="say"></div>
+
+<h1>🃏 記憶翻牌</h1>
+<nav class="vers"></nav>
+
+<div class="wrap">
+  <div class="levels" id="levels"></div>
+
+  <div class="stats">
+    <div class="st"><b>已配對</b><span id="sPair">0</span></div>
+    <div class="st"><b>翻牌次數</b><span id="sFlip">0</span></div>
+    <div class="st"><b>用時</b><span id="sTime">0</span></div>
+    <div class="st"><b>最快紀錄</b><span id="sBest">—</span></div>
+  </div>
+
+  <div class="qbox" id="qbox">按「開始配對」，把算式牌跟答案牌翻成一對</div>
+
+  <div class="board" id="board">
+    <div class="combo" id="combo"></div>
+    <img class="cat" id="cat" src="assets/cat_jump.png" alt="">
+  </div>
+
+  <button class="btn" id="start" style="width:100%">開始配對</button>
+  <p class="note">翻開一張<b>算式牌</b>（金色）跟一張<b>答案牌</b>（藍色），算對就配成一對。<br>
+  兩張都是同色不算，記住位置才翻得快。</p>
+</div>
+
+<div class="over" id="over"><div class="card">
+  <h2 id="oTitle">全部配對完成</h2>
+  <div class="big" id="oScore">0</div>
+  <div class="line">用時 <span id="oTime">0 秒</span></div>
+  <div class="line">翻牌次數 <span id="oFlip">0</span></div>
+  <div class="line">最長連續配對 <span id="oCombo">0</span></div>
+  <div class="line">獲得金幣 <span id="oGold">0</span></div>
+  <div class="line">獲得經驗 <span id="oExp">0</span></div>
+  <div class="weak"><h3>最該再練的乘法</h3><ul id="oWeak"></ul></div>
+  <button class="btn" id="again">再玩一次</button>
+  <button class="btn ghost" style="margin-top:8px;width:100%;height:44px" onclick="location.href='index.html'">回大廳</button>
+</div></div>
+
+<script src="assets/common.js"></script>
+<script>
+versionBar('index6.html');
+
+function r(a,b){ return a + ((Math.random()*(b-a+1))|0); }
+const BACK_IMG = 'assets/sym_tiger.png';   // 所有牌背同一款，才不會看背面就知道哪兩張是一對
+
+const LEVELS = [
+  {n:'新手', d:'6 組 ・ 2～5', pairs:6, cols:4, pick:()=>[r(2,5), r(2,9)]},
+  {n:'進階', d:'8 組 ・ 2～9', pairs:8, cols:4, pick:()=>[r(2,9), r(2,9)]},
+  {n:'高手', d:'10 組 ・ 6～9', pairs:10, cols:5, pick:()=>[r(6,9), r(3,9)]}
+];
+let lvIdx = 1;
+$('levels').innerHTML = LEVELS.map((l,i)=>
+  '<div class="lv' + (i===lvIdx?' on':'') + '" data-i="' + i + '">' + l.n + '<b>' + l.d + '</b></div>').join('');
+$('levels').onclick = e => {
+  const el = e.target.closest('.lv'); if(!el || running) return;
+  lvIdx = +el.dataset.i;
+  [...$('levels').children].forEach((c,i)=>c.classList.toggle('on', i===lvIdx));
+  Sfx.tick();
+};
+
+const board = $('board');
+let running = false, first = null, lock = false;
+let flips = 0, pairs = 0, needPairs = 0, combo = 0, bestCombo = 0;
+let t0 = 0, timer = 0, elapsed = 0;
+
+function buildCards(){
+  const L = LEVELS[lvIdx];
+  needPairs = L.pairs;
+  board.style.gridTemplateColumns = 'repeat(' + L.cols + ',1fr)';
+  [...board.querySelectorAll('.cd')].forEach(c => c.remove());
+
+  const used = new Set(), items = [];
+  let guard = 0;
+  while(items.length < L.pairs && guard++ < 400){
+    const p = L.pick(), a = Math.min(p[0],p[1]), b = Math.max(p[0],p[1]);
+    const key = a + '×' + b;
+    if(used.has(key) || used.has('ans' + (a*b))) continue;   // 答案不重複，才不會一對多
+    used.add(key); used.add('ans' + (a*b));
+    items.push({key:key, q: a + ' × ' + b, ans: a*b});
+  }
+  const cards = [];
+  items.forEach((it, i) => {
+    cards.push({pid:i, type:'q',   text: it.q,        item:it});
+    cards.push({pid:i, type:'ans', text: String(it.ans), item:it});
+  });
+  for(let i=cards.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; const t=cards[i]; cards[i]=cards[j]; cards[j]=t; }
+
+  cards.forEach(c => {
+    const el = document.createElement('div');
+    el.className = 'cd';
+    el.dataset.pid = c.pid;
+    el.dataset.type = c.type;
+    el.dataset.key = c.item.key;
+
+    const inner = document.createElement('div'); inner.className = 'cdIn';
+    const back = document.createElement('div'); back.className = 'face back';
+    const im = document.createElement('img');
+    im.alt = '';
+    im.onerror = () => {
+      const ph = document.createElement('div');
+      ph.className = 'ph'; ph.textContent = '💎';
+      im.replaceWith(ph);
+    };
+    im.src = BACK_IMG;
+    back.appendChild(im);
+
+    const front = document.createElement('div');
+    front.className = 'face front' + (c.type === 'ans' ? ' ansCard' : '');
+    front.textContent = c.text;
+
+    inner.append(back, front);
+    el.appendChild(inner);
+    board.appendChild(el);
+  });
+}
+
+board.addEventListener('click', e => {
+  const el = e.target.closest('.cd');
+  if(!el || !running || lock) return;
+  if(el.classList.contains('done') || el === first) return;
+  el.classList.add('up');
+  Sfx.tick(); beep(700, .07, 'sine', .07);
+  flips++; $('sFlip').textContent = flips;
+
+  if(!first){ first = el; return; }
+  lock = true;
+  const sameKind = first.dataset.type === el.dataset.type;
+  const match = !sameKind && first.dataset.pid === el.dataset.pid;
+  const key = first.dataset.key;
+
+  if(match){
+    Stats.mark(key, true);
+    pairs++; combo++; bestCombo = Math.max(bestCombo, combo);
+    $('sPair').textContent = pairs;
+    setTimeout(() => {
+      [first, el].forEach(c => {
+        c.classList.remove('up'); c.classList.add('done');
+        sparks(board, c.getBoundingClientRect(), 12, '#ffe9a8');
+      });
+      floatText(board, el.getBoundingClientRect(), '配對！', '#4ade80');
+      Sfx.ok(combo);
+      const qb = $('qbox');
+      qb.className = 'qbox ok';
+      qb.textContent = first.dataset.key.replace('×',' × ') + ' = ' + (first.dataset.type==='ans' ? first.textContent : el.textContent) + '　配對成功';
+      if(combo >= 3){
+        const c = $('combo');
+        c.textContent = combo + ' 連配！';
+        c.classList.remove('on'); void c.offsetWidth; c.classList.add('on');
+        Char.cat(combo >= 5);
+      }
+      Char.react(true, combo >= 2);
+      setTimeout(()=>{ [first,el].forEach(c=>c.classList.add('gone')); first = null; lock = false;
+        if(pairs >= needPairs) finish(); }, 380);
+    }, 260);
+  }else{
+    combo = 0;
+    const qb = $('qbox');
+    qb.className = 'qbox no';
+    qb.textContent = sameKind ? '兩張同一種牌，要一張算式配一張答案' : '不是這一對，再想想';
+    Sfx.bad();
+    Char.react(false);
+    setTimeout(() => {
+      [first, el].forEach(c => { c.classList.add('wrong'); });
+      setTimeout(()=>{
+        [first, el].forEach(c => { c.classList.remove('up','wrong'); });
+        first = null; lock = false;
+      }, 420);
+    }, 380);
+  }
+});
+
+function tick(){
+  elapsed = Math.round((performance.now() - t0) / 1000);
+  $('sTime').textContent = elapsed;
+}
+function start(){
+  running = true; first = null; lock = false;
+  flips = 0; pairs = 0; combo = 0; bestCombo = 0; elapsed = 0;
+  $('sPair').textContent = 0; $('sFlip').textContent = 0; $('sTime').textContent = 0;
+  $('qbox').className = 'qbox';
+  $('qbox').textContent = '翻開一張算式牌，再翻它的答案牌';
+  $('start').textContent = '重新開始';
+  buildCards();
+  t0 = performance.now();
+  clearInterval(timer); timer = setInterval(tick, 500);
+}
+function finish(){
+  running = false;
+  clearInterval(timer);
+  tick();
+  const perfect = needPairs * 2;
+  const score = Math.max(20, Math.round(needPairs * 40 - elapsed * 2 - (flips - perfect) * 3));
+  const bestT = Best.get('v6_time');
+  // 用時越短越好，另存一份「反向分數」方便共用 Best
+  if(!bestT || elapsed < bestT){ try{ localStorage.setItem('mul99_best_v6_time', elapsed); }catch(e){} }
+  Best.set('v6_score', score);
+
+  const gold = Math.round(score * 0.35), exp = Math.round(score * 0.5);
+  Save.d.gold += gold;
+  const ups = Save.addExp(exp);
+  Save.d.playCount++; Save.put();
+
+  $('oTitle').textContent = elapsed <= needPairs * 6 ? '記憶力超強！' : '全部配對完成';
+  $('oScore').textContent = score;
+  $('oTime').textContent = elapsed + ' 秒';
+  $('oFlip').textContent = flips + '（最少 ' + perfect + '）';
+  $('oCombo').textContent = bestCombo;
+  $('oGold').textContent = gold;
+  $('oExp').textContent = exp + (ups ? '（升 ' + ups + ' 級！）' : '');
+  $('oWeak').innerHTML = Stats.weakHTML(8);
+  $('over').classList.add('on');
+  Sfx.win();
+  paintBest();
+}
+function paintBest(){
+  const t = Best.get('v6_time');
+  $('sBest').textContent = t ? t + ' 秒' : '—';
+}
+$('start').onclick = () => { $('over').classList.remove('on'); start(); };
+$('again').onclick = () => { $('over').classList.remove('on'); start(); };
+
+startCoins();
+paintBest();
+</script>
+</body>
+</html>

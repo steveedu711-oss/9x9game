@@ -147,7 +147,7 @@ body{gap:14px}
       <div class="go">›</div>
     </a>
 
-    <a class="game new" href="index3.html">
+    <a class="game" href="index3.html">
       <div class="ic" id="ic3"></div>
       <div class="txt">
         <b>寶石消消樂</b>
@@ -163,6 +163,46 @@ body{gap:14px}
         <b>找答案挑戰</b>
         <small>出一題「6 × 7」，把盤面上所有 42 點掉，限時 60 秒衝分數。最單純的速度練習。</small>
         <div class="rec" id="rec4">還沒開始</div>
+      </div>
+      <div class="go">›</div>
+    </a>
+
+    <a class="game new" href="index5.html">
+      <div class="ic">🏎️</div>
+      <div class="txt">
+        <b>飆速賽車</b>
+        <small>三線道往前衝，撞上答案正確的牌子就加速加分，撞錯會打滑扣愛心。速度愈快愈刺激。</small>
+        <div class="rec" id="rec5">還沒開始</div>
+      </div>
+      <div class="go">›</div>
+    </a>
+
+    <a class="game new" href="index6.html">
+      <div class="ic">🃏</div>
+      <div class="txt">
+        <b>記憶翻牌</b>
+        <small>翻開一張算式牌跟一張答案牌配成一對，全部配完就過關。比誰記得住、翻得少。</small>
+        <div class="rec" id="rec6">還沒開始</div>
+      </div>
+      <div class="go">›</div>
+    </a>
+
+    <a class="game new" href="index7.html">
+      <div class="ic">☁️</div>
+      <div class="txt">
+        <b>雲端跳跳</b>
+        <small>跳到答案正確的那朵雲上就往上爬一層，跳錯雲會碎掉掉下去。看能爬到幾樓。</small>
+        <div class="rec" id="rec7">還沒開始</div>
+      </div>
+      <div class="go">›</div>
+    </a>
+
+    <a class="game new" href="index8.html">
+      <div class="ic">🐠</div>
+      <div class="txt">
+        <b>深海泡泡</b>
+        <small>海裡漂著一堆答案泡泡，限時 60 秒把正確的射破。射錯扣 3 秒，連續射中分數翻倍加。</small>
+        <div class="rec" id="rec8">還沒開始</div>
       </div>
       <div class="go">›</div>
     </a>
@@ -250,6 +290,12 @@ function paintRecords(){
   const v3 = Best.get('v3_best'), v1 = Best.get('v1_score');
   $('rec3').textContent = v3 ? '最高一轉得分 ' + v3 : '還沒開始';
   $('rec4').textContent = v1 ? '最高分 ' + v1 : '還沒開始';
+  const v5 = Best.get('v5_score'), v6 = Best.get('v6_time'),
+        v7 = Best.get('v7_floor'), v8 = Best.get('v8_score');
+  $('rec5').textContent = v5 ? '最高分 ' + v5 : '還沒開始';
+  $('rec6').textContent = v6 ? '最快 ' + v6 + ' 秒配完' : '還沒開始';
+  $('rec7').textContent = v7 ? '爬到 ' + v7 + ' 樓' : '還沒開始';
+  $('rec8').textContent = v8 ? '最高分 ' + v8 : '還沒開始';
 }
 function paintStats(){
   let ok = 0, bad = 0;

@@ -297,9 +297,13 @@ function startCoins(){
 /* 版本切換列 */
 const VERSIONS = [
   {f:'index.html',  n:'🏠 大廳'},
-  {f:'index2.html', n:'⚔️ 打怪大作戰'},
-  {f:'index3.html', n:'💎 寶石消消樂'},
-  {f:'index4.html', n:'🔢 找答案挑戰'}
+  {f:'index2.html', n:'⚔️ 打怪'},
+  {f:'index3.html', n:'💎 消消樂'},
+  {f:'index4.html', n:'🔢 找答案'},
+  {f:'index5.html', n:'🏎️ 賽車'},
+  {f:'index6.html', n:'🃏 翻牌'},
+  {f:'index7.html', n:'☁️ 跳跳'},
+  {f:'index8.html', n:'🐠 泡泡'}
 ];
 function versionBar(current){
   const el = document.querySelector('.vers');

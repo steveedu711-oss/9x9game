@@ -1,0 +1,433 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>雲端跳跳 ・ 小虎乘法大冒險</title>
+<link rel="stylesheet" href="assets/common.css">
+<style>
+body{gap:8px}
+.wrap{width:min(96vw,560px);display:flex;flex-direction:column;gap:8px}
+
+.stage{
+  position:relative;width:100%;height:min(60vh,450px);border-radius:20px;overflow:hidden;
+  border:1px solid var(--line);box-shadow:0 18px 46px #000a,inset 0 1px 0 #ffffff14;
+  background:linear-gradient(180deg,#140c22 0%,#2b1747 40%,#4a2a72 78%,#6b3a86 100%);
+  user-select:none;touch-action:manipulation;
+}
+/* 背景雲層（往下飄＝往上爬） */
+.clouds{position:absolute;inset:-10% -10% -10% -10%;pointer-events:none;opacity:.72}
+.clouds i{
+  position:absolute;border-radius:99px;background:radial-gradient(ellipse,#ffffff33,#ffffff08 70%,transparent);
+  filter:blur(1px);animation:cloudDown linear infinite;
+}
+@keyframes cloudDown{from{transform:translateY(-120px)}to{transform:translateY(560px)}}
+.stars{position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(1.8px 1.8px at 14% 18%,#ffffff99,transparent),
+             radial-gradient(2px 2px at 42% 8%,#ffffff77,transparent),
+             radial-gradient(1.6px 1.6px at 68% 22%,#ffffff88,transparent),
+             radial-gradient(2px 2px at 86% 12%,#ffffff66,transparent);}
+
+/* 平台層 */
+.floor{position:absolute;left:0;right:0;top:44%;height:0;z-index:4;
+  transition:transform .5s cubic-bezier(.3,.9,.3,1),opacity .5s}
+.floor.rise{transform:translateY(210px);opacity:0}
+/* 雲朵平台 */
+.plat{
+  position:absolute;bottom:0;width:27%;height:54px;border-radius:99px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;font-size:clamp(20px,5.4vw,30px);
+  font-weight:900;color:#14406e;font-variant-numeric:tabular-nums;
+  background:linear-gradient(180deg,#ffffff,#dcebff 62%,#b9d6f5);
+  box-shadow:0 8px 0 #93b8e0,0 16px 32px #0009,inset 0 -4px 8px #ffffffcc;
+  transition:transform .16s ease,box-shadow .16s;
+  text-shadow:0 1px 0 #ffffffcc;
+}
+.plat::before,.plat::after{
+  content:"";position:absolute;border-radius:50%;
+  background:linear-gradient(180deg,#ffffff,#e6f1ff);box-shadow:inset 0 -3px 6px #ffffff;
+}
+.plat span{position:relative;z-index:3}
+.plat::before{width:38%;padding-bottom:38%;left:12%;top:-24%;z-index:1}
+.plat::after{width:30%;padding-bottom:30%;right:14%;top:-16%;z-index:1}
+.plat:nth-child(1){left:4%}
+.plat:nth-child(2){left:36.5%}
+.plat:nth-child(3){right:4%}
+.plat:hover{transform:translateY(-4px)}
+.plat.good{background:linear-gradient(180deg,#e6ffef,#8df0b4 62%,#4ade80);color:#08331c;
+  box-shadow:0 8px 0 #1f9d55,0 0 34px #4ade8099}
+.plat.good::before,.plat.good::after{background:linear-gradient(180deg,#f0fff5,#bdf5d4)}
+.plat.bad{animation:platBreak .6s forwards}
+@keyframes platBreak{
+  30%{transform:translateY(6px) rotate(3deg)}
+  100%{transform:translateY(180px) rotate(22deg);opacity:0}
+}
+.plat.press{animation:platPress .3s}
+@keyframes platPress{40%{transform:translateY(8px) scaleY(.86)}}
+
+/* 腳下那朵起跳雲 */
+.base{
+  position:absolute;left:50%;transform:translateX(-50%);bottom:9%;width:34%;height:34px;
+  border-radius:99px;z-index:3;pointer-events:none;
+  background:linear-gradient(180deg,#ffffffdd,#c9deffcc);
+  box-shadow:0 6px 0 #8fb0d8aa,0 14px 26px #0007;
+}
+.base::before,.base::after{content:"";position:absolute;border-radius:50%;
+  background:linear-gradient(180deg,#ffffffdd,#e2eeffcc)}
+.base::before{width:36%;padding-bottom:36%;left:14%;top:-32%}
+.base::after{width:28%;padding-bottom:28%;right:16%;top:-22%}
+
+/* 角色 */
+.pl{
+  --w:clamp(74px,19vw,106px);
+  position:absolute;left:50%;bottom:12%;width:var(--w);z-index:6;
+  margin-left:calc(var(--w) / -2);pointer-events:none;filter:drop-shadow(0 10px 16px #000b);
+}
+.pl img{width:100%;display:block}
+.pl .ph{font-size:52px;text-align:center}
+.pl .sh{position:absolute;left:50%;bottom:-10px;transform:translateX(-50%);width:70%;height:12px;
+  border-radius:50%;background:radial-gradient(ellipse,#000000aa,transparent 70%)}
+.pl.jump{animation:jumpArc var(--jt,.62s) cubic-bezier(.35,.05,.5,1) forwards}
+@keyframes jumpArc{
+  0%{transform:translate(0,0) scale(1,1)}
+  12%{transform:translate(0,10px) scale(1.14,.84)}
+  50%{transform:translate(calc(var(--jx)/2),calc(var(--jy) - 150px)) scale(.9,1.14) rotate(-8deg)}
+  92%{transform:translate(var(--jx),var(--jy)) scale(1.14,.86) rotate(0)}
+  100%{transform:translate(var(--jx),var(--jy)) scale(1,1)}
+}
+.pl.fall{animation:fallDown .8s ease-in forwards}
+@keyframes fallDown{
+  30%{transform:translate(var(--jx),calc(var(--jy) - 30px)) rotate(12deg)}
+  100%{transform:translate(var(--jx),260px) rotate(220deg);opacity:.15}
+}
+.pl.land{animation:landSquash .3s ease-out}
+@keyframes landSquash{40%{transform:scale(1.18,.8)}100%{transform:scale(1,1)}}
+
+.dust{position:absolute;width:9px;height:9px;border-radius:50%;background:#ffe9a8;
+  pointer-events:none;z-index:5;animation:dustOut .55s ease-out forwards}
+@keyframes dustOut{to{transform:translate(var(--dx),var(--dy)) scale(.2);opacity:0}}
+
+/* HUD */
+.qbar{
+  position:absolute;left:50%;top:10px;transform:translateX(-50%);z-index:8;padding:6px 20px;border-radius:99px;
+  background:#120b1cc9;border:1px solid var(--gold);backdrop-filter:blur(6px);white-space:nowrap;
+  font-size:clamp(20px,5vw,28px);font-weight:900;color:var(--gold2);letter-spacing:2px;text-shadow:0 2px 10px #000;
+}
+.qbar.pulse{animation:qp .4s cubic-bezier(.2,1.6,.4,1)}
+@keyframes qp{from{transform:translateX(-50%) scale(.7);opacity:0}}
+.hud{position:absolute;left:10px;top:52px;z-index:8;font-size:13px;font-weight:800;color:var(--gold2);
+  text-shadow:0 2px 6px #000;line-height:1.8}
+.hud .hp{font-size:16px;letter-spacing:2px}
+.hud2{position:absolute;right:10px;top:52px;z-index:8;text-align:right;font-size:13px;font-weight:800;
+  color:var(--gold2);text-shadow:0 2px 6px #000;line-height:1.8}
+.hud2 .big{font-size:24px;font-variant-numeric:tabular-nums}
+/* 高度尺 */
+.ruler{position:absolute;right:6px;top:96px;bottom:14px;width:6px;border-radius:99px;
+  background:#ffffff1a;z-index:7;overflow:hidden}
+.ruler i{position:absolute;left:0;right:0;bottom:0;border-radius:99px;
+  background:linear-gradient(180deg,#f6c453,#4ade80);transition:height .5s ease}
+
+.flash{position:absolute;inset:0;z-index:9;pointer-events:none;opacity:0}
+.flash.ok{background:radial-gradient(circle at 50% 60%,#4ade8055,transparent 65%);animation:fl .45s}
+.flash.no{background:radial-gradient(circle at 50% 60%,#f8717177,transparent 65%);animation:fl .45s}
+@keyframes fl{from{opacity:1}to{opacity:0}}
+.stage.shake{animation:stShake .32s}
+@keyframes stShake{20%{transform:translate(-6px,4px)}45%{transform:translate(5px,-3px)}
+  70%{transform:translate(-3px,2px)}100%{transform:none}}
+
+.combo{
+  position:absolute;left:50%;top:44%;transform:translateX(-50%);z-index:9;pointer-events:none;
+  font-size:clamp(24px,6.5vw,42px);font-weight:900;color:#fff;opacity:0;white-space:nowrap;
+  text-shadow:0 0 18px #f6c453,0 4px 0 #a9540f,0 8px 22px #000;
+}
+.combo.on{animation:cb .8s cubic-bezier(.2,1.5,.4,1)}
+@keyframes cb{0%{opacity:0;transform:translateX(-50%) scale(.4)}
+  30%{opacity:1;transform:translateX(-50%) scale(1.15)}
+  70%{opacity:1;transform:translateX(-50%) scale(1)}
+  100%{opacity:0;transform:translateX(-50%) scale(1.1) translateY(-24px)}}
+</style>
+</head>
+<body>
+<img class="hero" id="hero" src="assets/princess.png" alt="">
+<div class="say" id="say"></div>
+
+<h1>☁️ 雲端跳跳</h1>
+<nav class="vers"></nav>
+
+<div class="wrap">
+  <div class="levels" id="levels"></div>
+
+  <div class="stage" id="stage">
+    <div class="stars"></div>
+    <div class="clouds" id="clouds"></div>
+    <div class="qbar pulse" id="qbar">準備往上跳</div>
+    <div class="hud"><div class="hp" id="hp">❤️❤️❤️</div><div>爬到 <span id="floorNo">0</span> 樓</div></div>
+    <div class="hud2"><div>分數</div><div class="big" id="score">0</div></div>
+    <div class="ruler"><i id="rulerFill" style="height:0"></i></div>
+    <div class="combo" id="combo"></div>
+    <div class="flash" id="flash"></div>
+    <div class="base"></div>
+    <div class="floor" id="floor"></div>
+    <div class="pl" id="pl"><img id="plImg" src="assets/fx_hero_ready.png" alt=""><div class="sh"></div></div>
+    <img class="cat" id="cat" src="assets/cat_jump.png" alt="">
+  </div>
+
+  <button class="btn" id="start" style="width:100%">開始往上爬</button>
+
+  <div class="stats">
+    <div class="st"><b>最高樓層</b><span id="bestF">0</span></div>
+    <div class="st"><b>連續答對</b><span id="cmb">0</span></div>
+    <div class="st"><b>最高分</b><span id="best">0</span></div>
+  </div>
+  <p class="note">看上面的題目，跳到<b>答案正確</b>的那朵雲上就往上爬一層。<br>
+  跳錯雲會碎掉掉下去，扣一顆愛心。也可以用鍵盤 1／2／3 或 ← ↑ → 選。</p>
+</div>
+
+<div class="over" id="over"><div class="card">
+  <h2 id="oTitle">跳完了</h2>
+  <div class="big" id="oScore">0</div>
+  <div class="line">爬到樓層 <span id="oFloor">0</span></div>
+  <div class="line">最長連續答對 <span id="oCombo">0</span></div>
+  <div class="line">獲得金幣 <span id="oGold">0</span></div>
+  <div class="line">獲得經驗 <span id="oExp">0</span></div>
+  <div class="weak"><h3>最該再練的乘法</h3><ul id="oWeak"></ul></div>
+  <button class="btn" id="again">再爬一次</button>
+  <button class="btn ghost" style="margin-top:8px;width:100%;height:44px" onclick="location.href='index.html'">回大廳</button>
+</div></div>
+
+<script src="assets/common.js"></script>
+<script>
+versionBar('index7.html');
+
+function r(a,b){ return a + ((Math.random()*(b-a+1))|0); }
+const LEVELS = [
+  {n:'新手', d:'2～5 的乘法', pick:()=>[r(2,5), r(2,9)]},
+  {n:'進階', d:'2～9 的乘法', pick:()=>[r(2,9), r(2,9)]},
+  {n:'高手', d:'6～9 難題',   pick:()=>[r(6,9), r(3,9)]}
+];
+let lvIdx = 1;
+$('levels').innerHTML = LEVELS.map((l,i)=>
+  '<div class="lv' + (i===lvIdx?' on':'') + '" data-i="' + i + '">' + l.n + '<b>' + l.d + '</b></div>').join('');
+$('levels').onclick = e => {
+  const el = e.target.closest('.lv'); if(!el || running) return;
+  lvIdx = +el.dataset.i;
+  [...$('levels').children].forEach((c,i)=>c.classList.toggle('on', i===lvIdx));
+  Sfx.tick();
+};
+
+/* 角色圖 */
+(() => {
+  const h = heroOf(Save.d.hero);
+  const img = $('plImg');
+  img.onerror = () => {
+    const ph = document.createElement('div');
+    ph.className = 'ph'; ph.textContent = h.icon;
+    img.replaceWith(ph);
+  };
+  img.src = h.img;
+})();
+
+/* 雲 */
+(() => {
+  const box = $('clouds');
+  for(let i=0;i<7;i++){
+    const c = document.createElement('i');
+    const w = 70 + Math.random()*130;
+    c.style.width = w + 'px';
+    c.style.height = (w*0.42) + 'px';
+    c.style.left = (Math.random()*88) + '%';
+    c.style.top = (Math.random()*90) + '%';
+    c.style.animationDuration = (9 + Math.random()*9) + 's';
+    c.style.animationDelay = (-Math.random()*10) + 's';
+    box.appendChild(c);
+  }
+})();
+
+const stage = $('stage'), floorEl = $('floor'), pl = $('pl');
+let running = false, lock = false, hp = 3, score = 0, floorNo = 0, combo = 0, bestCombo = 0;
+let cur = null;
+
+function nextFloor(){
+  const L = LEVELS[lvIdx];
+  const p = L.pick(), a = p[0], b = p[1], ans = a*b;
+  const wrongs = new Set();
+  let guard = 0;
+  while(wrongs.size < 2 && guard++ < 60){
+    const d = [-1,1,-2,2,a,-a,b,-b][(Math.random()*8)|0];
+    const w = ans + d;
+    if(w > 0 && w !== ans) wrongs.add(w);
+  }
+  while(wrongs.size < 2) wrongs.add(ans + wrongs.size + 3);
+  const opts = [ans, ...wrongs];
+  for(let i=opts.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; const t=opts[i]; opts[i]=opts[j]; opts[j]=t; }
+
+  const qb = $('qbar');
+  qb.textContent = a + ' × ' + b + ' = ?';
+  qb.classList.remove('pulse'); void qb.offsetWidth; qb.classList.add('pulse');
+
+  floorEl.classList.remove('rise');
+  floorEl.innerHTML = '';
+  opts.forEach((v,i) => {
+    const d = document.createElement('div');
+    d.className = 'plat';
+    d.innerHTML = '<span>' + v + '</span>';
+    d.dataset.i = i;
+    floorEl.appendChild(d);
+  });
+  cur = {a:a, b:b, ans:ans, key: a + '×' + b, opts:opts};
+  lock = false;
+}
+
+function dust(rect, n, color){
+  const hr = stage.getBoundingClientRect();
+  for(let i=0;i<n;i++){
+    const s = document.createElement('div');
+    s.className = 'dust';
+    const ang = -Math.PI/2 + (Math.random()-0.5)*2.6;
+    const dist = 20 + Math.random()*44;
+    s.style.setProperty('--dx', Math.cos(ang)*dist + 'px');
+    s.style.setProperty('--dy', (Math.abs(Math.sin(ang))*dist*0.5 + 10) + 'px');
+    s.style.background = color || '#ffe9a8';
+    s.style.left = (rect.left - hr.left + rect.width/2) + 'px';
+    s.style.top = (rect.top - hr.top + rect.height*0.9) + 'px';
+    stage.appendChild(s);
+    setTimeout(()=>s.remove(), 600);
+  }
+}
+
+function pick(i){
+  if(!running || lock || !cur) return;
+  lock = true;
+  const plats = [...floorEl.children];
+  const target = plats[i];
+  if(!target) { lock = false; return; }
+  target.classList.add('press');
+
+  const ok = cur.opts[i] === cur.ans;
+  Stats.mark(cur.key, ok);
+
+  // 算跳躍位移
+  const pr = pl.getBoundingClientRect(), tr = target.getBoundingClientRect();
+  const jx = (tr.left + tr.width/2) - (pr.left + pr.width/2);
+  const jy = (tr.top - pr.bottom) + 6;
+  pl.style.setProperty('--jx', jx.toFixed(1) + 'px');
+  pl.style.setProperty('--jy', jy.toFixed(1) + 'px');
+  pl.classList.remove('jump','fall','land'); void pl.offsetWidth;
+  pl.classList.add('jump');
+  beep(520, .12, 'sine', .08);
+  dust(pr, 8, '#c9b6ff');
+
+  setTimeout(() => {
+    const fl = $('flash');
+    if(ok){
+      target.classList.add('good');
+      pl.classList.add('land');
+      combo++; bestCombo = Math.max(bestCombo, combo);
+      floorNo++;
+      const gain = 12 + combo * 3;
+      score += gain;
+      fl.className = 'flash ok'; setTimeout(()=>{fl.className='flash';}, 460);
+      Sfx.ok(combo); Sfx.hit(combo >= 5);
+      dust(target.getBoundingClientRect(), 12, '#ffe9a8');
+      sparks(stage, target.getBoundingClientRect(), 10 + Math.min(combo,8)*2, '#4ade80');
+      floatText(stage, target.getBoundingClientRect(), '+' + gain, '#4ade80');
+      if(combo >= 3){
+        const c = $('combo');
+        c.textContent = combo + ' 連跳！';
+        c.classList.remove('on'); void c.offsetWidth; c.classList.add('on');
+        Char.cat(combo >= 6);
+      }
+      Char.react(true, combo >= 3);
+      paint();
+      // 場景往下捲，角色回到底部＝爬高一層
+      setTimeout(() => {
+        floorEl.classList.add('rise');
+        pl.classList.remove('jump','land');
+        pl.style.removeProperty('--jx'); pl.style.removeProperty('--jy');
+        setTimeout(() => {
+          if(!running) return;
+          if(floorNo >= 20){ finish(true); return; }
+          nextFloor();
+        }, 480);
+      }, 520);
+    }else{
+      target.classList.add('bad');
+      pl.classList.remove('jump'); void pl.offsetWidth;
+      pl.classList.add('fall');
+      combo = 0; hp--;
+      fl.className = 'flash no'; setTimeout(()=>{fl.className='flash';}, 460);
+      stage.classList.remove('shake'); void stage.offsetWidth; stage.classList.add('shake');
+      Sfx.hurt(); Sfx.bad();
+      sparks(stage, target.getBoundingClientRect(), 16, '#f87171');
+      const right = plats[cur.opts.indexOf(cur.ans)];
+      right.classList.add('good');
+      floatText(stage, right.getBoundingClientRect(), '答案 ' + cur.ans, '#ffe9a8');
+      Char.react(false);
+      paint();
+      setTimeout(() => {
+        pl.classList.remove('fall');
+        pl.style.removeProperty('--jx'); pl.style.removeProperty('--jy');
+        if(!running) return;
+        if(hp <= 0){ finish(false); return; }
+        floorEl.classList.add('rise');
+        setTimeout(()=>{ if(running) nextFloor(); }, 420);
+      }, 950);
+    }
+  }, 560);
+}
+
+floorEl.addEventListener('click', e => {
+  const p = e.target.closest('.plat');
+  if(p) pick(+p.dataset.i);
+});
+addEventListener('keydown', e => {
+  if(!running) return;
+  const map = {'1':0,'2':1,'3':2,'ArrowLeft':0,'ArrowUp':1,'ArrowRight':2};
+  if(e.key in map){ pick(map[e.key]); e.preventDefault(); }
+});
+
+function paint(){
+  $('score').textContent = score;
+  $('floorNo').textContent = floorNo;
+  $('hp').textContent = '❤️'.repeat(Math.max(0,hp)) + '🖤'.repeat(Math.max(0,3-hp));
+  $('cmb').textContent = combo;
+  $('best').textContent = Best.get('v7_score');
+  $('bestF').textContent = Best.get('v7_floor');
+  $('rulerFill').style.height = Math.min(100, floorNo/20*100) + '%';
+}
+
+function start(){
+  running = true; lock = false; hp = 3; score = 0; floorNo = 0; combo = 0; bestCombo = 0;
+  pl.classList.remove('jump','fall','land');
+  pl.style.removeProperty('--jx'); pl.style.removeProperty('--jy');
+  $('start').textContent = '重新開始';
+  paint();
+  nextFloor();
+}
+function finish(clear){
+  running = false; lock = true;
+  Best.set('v7_score', score);
+  Best.set('v7_floor', floorNo);
+  const gold = Math.round(score * 0.35), exp = Math.round(score * 0.5);
+  Save.d.gold += gold;
+  const ups = Save.addExp(exp);
+  Save.d.playCount++; Save.put();
+
+  $('oTitle').textContent = clear ? '爬到雲的最上面！' : (floorNo >= 8 ? '爬得很高！' : '再挑戰一次');
+  $('oScore').textContent = score;
+  $('oFloor').textContent = floorNo + ' 樓';
+  $('oCombo').textContent = bestCombo;
+  $('oGold').textContent = gold;
+  $('oExp').textContent = exp + (ups ? '（升 ' + ups + ' 級！）' : '');
+  $('oWeak').innerHTML = Stats.weakHTML(8);
+  $('over').classList.add('on');
+  clear ? Sfx.win() : Sfx.lose();
+  paint();
+}
+$('start').onclick = () => { $('over').classList.remove('on'); start(); };
+$('again').onclick = () => { $('over').classList.remove('on'); start(); };
+
+startCoins();
+paint();
+</script>
+</body>
+</html>

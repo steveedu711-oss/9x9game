@@ -1,0 +1,442 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>深海泡泡 ・ 小虎乘法大冒險</title>
+<link rel="stylesheet" href="assets/common.css">
+<style>
+body{gap:8px}
+.wrap{width:min(96vw,560px);display:flex;flex-direction:column;gap:8px}
+
+.tank{
+  position:relative;width:100%;height:min(60vh,460px);border-radius:20px;overflow:hidden;
+  border:1px solid var(--line);box-shadow:0 18px 46px #000a,inset 0 1px 0 #ffffff14;
+  background:linear-gradient(180deg,#0d2340 0%,#123a5e 42%,#0e2a46 72%,#081a2e 100%);
+  touch-action:manipulation;user-select:none;cursor:crosshair;
+}
+/* 水面光束 */
+.tank::before{
+  content:"";position:absolute;inset:0;pointer-events:none;z-index:2;
+  background:
+   linear-gradient(102deg,transparent 12%,#8ad8ff14 16%,transparent 22%),
+   linear-gradient(96deg,transparent 38%,#8ad8ff1a 43%,transparent 49%),
+   linear-gradient(88deg,transparent 66%,#8ad8ff12 71%,transparent 77%);
+  animation:beam 7s ease-in-out infinite alternate;
+}
+@keyframes beam{to{transform:translateX(14px) scaleY(1.04)}}
+/* 海底 */
+.floorSea{
+  position:absolute;left:-4%;right:-4%;bottom:-6px;height:22%;z-index:1;pointer-events:none;
+  background:
+    radial-gradient(ellipse 40% 100% at 18% 100%,#123a2e,transparent 70%),
+    radial-gradient(ellipse 46% 100% at 52% 100%,#0f3348,transparent 70%),
+    radial-gradient(ellipse 40% 100% at 86% 100%,#123a2e,transparent 70%),
+    linear-gradient(180deg,transparent,#07182a 62%);
+}
+.weed{position:absolute;bottom:0;width:14px;height:64px;border-radius:99px 99px 0 0;z-index:1;
+  background:linear-gradient(180deg,#2fa07a55,#1c6b5188);transform-origin:50% 100%;
+  animation:sway 3.6s ease-in-out infinite alternate;pointer-events:none}
+@keyframes sway{from{transform:rotate(-9deg) scaleY(.96)}to{transform:rotate(9deg) scaleY(1.04)}}
+
+canvas{position:absolute;inset:0;width:100%;height:100%;z-index:3}
+
+/* 發射台上的角色 */
+.shooter{
+  position:absolute;left:50%;bottom:-6px;width:clamp(70px,18vw,96px);z-index:4;
+  transform:translateX(-50%);pointer-events:none;filter:drop-shadow(0 8px 14px #000b);
+  transition:transform .18s ease;
+}
+.shooter img{width:100%;display:block}
+.shooter .ph{font-size:52px;text-align:center}
+.shooter.kick{animation:kick .28s}
+@keyframes kick{40%{transform:translateX(-50%) translateY(7px) scale(1.06,.92)}}
+
+.qbar{
+  position:absolute;left:50%;top:10px;transform:translateX(-50%);z-index:8;padding:6px 20px;border-radius:99px;
+  background:#04121fcc;border:1px solid #7fd6ff;backdrop-filter:blur(6px);white-space:nowrap;
+  font-size:clamp(20px,5vw,28px);font-weight:900;color:#d9f4ff;letter-spacing:2px;text-shadow:0 2px 10px #000;
+}
+.qbar.pulse{animation:qp .4s cubic-bezier(.2,1.6,.4,1)}
+@keyframes qp{from{transform:translateX(-50%) scale(.7);opacity:0}}
+.hud{position:absolute;left:10px;top:52px;z-index:8;font-size:13px;font-weight:800;color:#d9f4ff;
+  text-shadow:0 2px 6px #000;line-height:1.8}
+.hud2{position:absolute;right:10px;top:52px;z-index:8;text-align:right;font-size:13px;font-weight:800;
+  color:#d9f4ff;text-shadow:0 2px 6px #000;line-height:1.8}
+.hud2 .big{font-size:24px;font-variant-numeric:tabular-nums}
+
+.flash{position:absolute;inset:0;z-index:7;pointer-events:none;opacity:0}
+.flash.ok{background:radial-gradient(circle at 50% 55%,#7dffb355,transparent 68%);animation:fl .45s}
+.flash.no{background:radial-gradient(circle at 50% 55%,#ff6b6b66,transparent 68%);animation:fl .45s}
+@keyframes fl{from{opacity:1}to{opacity:0}}
+.tank.shake{animation:stShake .3s}
+@keyframes stShake{20%{transform:translate(-6px,3px)}45%{transform:translate(5px,-3px)}
+  70%{transform:translate(-3px,2px)}100%{transform:none}}
+
+.combo{
+  position:absolute;left:50%;top:40%;transform:translateX(-50%);z-index:9;pointer-events:none;
+  font-size:clamp(24px,6.5vw,42px);font-weight:900;color:#fff;opacity:0;white-space:nowrap;
+  text-shadow:0 0 18px #7fd6ff,0 4px 0 #10557a,0 8px 22px #000;
+}
+.combo.on{animation:cb .8s cubic-bezier(.2,1.5,.4,1)}
+@keyframes cb{0%{opacity:0;transform:translateX(-50%) scale(.4)}
+  30%{opacity:1;transform:translateX(-50%) scale(1.15)}
+  70%{opacity:1;transform:translateX(-50%) scale(1)}
+  100%{opacity:0;transform:translateX(-50%) scale(1.1) translateY(-24px)}}
+.timebar{width:100%}
+</style>
+</head>
+<body>
+<img class="hero" id="hero" src="assets/princess.png" alt="">
+<div class="say" id="say"></div>
+
+<h1>🐠 深海泡泡</h1>
+<nav class="vers"></nav>
+
+<div class="wrap">
+  <div class="levels" id="levels"></div>
+
+  <div class="tank" id="tank">
+    <div class="floorSea"></div>
+    <canvas id="cv"></canvas>
+    <div class="qbar pulse" id="qbar">準備射擊</div>
+    <div class="hud"><div>剩下 <span id="tleft">60</span> 秒</div><div>連續 <span id="cmb2">0</span></div></div>
+    <div class="hud2"><div>分數</div><div class="big" id="score">0</div></div>
+    <div class="combo" id="combo"></div>
+    <div class="flash" id="flash"></div>
+    <div class="shooter" id="shooter"><img id="shImg" src="assets/fx_hero_ready.png" alt=""></div>
+    <img class="cat" id="cat" src="assets/cat_jump.png" alt="">
+  </div>
+
+  <div class="timebar"><i id="tbar" style="width:100%"></i></div>
+  <button class="btn" id="start" style="width:100%">開始射泡泡</button>
+
+  <div class="stats">
+    <div class="st"><b>最高分</b><span id="best">0</span></div>
+    <div class="st"><b>本場答對</b><span id="okn">0</span></div>
+    <div class="st"><b>最長連續</b><span id="cmb">0</span></div>
+  </div>
+  <p class="note">題目出現後，點<b>答案正確的泡泡</b>把它射破。<br>
+  射錯會扣 3 秒，連續射中會愈射愈快、分數愈高。</p>
+</div>
+
+<div class="over" id="over"><div class="card">
+  <h2 id="oTitle">時間到</h2>
+  <div class="big" id="oScore">0</div>
+  <div class="line">射破泡泡 <span id="oOk">0</span></div>
+  <div class="line">最長連續 <span id="oCombo">0</span></div>
+  <div class="line">獲得金幣 <span id="oGold">0</span></div>
+  <div class="line">獲得經驗 <span id="oExp">0</span></div>
+  <div class="weak"><h3>最該再練的乘法</h3><ul id="oWeak"></ul></div>
+  <button class="btn" id="again">再玩一次</button>
+  <button class="btn ghost" style="margin-top:8px;width:100%;height:44px" onclick="location.href='index.html'">回大廳</button>
+</div></div>
+
+<script src="assets/common.js"></script>
+<script>
+versionBar('index8.html');
+
+function r(a,b){ return a + ((Math.random()*(b-a+1))|0); }
+const LEVELS = [
+  {n:'新手', d:'4 顆 ・ 2～5', bub:4, pick:()=>[r(2,5), r(2,9)]},
+  {n:'進階', d:'5 顆 ・ 2～9', bub:5, pick:()=>[r(2,9), r(2,9)]},
+  {n:'高手', d:'6 顆 ・ 6～9', bub:6, pick:()=>[r(6,9), r(3,9)]}
+];
+let lvIdx = 1;
+$('levels').innerHTML = LEVELS.map((l,i)=>
+  '<div class="lv' + (i===lvIdx?' on':'') + '" data-i="' + i + '">' + l.n + '<b>' + l.d + '</b></div>').join('');
+$('levels').onclick = e => {
+  const el = e.target.closest('.lv'); if(!el || running) return;
+  lvIdx = +el.dataset.i;
+  [...$('levels').children].forEach((c,i)=>c.classList.toggle('on', i===lvIdx));
+  Sfx.tick();
+};
+
+/* 角色圖 */
+(() => {
+  const h = heroOf(Save.d.hero);
+  const img = $('shImg');
+  img.onerror = () => {
+    const ph = document.createElement('div');
+    ph.className = 'ph'; ph.textContent = h.icon;
+    img.replaceWith(ph);
+  };
+  img.src = h.frames ? 'assets/fx_hero_ready.png' : h.img;
+})();
+
+/* 海草 */
+(() => {
+  const t = $('tank');
+  for(let i=0;i<9;i++){
+    const w = document.createElement('div');
+    w.className = 'weed';
+    w.style.left = (3 + Math.random()*94) + '%';
+    w.style.height = (34 + Math.random()*54) + 'px';
+    w.style.animationDelay = (-Math.random()*3.6) + 's';
+    t.appendChild(w);
+  }
+})();
+
+const tank = $('tank'), cv = $('cv'), ctx = cv.getContext('2d');
+let W = 0, H = 0, dpr = Math.min(2, window.devicePixelRatio || 1);
+function resize(){
+  W = tank.clientWidth; H = tank.clientHeight;
+  cv.width = W * dpr; cv.height = H * dpr;
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+}
+addEventListener('resize', resize);
+
+let running = false, score = 0, combo = 0, bestCombo = 0, okCount = 0;
+let timeLeft = 60, tTimer = 0, raf = 0, lastT = 0;
+let bubbles = [], parts = [], shots = [], cur = null, lockShot = false;
+
+const COLORS = [
+  ['#7fd6ff','#2b7fb8'], ['#ffd28a','#c9752a'], ['#b8a6ff','#5a44b8'],
+  ['#8affc4','#25916a'], ['#ff9fc4','#b8406e'], ['#ffe98a','#c9a52a']
+];
+
+function newQuestion(){
+  const L = LEVELS[lvIdx];
+  const p = L.pick(), a = p[0], b = p[1], ans = a*b;
+  const set = new Set([ans]);
+  let guard = 0;
+  while(set.size < L.bub && guard++ < 120){
+    const d = [-1,1,-2,2,-3,3,a,-a,b,-b][(Math.random()*10)|0];
+    const w = ans + d;
+    if(w > 0) set.add(w);
+  }
+  let filler = ans + 5;
+  while(set.size < L.bub) set.add(filler++);
+  const vals = [...set];
+  for(let i=vals.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; const t=vals[i]; vals[i]=vals[j]; vals[j]=t; }
+
+  const qb = $('qbar');
+  qb.textContent = a + ' × ' + b + ' = ?';
+  qb.classList.remove('pulse'); void qb.offsetWidth; qb.classList.add('pulse');
+
+  cur = {a:a, b:b, ans:ans, key: a + '×' + b};
+  bubbles = vals.map((v,i) => {
+    const c = COLORS[i % COLORS.length];
+    const rr = Math.max(24, Math.min(38, W/(vals.length*2.4)));
+    return {
+      v: v, r: rr,
+      x: (W/(vals.length+1))*(i+1) + (Math.random()-.5)*18,
+      y: H*0.24 + Math.random()*H*0.34,
+      vx: (Math.random()-.5)*0.42, vy: (Math.random()-.5)*0.3,
+      ph: Math.random()*6.28, c1: c[0], c2: c[1], dead: false, hitT: 0
+    };
+  });
+  lockShot = false;
+}
+
+function burst(x, y, n, color){
+  for(let i=0;i<n;i++){
+    const ang = Math.random()*6.283, sp = 1.2 + Math.random()*3.6;
+    parts.push({x:x, y:y, vx:Math.cos(ang)*sp, vy:Math.sin(ang)*sp - 0.6,
+      r: 2 + Math.random()*4, life:1, color:color});
+  }
+}
+
+function draw(t){
+  const dt = Math.min(40, t - lastT) / 16.67; lastT = t;
+  ctx.clearRect(0,0,W,H);
+
+  // 泡泡
+  for(const b of bubbles){
+    if(b.dead) continue;
+    b.ph += 0.03*dt;
+    b.x += b.vx*dt + Math.sin(b.ph)*0.24;
+    b.y += b.vy*dt + Math.cos(b.ph*0.7)*0.18;
+    if(b.x < b.r+6 || b.x > W-b.r-6) b.vx *= -1;
+    if(b.y < H*0.18 || b.y > H*0.74) b.vy *= -1;
+    b.x = Math.max(b.r+6, Math.min(W-b.r-6, b.x));
+    b.y = Math.max(H*0.17, Math.min(H*0.75, b.y));
+
+    const wob = b.hitT > 0 ? 1 + Math.sin(b.hitT*0.9)*0.14 : 1;
+    if(b.hitT > 0) b.hitT -= dt;
+    const rr = b.r * wob;
+
+    const g = ctx.createRadialGradient(b.x - rr*0.34, b.y - rr*0.4, rr*0.12, b.x, b.y, rr);
+    g.addColorStop(0, '#ffffffee');
+    g.addColorStop(0.32, b.c1);
+    g.addColorStop(1, b.c2);
+    ctx.save();
+    ctx.shadowColor = b.c1; ctx.shadowBlur = 18;
+    ctx.beginPath(); ctx.arc(b.x, b.y, rr, 0, 6.283); ctx.fillStyle = g; ctx.fill();
+    ctx.restore();
+    // 外框與高光
+    ctx.beginPath(); ctx.arc(b.x, b.y, rr, 0, 6.283);
+    ctx.strokeStyle = '#ffffff88'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.beginPath();
+    ctx.ellipse(b.x - rr*0.36, b.y - rr*0.42, rr*0.24, rr*0.15, -0.6, 0, 6.283);
+    ctx.fillStyle = '#ffffffcc'; ctx.fill();
+    // 數字
+    ctx.font = '900 ' + Math.round(rr*0.86) + 'px "Noto Sans TC",sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.lineWidth = 4; ctx.strokeStyle = '#06263dbb';
+    ctx.strokeText(b.v, b.x, b.y + 1);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(b.v, b.x, b.y + 1);
+  }
+
+  // 子彈
+  for(const s of shots){
+    s.x += s.vx*dt; s.y += s.vy*dt;
+    s.life -= 0.02*dt;
+    ctx.save();
+    ctx.shadowColor = '#ffe9a8'; ctx.shadowBlur = 16;
+    ctx.beginPath(); ctx.arc(s.x, s.y, 7, 0, 6.283);
+    ctx.fillStyle = '#fff6d8'; ctx.fill();
+    ctx.restore();
+    // 尾巴
+    ctx.beginPath();
+    ctx.moveTo(s.x, s.y); ctx.lineTo(s.x - s.vx*3, s.y - s.vy*3);
+    ctx.strokeStyle = '#ffe9a866'; ctx.lineWidth = 5; ctx.lineCap = 'round'; ctx.stroke();
+  }
+  shots = shots.filter(s => s.life > 0 && s.y > -30);
+
+  // 粒子
+  for(const p of parts){
+    p.x += p.vx*dt; p.y += p.vy*dt; p.vy += 0.06*dt; p.life -= 0.026*dt;
+    ctx.globalAlpha = Math.max(0, p.life);
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.r*Math.max(.2,p.life), 0, 6.283);
+    ctx.fillStyle = p.color; ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+  parts = parts.filter(p => p.life > 0);
+
+  raf = requestAnimationFrame(draw);
+}
+
+tank.addEventListener('pointerdown', e => {
+  if(!running || lockShot) return;
+  const rect = tank.getBoundingClientRect();
+  const x = e.clientX - rect.left, y = e.clientY - rect.top;
+  let target = null;
+  for(const b of bubbles){
+    if(b.dead) continue;
+    if((x-b.x)*(x-b.x) + (y-b.y)*(y-b.y) <= (b.r+8)*(b.r+8)){ target = b; break; }
+  }
+  if(!target) return;
+  lockShot = true;
+  fire(target);
+});
+
+function fire(target){
+  const sx = W/2, sy = H - 46;
+  const dx = target.x - sx, dy = target.y - sy;
+  const d = Math.hypot(dx, dy) || 1;
+  const sp = 13;
+  shots.push({x:sx, y:sy, vx:dx/d*sp, vy:dy/d*sp, life:1});
+  const sh = $('shooter');
+  sh.classList.remove('kick'); void sh.offsetWidth; sh.classList.add('kick');
+  beep(880, .07, 'square', .06);
+  setTimeout(() => hitCheck(target), Math.max(120, d/sp*16.67));
+}
+
+function hitCheck(b){
+  if(!running) return;
+  const ok = b.v === cur.ans;
+  Stats.mark(cur.key, ok);
+  const fl = $('flash');
+  const rectOf = (bb) => ({left: tank.getBoundingClientRect().left + bb.x - bb.r,
+    top: tank.getBoundingClientRect().top + bb.y - bb.r, width: bb.r*2, height: bb.r*2});
+
+  if(ok){
+    b.dead = true;
+    burst(b.x, b.y, 26, '#d9f4ff');
+    burst(b.x, b.y, 14, b.c1);
+    combo++; okCount++; bestCombo = Math.max(bestCombo, combo);
+    const gain = 12 + combo * 3;
+    score += gain;
+    fl.className = 'flash ok'; setTimeout(()=>{fl.className='flash';}, 460);
+    Sfx.ok(combo); Sfx.hit(combo >= 5);
+    floatText(tank, rectOf(b), '+' + gain, '#7dffb3');
+    if(combo >= 3){
+      const c = $('combo');
+      c.textContent = combo + ' 連破！';
+      c.classList.remove('on'); void c.offsetWidth; c.classList.add('on');
+      Char.cat(combo >= 6);
+    }
+    Char.react(true, combo >= 3);
+    paint();
+    setTimeout(() => { if(running) newQuestion(); }, 420);
+  }else{
+    b.hitT = 26;
+    burst(b.x, b.y, 12, '#ff9f9f');
+    combo = 0;
+    timeLeft = Math.max(0, timeLeft - 3);
+    fl.className = 'flash no'; setTimeout(()=>{fl.className='flash';}, 460);
+    tank.classList.remove('shake'); void tank.offsetWidth; tank.classList.add('shake');
+    Sfx.bad(); Sfx.hurt();
+    floatText(tank, rectOf(b), '-3 秒', '#ff9f9f');
+    Char.react(false);
+    paint();
+    setTimeout(() => { if(running && timeLeft > 0) lockShot = false; }, 480);
+  }
+}
+
+function paint(){
+  $('score').textContent = score;
+  $('cmb').textContent = bestCombo;
+  $('cmb2').textContent = combo;
+  $('okn').textContent = okCount;
+  $('best').textContent = Best.get('v8_score');
+  $('tleft').textContent = timeLeft;
+  $('tbar').style.width = (timeLeft/60*100) + '%';
+  if(timeLeft <= 10) $('tleft').parentElement.style.color = '#ff9f9f';
+  else $('tleft').parentElement.style.color = '';
+}
+
+function start(){
+  resize();
+  running = true; score = 0; combo = 0; bestCombo = 0; okCount = 0; timeLeft = 60;
+  parts = []; shots = [];
+  $('start').textContent = '重新開始';
+  $('over').classList.remove('on');
+  newQuestion(); paint();
+  clearInterval(tTimer);
+  tTimer = setInterval(() => {
+    if(!running) return;
+    timeLeft--;
+    if(timeLeft <= 5 && timeLeft > 0) Sfx.tick();
+    paint();
+    if(timeLeft <= 0) finish();
+  }, 1000);
+  lastT = performance.now();
+  cancelAnimationFrame(raf); raf = requestAnimationFrame(draw);
+}
+function finish(){
+  running = false; lockShot = true;
+  clearInterval(tTimer);
+  Best.set('v8_score', score);
+  const gold = Math.round(score * 0.3), exp = Math.round(score * 0.45);
+  Save.d.gold += gold;
+  const ups = Save.addExp(exp);
+  Save.d.playCount++; Save.put();
+
+  $('oTitle').textContent = okCount >= 15 ? '神射手！' : (okCount >= 8 ? '射得不錯！' : '再挑戰一次');
+  $('oScore').textContent = score;
+  $('oOk').textContent = okCount + ' 顆';
+  $('oCombo').textContent = bestCombo;
+  $('oGold').textContent = gold;
+  $('oExp').textContent = exp + (ups ? '（升 ' + ups + ' 級！）' : '');
+  $('oWeak').innerHTML = Stats.weakHTML(8);
+  $('over').classList.add('on');
+  okCount >= 8 ? Sfx.win() : Sfx.lose();
+  paint();
+}
+$('start').onclick = () => { $('over').classList.remove('on'); start(); };
+$('again').onclick = () => { $('over').classList.remove('on'); start(); };
+
+resize();
+startCoins();
+paint();
+/* 待機也讓泡泡浮著，畫面才不會空 */
+newQuestion();
+$('qbar').textContent = '按下面的按鈕開始';
+lastT = performance.now();
+raf = requestAnimationFrame(draw);
+</script>
+</body>
+</html>
