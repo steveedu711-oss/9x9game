@@ -10,7 +10,7 @@ body{gap:8px}
 .wrap{width:min(96vw,560px);display:flex;flex-direction:column;gap:8px}
 
 .stage{
-  position:relative;width:100%;height:min(60vh,450px);border-radius:20px;overflow:hidden;
+  position:relative;width:100%;height:min(60vh,450px);height:min(60dvh,450px);border-radius:20px;overflow:hidden;
   border:1px solid var(--line);box-shadow:0 18px 46px #000a,inset 0 1px 0 #ffffff14;
   background:linear-gradient(180deg,#140c22 0%,#2b1747 40%,#4a2a72 78%,#6b3a86 100%);
   user-select:none;touch-action:manipulation;
@@ -429,5 +429,6 @@ $('again').onclick = () => { $('over').classList.remove('on'); start(); };
 startCoins();
 paint();
 </script>
+<script src="assets/lock.js"></script>
 </body>
 </html>

@@ -11,7 +11,7 @@ body{gap:8px}
 
 /* ---- 賽道舞台 ---- */
 .stage{
-  position:relative;width:100%;height:min(58vh,430px);border-radius:20px;overflow:hidden;
+  position:relative;width:100%;height:min(58vh,430px);height:min(58dvh,430px);border-radius:20px;overflow:hidden;
   border:1px solid var(--line);box-shadow:0 18px 46px #000a,inset 0 1px 0 #ffffff14;
   background:linear-gradient(180deg,#1b1030 0%,#3b1f5e 38%,#6b2f6e 52%,#2a1440 53%,#170d24 100%);
   touch-action:none;user-select:none;
@@ -458,5 +458,6 @@ startCoins();
 setLane(1);
 paint();
 </script>
+<script src="assets/lock.js"></script>
 </body>
 </html>

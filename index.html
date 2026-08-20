@@ -6,105 +6,168 @@
 <title>小虎乘法大冒險</title>
 <link rel="stylesheet" href="assets/common.css">
 <style>
-body{gap:14px}
-.wrap{width:min(96vw,620px);display:flex;flex-direction:column;gap:12px}
+body{gap:14px;padding-bottom:90px}
+.wrap{width:min(96vw,620px);display:flex;flex-direction:column;gap:14px}
 
-.logo{text-align:center;margin-top:4px}
-.logo h1{font-size:clamp(22px,5.4vw,34px);letter-spacing:6px}
-.logo p{font-size:12px;color:var(--dim);letter-spacing:2px;margin-top:2px}
+/* ---------- 標題 ---------- */
+.logo{text-align:center;margin-top:6px;position:relative}
+.logo h1{font-size:clamp(24px,6.4vw,36px);letter-spacing:6px}
+.logo p{font-size:12px;color:var(--dim);letter-spacing:3px;margin-top:4px}
+.logo::after{
+  content:"";position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+  width:min(80%,340px);height:120px;border-radius:50%;z-index:-1;
+  background:radial-gradient(ellipse,#f6c45322,transparent 70%);
+}
 
-/* 玩家卡 */
+/* ---------- 玩家卡 ---------- */
 .player{
-  display:flex;gap:12px;align-items:center;padding:14px;border-radius:18px;
-  background:linear-gradient(180deg,#3b2456,#20132f);border:1px solid var(--line);
-  box-shadow:0 12px 34px #0008,inset 0 1px 0 #ffffff14;
+  display:flex;gap:14px;align-items:center;padding:16px;border-radius:20px;
+  background:linear-gradient(135deg,#41285e,#20132f 70%);border:1px solid var(--line);
+  box-shadow:0 14px 36px #0009,inset 0 1px 0 #ffffff1a;position:relative;overflow:hidden;
 }
-.player img{width:74px;height:74px;object-fit:cover;object-position:top center;
-  border-radius:50%;border:2px solid var(--gold);background:#241638}
-.player .info{flex:1;min-width:0}
-.player .info .row1{display:flex;align-items:baseline;gap:8px}
-.player .info b{font-size:18px;color:var(--gold2)}
-.player .info .lv{
-  flex:none;font-size:12px;color:#3a2400;font-weight:800;padding:2px 10px;border-radius:99px;
-  background:linear-gradient(180deg,var(--gold2),var(--gold));
+.player::before{
+  content:"";position:absolute;right:-30px;top:-40px;width:170px;height:170px;border-radius:50%;
+  background:radial-gradient(circle,#f6c45326,transparent 68%);pointer-events:none;
 }
-.player .info .row1{align-items:center}
-.player .expbar{height:8px;border-radius:99px;background:#241638;margin:6px 0 4px;overflow:hidden}
-.player .expbar i{display:block;height:100%;border-radius:99px;
-  background:linear-gradient(90deg,#6ea8ff,#f6c453);transition:width .5s ease}
-.player small{font-size:11px;color:var(--dim)}
-.gearrow{display:flex;gap:4px;margin-top:6px;flex-wrap:wrap}
-.gearrow span{font-size:11px;padding:2px 8px;border-radius:99px;background:#241638;
-  border:1px solid var(--line)}
+.face{position:relative;flex:none}
+.face img{
+  width:76px;height:76px;object-fit:cover;object-position:top center;border-radius:50%;
+  border:2px solid var(--gold);background:#241638;box-shadow:0 0 0 4px #f6c4531f,0 8px 18px #0008;
+}
+.face .lvbadge{
+  position:absolute;left:50%;bottom:-8px;transform:translateX(-50%);font-size:11px;font-weight:800;
+  color:#3a2400;padding:2px 10px;border-radius:99px;white-space:nowrap;
+  background:linear-gradient(180deg,var(--gold2),var(--gold));box-shadow:0 3px 8px #0008;
+}
+.pinfo{flex:1;min-width:0}
+.pinfo .nm{font-size:19px;font-weight:800;color:var(--gold2);letter-spacing:1px}
+.expbar{height:10px;border-radius:99px;background:#1b0f2c;margin:8px 0 5px;overflow:hidden;
+  box-shadow:inset 0 1px 3px #0009}
+.expbar i{display:block;height:100%;border-radius:99px;transition:width .6s cubic-bezier(.2,1,.3,1);
+  background:linear-gradient(90deg,#6ea8ff,#c084fc 55%,#f6c453);box-shadow:0 0 12px #f6c45366}
+.pinfo small{font-size:11px;color:var(--dim)}
+.gearrow{display:flex;gap:5px;margin-top:7px;flex-wrap:wrap}
+.gearrow span{font-size:11px;padding:3px 9px;border-radius:99px;background:#1f1330;
+  border:1px solid var(--line);white-space:nowrap}
+.gold{
+  flex:none;text-align:center;padding:8px 12px;border-radius:14px;
+  background:linear-gradient(180deg,#3a2456,#241638);border:1px solid var(--line);
+}
+.gold b{display:block;font-size:10px;color:var(--dim);font-weight:500;letter-spacing:1px}
+.gold span{font-size:21px;font-weight:800;color:var(--gold2);font-variant-numeric:tabular-nums}
 
-/* 遊戲卡 */
-.games{display:flex;flex-direction:column;gap:12px}
+/* ---------- 區塊標題 ---------- */
+.sec{display:flex;align-items:center;gap:10px;margin:2px 2px -4px}
+.sec h2{font-size:14px;color:var(--gold);letter-spacing:2px;font-weight:800;white-space:nowrap}
+.sec i{flex:1;height:1px;background:linear-gradient(90deg,#573a7d,transparent)}
+
+.panel{
+  padding:16px;border-radius:20px;background:linear-gradient(180deg,#2e1c47,#1a1029);
+  border:1px solid var(--line);box-shadow:0 10px 28px #0007;
+}
+
+/* ---------- 選角 ---------- */
+.heroes{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}
+.hcard{
+  background:linear-gradient(180deg,#2a1a3f,#1e1230);border:1px solid var(--line);border-radius:16px;
+  padding:10px 6px 8px;text-align:center;cursor:pointer;position:relative;overflow:hidden;
+  transition:transform .16s ease,border-color .2s,box-shadow .2s;
+}
+.hcard:hover{transform:translateY(-3px);border-color:#8a63c9}
+.hcard img{width:100%;height:78px;object-fit:contain;object-position:bottom center;
+  filter:drop-shadow(0 6px 10px #0009)}
+.hcard .ph{font-size:36px;line-height:78px}
+.hcard b{display:block;font-size:13px;color:var(--gold2);margin-top:4px;letter-spacing:1px}
+.hcard small{display:block;font-size:10px;color:var(--dim);line-height:1.5;min-height:15px}
+.hcard .buff{font-size:10px;color:var(--ok);margin-top:3px;line-height:1.5;min-height:30px}
+.hcard.on{
+  background:linear-gradient(180deg,#523775,#2c1b42);border-color:var(--gold);
+  box-shadow:0 0 0 2px #f6c45344,0 10px 24px #0009;
+}
+.hcard.on::after{
+  content:"出戰中";position:absolute;top:6px;right:6px;font-size:9px;font-weight:800;
+  background:var(--gold);color:#3a2400;border-radius:99px;padding:2px 7px;box-shadow:0 2px 6px #0007;
+}
+
+/* ---------- 遊戲卡 ---------- */
+.games{display:flex;flex-direction:column;gap:10px}
 .game{
-  display:flex;gap:12px;align-items:center;padding:14px;border-radius:18px;cursor:pointer;
-  background:linear-gradient(135deg,#33204d,#1d1230);border:1px solid var(--line);
+  --ac:#f6c453;
+  display:flex;gap:13px;align-items:center;padding:13px 14px 13px 16px;border-radius:18px;
+  background:linear-gradient(120deg,#33204d,#1d1230 78%);border:1px solid var(--line);
   text-decoration:none;color:var(--text);position:relative;overflow:hidden;
   transition:transform .18s ease,box-shadow .18s ease,border-color .18s;
 }
-.game:hover{transform:translateY(-3px);box-shadow:0 14px 34px #000a;border-color:var(--gold)}
+.game::before{
+  content:"";position:absolute;left:0;top:12%;bottom:12%;width:4px;border-radius:0 4px 4px 0;
+  background:var(--ac);box-shadow:0 0 14px var(--ac);
+}
 .game::after{
   content:"";position:absolute;inset:0;pointer-events:none;
-  background:linear-gradient(105deg,transparent 35%,#ffffff18 50%,transparent 65%);
+  background:linear-gradient(105deg,transparent 35%,#ffffff16 50%,transparent 65%);
   transform:translateX(-140%);
 }
+.game:hover{transform:translateY(-3px);box-shadow:0 14px 32px #000a;border-color:var(--ac)}
 .game:hover::after{animation:sheen .7s ease-out}
 @keyframes sheen{to{transform:translateX(140%)}}
 .game .ic{
-  width:64px;height:64px;flex:none;border-radius:16px;display:flex;align-items:center;
-  justify-content:center;font-size:32px;background:#241638;border:1px solid var(--line);
-  background-size:78% 78%;background-position:center;background-repeat:no-repeat;
+  width:58px;height:58px;flex:none;border-radius:16px;display:flex;align-items:center;
+  justify-content:center;font-size:28px;position:relative;
+  background:radial-gradient(circle at 34% 28%,#3a2456,#1b1029 76%);
+  border:1px solid var(--line);box-shadow:inset 0 1px 0 #ffffff22,0 6px 14px #0008;
+  background-size:74% 74%;background-position:center;background-repeat:no-repeat;
 }
 .game .txt{flex:1;min-width:0}
-.game .txt b{display:block;font-size:17px;color:var(--gold2);letter-spacing:1px}
-.game .txt small{display:block;font-size:12px;color:var(--dim);line-height:1.6;margin-top:2px}
-.game .txt .rec{font-size:11px;color:var(--gold);margin-top:4px}
-.game .go{font-size:22px;color:var(--gold)}
-.game.new::before{
-  content:"新";position:absolute;top:8px;right:8px;background:var(--bad);color:#fff;
-  font-size:10px;font-weight:800;padding:2px 8px;border-radius:99px;
+.game .txt b{display:block;font-size:17px;color:#fff;letter-spacing:1px}
+.game .txt small{
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+  font-size:12px;color:var(--dim);line-height:1.6;margin-top:3px;
+}
+.game .rec{
+  display:inline-block;margin-top:6px;font-size:11px;font-weight:700;color:var(--ac);
+  background:#1b1029;border:1px solid var(--line);border-radius:99px;padding:2px 9px;
+}
+.game .go{font-size:22px;color:var(--ac);flex:none;opacity:.8}
+.game.new .ic::after{
+  content:"新";position:absolute;top:-6px;right:-6px;background:var(--bad);color:#fff;
+  font-size:9px;font-weight:800;padding:2px 7px;border-radius:99px;box-shadow:0 3px 8px #0009;
 }
 
-/* 練習狀況 */
-.panel{
-  padding:14px;border-radius:18px;background:linear-gradient(180deg,#2e1c47,#1a1029);
-  border:1px solid var(--line);
-}
-.panel h3{font-size:14px;color:var(--gold);margin-bottom:8px;letter-spacing:1px}
-.panel h3+ul{margin-bottom:4px}
-.panel .nums{display:flex;gap:8px;margin-bottom:10px}
-.panel .nums div{flex:1;background:#241638;border:1px solid var(--line);border-radius:10px;
-  padding:8px 2px;text-align:center}
-.panel .nums b{display:block;font-size:10px;color:var(--dim);font-weight:500}
-.panel .nums span{font-size:17px;font-weight:800;color:var(--gold2)}
+/* ---------- 練習狀況 ---------- */
+.nums{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}
+.nums div{background:#211434;border:1px solid var(--line);border-radius:12px;padding:9px 2px;text-align:center}
+.nums b{display:block;font-size:10px;color:var(--dim);font-weight:500;letter-spacing:1px}
+.nums span{font-size:19px;font-weight:800;color:var(--gold2);font-variant-numeric:tabular-nums}
+.panel h3{font-size:13px;color:var(--gold);margin-bottom:8px;letter-spacing:1px}
 .panel ul{list-style:none;display:flex;flex-wrap:wrap;gap:6px}
-.panel li{background:#3a2456;border:1px solid var(--line);border-radius:8px;padding:4px 9px;font-size:13px}
+.panel li{background:#3a2456;border:1px solid var(--line);border-radius:9px;padding:5px 10px;font-size:13px}
 .panel li i{font-style:normal;color:var(--bad);font-size:11px}
-.heroes{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
-.hcard{
-  background:#241638;border:1px solid var(--line);border-radius:14px;padding:8px 4px;
-  text-align:center;cursor:pointer;transition:transform .15s,border-color .2s,background .2s;
-  position:relative;overflow:hidden;
-}
-.hcard:hover{transform:translateY(-3px)}
-.hcard img{width:100%;height:74px;object-fit:contain;object-position:bottom center;
-  filter:drop-shadow(0 6px 10px #0008)}
-.hcard .ph{font-size:34px;line-height:74px}
-.hcard b{display:block;font-size:13px;color:var(--gold2);margin-top:2px}
-.hcard small{display:block;font-size:10px;color:var(--dim);line-height:1.4}
-.hcard .buff{font-size:10px;color:var(--ok);margin-top:2px}
-.hcard.on{
-  background:linear-gradient(180deg,#4a3168,#2a1a3f);border-color:var(--gold);
-  box-shadow:0 0 0 2px #f6c45355,0 8px 22px #0008;
-}
-.hcard.on::after{content:"出戰中";position:absolute;top:4px;right:4px;font-size:9px;font-weight:800;
-  background:var(--gold);color:#3a2400;border-radius:99px;padding:1px 6px}
 .clearbtn{
-  margin-top:12px;width:100%;height:40px;border-radius:12px;cursor:pointer;
-  background:#2a1a40;border:1px solid var(--line);color:var(--dim);font-size:13px;font-weight:700;
+  margin-top:14px;width:100%;height:44px;border-radius:12px;cursor:pointer;
+  background:#251739;border:1px solid var(--line);color:var(--dim);font-size:13px;font-weight:700;
+}
+.clearbtn:active{transform:translateY(2px)}
+
+/* ---------- 手機 ---------- */
+@media (max-width:520px){
+  body{gap:12px;padding-bottom:92px}
+  .wrap{gap:12px}
+  .logo h1{letter-spacing:4px}
+  .player{padding:13px;gap:11px}
+  .face img{width:64px;height:64px}
+  .gold{padding:7px 10px}
+  .gold span{font-size:19px}
+  .panel{padding:13px}
+  .heroes{grid-template-columns:repeat(2,1fr);gap:8px}
+  .hcard img{height:96px}
+  .hcard .ph{line-height:96px}
+  .hcard .buff{min-height:0}
+  .game{padding:11px 12px 11px 14px;gap:11px}
+  .game .ic{width:52px;height:52px;font-size:25px}
+  .game .txt b{font-size:16px}
+  .game .txt small{font-size:11.5px}
+  .nums{gap:6px}
+  .nums span{font-size:17px}
 }
 </style>
 </head>
@@ -118,98 +181,32 @@ body{gap:14px}
   </div>
 
   <div class="player">
-    <img id="pface" src="assets/hero_cheer.png" alt="">
-    <div class="info">
-      <div class="row1"><b>小勇者</b><span class="lv" id="plv">Lv 1</span></div>
+    <div class="face">
+      <img id="pface" src="assets/hero_cheer.png" alt="">
+      <span class="lvbadge" id="plv">Lv 1</span>
+    </div>
+    <div class="pinfo">
+      <div class="nm" id="pname">小虎姬</div>
       <div class="expbar"><i id="pexp"></i></div>
       <small id="pexpText">經驗 0 / 75</small>
       <div class="gearrow" id="pgear"></div>
     </div>
-    <div style="text-align:right">
-      <div style="font-size:11px;color:var(--dim)">金幣</div>
-      <div style="font-size:20px;font-weight:800;color:var(--gold2)" id="pgold">0</div>
-    </div>
+    <div class="gold"><b>金幣</b><span id="pgold">0</span></div>
   </div>
 
-  <div class="panel">
-    <h3>選一個角色出戰</h3>
+  <div class="sec"><h2>選一個角色出戰</h2><i></i></div>
+  <div class="panel" style="padding:13px">
     <div class="heroes" id="heroes"></div>
   </div>
 
-  <div class="games">
-    <a class="game" href="battle.html">
-      <div class="ic">⚔️</div>
-      <div class="txt">
-        <b>打怪大作戰</b>
-        <small>答對就出手打怪，答錯被反擊。打中敵人害怕的乘法表傷害兩倍，還會掉裝備、升等級。</small>
-        <div class="rec" id="rec2">還沒開始</div>
-      </div>
-      <div class="go">›</div>
-    </a>
+  <div class="sec"><h2>主線冒險</h2><i></i></div>
+  <div class="games" id="gamesMain"></div>
 
-    <a class="game" href="gems.html">
-      <div class="ic" id="ic3"></div>
-      <div class="txt">
-        <b>寶石消消樂</b>
-        <small>轉出 4 顆以上連在一起的寶石就消除，接著問你「消掉幾顆 × 每顆幾分」，算對才拿得到分數。</small>
-        <div class="rec" id="rec3">還沒開始</div>
-      </div>
-      <div class="go">›</div>
-    </a>
+  <div class="sec"><h2>練習小遊戲</h2><i></i></div>
+  <div class="games" id="gamesSub"></div>
 
-    <a class="game" href="findnum.html">
-      <div class="ic">🔢</div>
-      <div class="txt">
-        <b>找答案挑戰</b>
-        <small>出一題「6 × 7」，把盤面上所有 42 點掉，限時 60 秒衝分數。最單純的速度練習。</small>
-        <div class="rec" id="rec4">還沒開始</div>
-      </div>
-      <div class="go">›</div>
-    </a>
-
-    <a class="game new" href="racing.html">
-      <div class="ic">🏎️</div>
-      <div class="txt">
-        <b>飆速賽車</b>
-        <small>三線道往前衝，撞上答案正確的牌子就加速加分，撞錯會打滑扣愛心。速度愈快愈刺激。</small>
-        <div class="rec" id="rec5">還沒開始</div>
-      </div>
-      <div class="go">›</div>
-    </a>
-
-    <a class="game new" href="memory.html">
-      <div class="ic">🃏</div>
-      <div class="txt">
-        <b>記憶翻牌</b>
-        <small>翻開一張算式牌跟一張答案牌配成一對，全部配完就過關。比誰記得住、翻得少。</small>
-        <div class="rec" id="rec6">還沒開始</div>
-      </div>
-      <div class="go">›</div>
-    </a>
-
-    <a class="game new" href="cloudjump.html">
-      <div class="ic">☁️</div>
-      <div class="txt">
-        <b>雲端跳跳</b>
-        <small>跳到答案正確的那朵雲上就往上爬一層，跳錯雲會碎掉掉下去。看能爬到幾樓。</small>
-        <div class="rec" id="rec7">還沒開始</div>
-      </div>
-      <div class="go">›</div>
-    </a>
-
-    <a class="game new" href="bubble.html">
-      <div class="ic">🐠</div>
-      <div class="txt">
-        <b>深海泡泡</b>
-        <small>海裡漂著一堆答案泡泡，限時 60 秒把正確的射破。射錯扣 3 秒，連續射中分數翻倍加。</small>
-        <div class="rec" id="rec8">還沒開始</div>
-      </div>
-      <div class="go">›</div>
-    </a>
-  </div>
-
+  <div class="sec"><h2>練習狀況</h2><i></i></div>
   <div class="panel">
-    <h3>練習狀況（存在這台電腦）</h3>
     <div class="nums">
       <div><b>答對</b><span id="sOk">0</span></div>
       <div><b>答錯</b><span id="sBad">0</span></div>
@@ -224,14 +221,85 @@ body{gap:14px}
 
 <script src="assets/common.js"></script>
 <script>
+/* 遊戲清單：要加新遊戲只改這一份，卡片與紀錄都會自己長出來 */
+const GAMES = [
+  {f:'battle.html', n:'打怪大作戰', ac:'#f6c453', icon:'⚔️', main:true,
+   d:'答對就出手打怪，答錯被反擊。打中敵人害怕的乘法表傷害兩倍，還會掉裝備、升等級。',
+   rec:() => Save.d.totalKill > 0
+     ? '打到第 ' + Save.d.round + '-' + (Save.d.wave+1) + ' 關　打倒 ' + Save.d.totalKill + ' 隻'
+     : null},
+  {f:'gems.html', n:'寶石消消樂', ac:'#c084fc', icon:'💎', img:'assets/sym_amethyst.png',
+   d:'轉出 4 顆以上連在一起的寶石就消除，接著問你「消掉幾顆 × 每顆幾分」，算對才拿得到分數。',
+   rec:() => { const v = Best.get('v3_best'); return v ? '最高一轉得分 ' + v : null; }},
+  {f:'findnum.html', n:'找答案挑戰', ac:'#6ea8ff', icon:'🔢',
+   d:'出一題「6 × 7」，把盤面上所有 42 點掉，限時 60 秒衝分數。最單純的速度練習。',
+   rec:() => { const v = Best.get('v1_score'); return v ? '最高分 ' + v : null; }},
+  {f:'racing.html', n:'飆速賽車', ac:'#ff8a5c', icon:'🏎️', isNew:true,
+   d:'三線道往前衝，撞上答案正確的牌子就加速加分，撞錯會打滑扣愛心。',
+   rec:() => { const v = Best.get('v5_score'); return v ? '最高分 ' + v : null; }},
+  {f:'memory.html', n:'記憶翻牌', ac:'#f0a3d0', icon:'🃏', isNew:true,
+   d:'翻開一張算式牌跟一張答案牌配成一對，全部配完就過關。比誰記得住、翻得少。',
+   rec:() => { const v = Best.get('v6_time'); return v ? '最快 ' + v + ' 秒配完' : null; }},
+  {f:'cloudjump.html', n:'雲端跳跳', ac:'#8fd8ff', icon:'☁️', isNew:true,
+   d:'跳到答案正確的那朵雲上就往上爬一層，跳錯雲會碎掉掉下去。看能爬到幾樓。',
+   rec:() => { const v = Best.get('v7_floor'); return v ? '爬到 ' + v + ' 樓' : null; }},
+  {f:'bubble.html', n:'深海泡泡', ac:'#5ee6c0', icon:'🐠', isNew:true,
+   d:'海裡漂著一堆答案泡泡，限時 60 秒把正確的射破。射錯扣 3 秒，連續射中分數愈高。',
+   rec:() => { const v = Best.get('v8_score'); return v ? '最高分 ' + v : null; }}
+];
+
+function gameCard(g){
+  const a = document.createElement('a');
+  a.className = 'game' + (g.isNew ? ' new' : '');
+  a.href = g.f;
+  a.style.setProperty('--ac', g.ac);
+
+  const ic = document.createElement('div');
+  ic.className = 'ic';
+  ic.textContent = g.icon;
+  ic.style.background = 'radial-gradient(circle at 34% 28%,' + g.ac + '3d,#1b1029 76%)';
+  ic.style.borderColor = g.ac + '66';
+  if(g.img){                                   // 有生好的圖就換成圖，沒有就留 emoji
+    const im = new Image();
+    im.onload = () => {
+      ic.textContent = '';
+      ic.style.backgroundImage = 'url(' + g.img + ')';
+      ic.style.backgroundSize = '74%';
+      ic.style.backgroundPosition = 'center';
+      ic.style.backgroundRepeat = 'no-repeat';
+    };
+    im.src = g.img;
+  }
+
+  const txt = document.createElement('div');
+  txt.className = 'txt';
+  const b = document.createElement('b');      b.textContent = g.n;
+  const sm = document.createElement('small'); sm.textContent = g.d;
+  txt.append(b, sm);
+  const r = g.rec();
+  if(r){
+    const rec = document.createElement('div');
+    rec.className = 'rec'; rec.textContent = r;
+    txt.appendChild(rec);
+  }
+
+  const go = document.createElement('div'); go.className = 'go'; go.textContent = '›';
+  a.append(ic, txt, go);
+  return a;
+}
+function paintGames(){
+  const main = $('gamesMain'), sub = $('gamesSub');
+  main.innerHTML = ''; sub.innerHTML = '';
+  for(const g of GAMES) (g.main ? main : sub).appendChild(gameCard(g));
+}
+
 function paintPlayer(){
-  const d = Save.d;
-  const h = heroOf(d.hero);
+  const d = Save.d, h = heroOf(d.hero);
   $('plv').textContent = 'Lv ' + d.lv;
   const face = $('pface');
   face.onerror = () => { face.src = 'assets/hero_cheer.png'; };
   face.src = h.frames ? 'assets/hero_cheer.png' : h.img;
-  document.querySelector('.row1 b').textContent = h.name;
+  $('pname').textContent = h.name;
   $('pgold').textContent = d.gold;
   $('pexp').style.width = (d.exp / Save.needExp() * 100) + '%';
   $('pexpText').textContent = '經驗 ' + d.exp + ' / ' + Save.needExp();
@@ -257,19 +325,17 @@ function paintHeroes(){
     card.dataset.h = h.key;
 
     const img = document.createElement('img');
-    img.src = h.img;
-    img.alt = '';
+    img.src = h.img; img.alt = '';
     img.onerror = () => {                    // 圖還沒生好就退回 emoji，不要破圖
       const ph = document.createElement('div');
-      ph.className = 'ph';
-      ph.textContent = h.icon;
+      ph.className = 'ph'; ph.textContent = h.icon;
       img.replaceWith(ph);
     };
     card.appendChild(img);
 
-    const b = document.createElement('b');   b.textContent = h.name;
+    const b = document.createElement('b');      b.textContent = h.name;
     const sm = document.createElement('small'); sm.textContent = h.desc;
-    const bf = document.createElement('div'); bf.className = 'buff'; bf.textContent = buffs.join('／');
+    const bf = document.createElement('div');   bf.className = 'buff'; bf.textContent = buffs.join('／');
     card.append(b, sm, bf);
     box.appendChild(card);
   }
@@ -282,21 +348,6 @@ $('heroes').addEventListener('click', e => {
   paintHeroes(); paintPlayer();
   Sfx.ok(3);
 });
-function paintRecords(){
-  const d = Save.d;
-  $('rec2').textContent = d.totalKill > 0
-    ? '打到第 ' + d.round + '-' + (d.wave+1) + ' 關　累計打倒 ' + d.totalKill + ' 隻'
-    : '還沒開始';
-  const v3 = Best.get('v3_best'), v1 = Best.get('v1_score');
-  $('rec3').textContent = v3 ? '最高一轉得分 ' + v3 : '還沒開始';
-  $('rec4').textContent = v1 ? '最高分 ' + v1 : '還沒開始';
-  const v5 = Best.get('v5_score'), v6 = Best.get('v6_time'),
-        v7 = Best.get('v7_floor'), v8 = Best.get('v8_score');
-  $('rec5').textContent = v5 ? '最高分 ' + v5 : '還沒開始';
-  $('rec6').textContent = v6 ? '最快 ' + v6 + ' 秒配完' : '還沒開始';
-  $('rec7').textContent = v7 ? '爬到 ' + v7 + ' 樓' : '還沒開始';
-  $('rec8').textContent = v8 ? '最高分 ' + v8 : '還沒開始';
-}
 function paintStats(){
   let ok = 0, bad = 0;
   for(const v of Object.values(Stats.data)){ ok += v.ok||0; bad += v.bad||0; }
@@ -311,18 +362,12 @@ $('clearAll').onclick = () => {
   Save.reset();
   try{ localStorage.removeItem('mul99_stats'); }catch(e){}
   Stats.data = {};
-  paintPlayer(); paintRecords(); paintStats();
+  paintPlayer(); paintGames(); paintStats();
 };
-/* 有生好的寶石圖就拿來當轉盤那張卡的圖示 */
-(() => {
-  const im = new Image();
-  im.onload = () => { $('ic3').style.backgroundImage = 'url(assets/sym_amethyst.png)'; };
-  im.onerror = () => { $('ic3').textContent = '💎'; };
-  im.src = 'assets/sym_amethyst.png';
-})();
 
 startCoins();
-paintHeroes(); paintPlayer(); paintRecords(); paintStats();
+paintHeroes(); paintPlayer(); paintGames(); paintStats();
 </script>
+<script src="assets/lock.js"></script>
 </body>
 </html>

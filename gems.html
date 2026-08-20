@@ -108,6 +108,11 @@ body{padding-bottom:20px}
 .big-msg b{font-size:clamp(28px,8vw,56px);color:var(--gold);letter-spacing:4px;
   text-shadow:0 4px 0 #7a4a00,0 10px 30px #000}
 .big-msg span{font-size:clamp(20px,5vw,34px);color:#fff;font-variant-numeric:tabular-nums}
+
+@media (max-width:520px){
+  body{padding-bottom:96px}
+  .betbtn,.bet button{min-width:46px;height:46px;font-size:20px}
+}
 </style>
 </head>
 <body>
@@ -386,5 +391,6 @@ startCoins();
 build();
 render();
 </script>
+<script src="assets/lock.js"></script>
 </body>
 </html>

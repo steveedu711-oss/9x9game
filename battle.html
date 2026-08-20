@@ -20,7 +20,7 @@ body{padding-bottom:16px}
 
 /* 戰場 */
 .field{
-  position:relative;width:100%;height:min(46vh,340px);border-radius:20px;overflow:hidden;
+  position:relative;width:100%;height:min(46vh,340px);height:min(46dvh,340px);border-radius:20px;overflow:hidden;
   border:2px solid var(--line);box-shadow:0 16px 46px #000a,inset 0 0 60px #0008;
   background:
     radial-gradient(70% 50% at 50% 100%,#4a2a6e 0%,transparent 70%),
@@ -99,9 +99,12 @@ body{padding-bottom:16px}
 @keyframes shMob{to{transform:scale(.86);opacity:.75}}
 #hero2{left:4%;height:62%;filter:drop-shadow(0 10px 18px #000a)}
 #cat2{left:22%;height:30%;opacity:0;transform:translateX(-40px);filter:drop-shadow(0 8px 14px #000a)}
-#mob{right:4%;height:56%;filter:drop-shadow(0 10px 18px #000a);
-  animation:mobIdle 2.2s ease-in-out infinite alternate}
+/* 漂浮掛在外層 .mobwrap、受擊掛在 #mob 自己身上。
+   兩個動畫如果掛同一層會互相覆蓋，命中結束的瞬間會「跳」一下回漂浮的相位 */
+.mobwrap{right:4%;height:56%;animation:mobIdle 2.2s ease-in-out infinite alternate}
 @keyframes mobIdle{to{transform:translateY(-10px) scale(1.02)}}
+#mob{width:auto;height:100%;display:block;filter:drop-shadow(0 10px 18px #000a)}
+.fighter,.mobwrap,.afterimg{will-change:transform;backface-visibility:hidden}
 /* 受擊：擠壓 → 被打飛 → 晃回來，中間夾白閃再轉紅 */
 #mob.hit{animation:mobHit .46s cubic-bezier(.2,1.2,.4,1), mobFlash .42s linear}
 @keyframes mobHit{
@@ -390,6 +393,24 @@ body{padding-bottom:16px}
 
 .tip{font-size:12px;color:var(--dim);text-align:center;line-height:1.7}
 .tip b{color:var(--gold2)}
+
+/* ---------- 手機：小螢幕上角色跟怪物會疊在一起，戰場拉高、兩邊各自縮一點 ---------- */
+@media (max-width:520px){
+  body{padding-bottom:96px}
+  .topbar{gap:6px;flex-wrap:nowrap}
+  .topbar .chip{padding:6px 9px;font-size:13px;white-space:nowrap}
+  .topbar .bagbtn{padding:11px 12px;font-size:13px}
+  .topbar .chip b{font-size:10px;margin-right:3px}
+  .field{height:min(42vh,330px);height:min(42dvh,330px)}
+  #hero2{left:1%;height:52%}
+  .mobwrap{right:1%;height:46%}
+  #shHero{left:2%;width:17%}
+  #shMob{right:2%;width:17%}
+  .qbox{padding:10px 12px}
+  .qbox .q{font-size:clamp(26px,8vw,38px)}
+  .ans button{height:56px;font-size:22px}
+  .tip{font-size:11px;line-height:1.7}
+}
 </style>
 </head>
 <body>
@@ -417,7 +438,7 @@ body{padding-bottom:16px}
     <div class="gshadow" id="shMob"></div>
     <img class="fighter" id="hero2" src="assets/fx_hero_ready.png" alt="">
     <img class="fighter" id="cat2" src="assets/fx_cat_attack.png" alt="">
-    <img class="fighter" id="mob" src="assets/mob_slime.png" alt="">
+    <div class="fighter mobwrap" id="mobWrap"><img id="mob" src="assets/mob_slime.png" alt=""></div>
     <div class="slash" id="slash"></div>
     <div class="speedlines" id="speedlines"></div>
     <img class="circle" id="circle" src="assets/fx_holy.png" alt="">
@@ -556,41 +577,53 @@ function afterImage(){
   F().appendChild(img);
   setTimeout(()=>img.remove(), 360);
 }
-/* 攻擊節奏照動畫原理走：先往後蓄力，再衝出去，命中後收招回位 */
+/* 攻擊節奏照動畫原理走：預備 → 衝刺 → 命中 → 收招。
+   整段是「一條」時間軸（Web Animations API），不是五顆 setTimeout 疊出來的——
+   分開排程各自會漂移，中間就會看到卡頓。換圖的時間點也一起掛在同一條軸上。 */
+const SWING_MS = 620;
 function heroSwing(onHit){
   const h = $('hero2');
   heroFrame('ready');
-  h.style.transition = 'transform .13s cubic-bezier(.3,.9,.5,1)';
-  h.style.transform = 'translateX(-18px) scale(1.02,.97)';        // 1) 預備：往後拉、下蹲
+  h.style.transform = '';
+  h.style.transition = 'none';
 
-  setTimeout(()=>{                                                 // 2) 衝刺
+  const anim = h.animate([
+    {offset:0,    transform:'translateX(0) scale(1,1)',            easing:'cubic-bezier(.3,.9,.5,1)'},
+    {offset:.21,  transform:'translateX(-20px) scale(1.03,.95)',   easing:'cubic-bezier(.55,0,.9,.45)'},
+    {offset:.40,  transform:'translateX(132px) scale(1.07,.97)',   easing:'cubic-bezier(.2,.7,.4,1)'},
+    {offset:.47,  transform:'translateX(122px) scale(1.02,1.02)',  easing:'cubic-bezier(.3,0,.5,1)'},
+    {offset:.70,  transform:'translateX(56px) scale(.99,1.02)',    easing:'cubic-bezier(.2,1.1,.4,1)'},
+    {offset:1,    transform:'translateX(0) scale(1,1)'}
+  ], {duration:SWING_MS, fill:'none'});
+  h._swing = anim;
+
+  const at = (k, fn) => setTimeout(fn, SWING_MS * k);
+  at(.21, () => {                                    // 衝刺起步：換圖、速度線、殘影
     heroFrame('swing');
-    h.style.transition = 'transform .1s cubic-bezier(.5,0,.9,.4)';
-    h.style.transform = 'translateX(132px) scale(1.06,.98)';
-    $('speedlines').classList.remove('on'); void $('speedlines').offsetWidth;
-    $('speedlines').classList.add('on');
+    const sl = $('speedlines');
+    sl.classList.remove('on'); void sl.offsetWidth; sl.classList.add('on');
     afterImage();
-    setTimeout(afterImage, 45);
-  }, 130);
-
-  setTimeout(()=>{                                                 // 3) 命中
+  });
+  at(.30, afterImage);
+  at(.40, () => {                                    // 命中
     heroFrame('after');
-    $('slash').classList.remove('on'); void $('slash').offsetWidth; $('slash').classList.add('on');
+    const s = $('slash');
+    s.classList.remove('on'); void s.offsetWidth; s.classList.add('on');
     onHit && onHit();
-  }, 240);
-
-  setTimeout(()=>{                                                 // 4) 收招
-    h.style.transition = 'transform .22s cubic-bezier(.2,1.1,.4,1)';
-    h.style.transform = 'translateX(58px) scale(.99,1.02)';
-  }, 400);
-  setTimeout(()=>{ heroFrame('ready'); h.style.transform = ''; }, 620);
+  });
+  at(.72, () => heroFrame('ready'));
 }
 function heroHurtAnim(){
   const h = $('hero2');
   heroFrame('hurt');
-  h.style.transform = 'translateX(-26px) rotate(-6deg)';
-  setTimeout(()=>{ h.style.transform = 'translateX(-8px)'; }, 220);
-  setTimeout(()=>{ heroFrame('ready'); h.style.transform = ''; }, 520);
+  h.style.transition = 'none';
+  h.animate([
+    {offset:0,   transform:'translateX(0) rotate(0)'},
+    {offset:.18, transform:'translateX(-28px) rotate(-7deg)', easing:'cubic-bezier(.2,.9,.4,1)'},
+    {offset:.55, transform:'translateX(-10px) rotate(-2deg)', easing:'cubic-bezier(.2,1.2,.4,1)'},
+    {offset:1,   transform:'translateX(0) rotate(0)'}
+  ], {duration:520, fill:'none'});
+  setTimeout(()=>heroFrame('ready'), 430);
 }
 function catRush(){
   const c = $('cat2');
@@ -615,7 +648,9 @@ function impactAt(pt){
   el.style.top  = pt.y + 'px';
   el.classList.remove('on'); void el.offsetWidth; el.classList.add('on');
 }
+const SMALL_SCREEN = matchMedia('(max-width:520px)').matches;
 function shards(pt, n, crit){
+  n = Math.max(4, Math.round(n * (SMALL_SCREEN ? .6 : 1)));   // 手機少噴一點，才不會掉幀
   for(let i=0;i<n;i++){
     const d = document.createElement('div');
     d.className = 'shard';
@@ -635,6 +670,26 @@ function shards(pt, n, crit){
     setTimeout(()=>d.remove(), 900);
   }
 }
+/* 戰場上正在跑的動畫（含角色那條時間軸）一起暫停／放慢。
+   血條的 transition 要排除掉——凍住的話，白色殘影慢半拍追上的效果就沒了 */
+function fieldAnims(){
+  try{
+    return F().getAnimations({subtree:true}).filter(a => {
+      const t = a.effect && a.effect.target;
+      return t && t.closest && !t.closest('.bars');
+    });
+  }catch(e){ return []; }
+}
+function freezeField(ms){
+  const list = fieldAnims();
+  list.forEach(a => { try{ a.pause(); }catch(e){} });
+  setTimeout(() => list.forEach(a => { try{ a.play(); }catch(e){} }), ms);
+}
+function slowmoField(ms, rate){
+  const list = fieldAnims();
+  list.forEach(a => { try{ a.playbackRate = rate; }catch(e){} });
+  setTimeout(() => list.forEach(a => { try{ a.playbackRate = 1; }catch(e){} }), ms);
+}
 /* 命中：停頓 → 方向性鏡頭 → 爆閃 → 沿攻擊向量噴粒子。
    停頓長度照業界慣例：一般 3~5 幀、重擊 8 幀上下、致命一擊 0.25 秒 */
 function hitEffect(crit, weak, lethal){
@@ -647,6 +702,7 @@ function hitEffect(crit, weak, lethal){
   const stop = lethal ? 250 : crit ? 150 : weak ? 110 : 80;
   const cam  = lethal ? 'cam3' : crit ? 'cam3' : weak ? 'cam2' : 'cam1';
   f.classList.add('freeze');
+  freezeField(stop);
   setTimeout(()=>f.classList.remove('freeze'), stop);
   f.classList.remove('cam1','cam2','cam3'); void f.offsetWidth;
   f.classList.add(cam);
@@ -938,6 +994,7 @@ function killMob(){
 
   $('mob').classList.add('die');
   F().classList.add('slowmo');
+  slowmoField(700, .38);
   setTimeout(()=>F().classList.remove('slowmo'), 700);
   Char.react(true, true, mob.boss ? '把 Boss 打倒了！' : '打倒一隻！');
   Char.cat(true);
@@ -1080,5 +1137,6 @@ maxHp = P.hp; heroHp = P.hp;
 paintHeroBar();
 
 </script>
+<script src="assets/lock.js"></script>
 </body>
 </html>

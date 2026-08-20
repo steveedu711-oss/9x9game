@@ -10,7 +10,7 @@ body{gap:8px}
 .wrap{width:min(96vw,560px);display:flex;flex-direction:column;gap:8px}
 
 .tank{
-  position:relative;width:100%;height:min(60vh,460px);border-radius:20px;overflow:hidden;
+  position:relative;width:100%;height:min(60vh,460px);height:min(60dvh,460px);border-radius:20px;overflow:hidden;
   border:1px solid var(--line);box-shadow:0 18px 46px #000a,inset 0 1px 0 #ffffff14;
   background:linear-gradient(180deg,#0d2340 0%,#123a5e 42%,#0e2a46 72%,#081a2e 100%);
   touch-action:manipulation;user-select:none;cursor:crosshair;
@@ -438,5 +438,6 @@ $('qbar').textContent = '按下面的按鈕開始';
 lastT = performance.now();
 raf = requestAnimationFrame(draw);
 </script>
+<script src="assets/lock.js"></script>
 </body>
 </html>

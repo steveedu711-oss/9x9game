@@ -286,6 +286,20 @@ h1{
   border:1px solid var(--line);background:#2a1a40}
 .vers a.on{background:linear-gradient(180deg,var(--gold2),var(--gold));color:#3a2400;font-weight:700}
 .note{font-size:11px;color:var(--dim);text-align:center;max-width:560px;line-height:1.7}
+
+/* 手機：這頁沒吃 assets/common.css，樣式要自己寫一份 */
+@media (max-width:520px){
+  body{padding-bottom:96px;overscroll-behavior-y:contain;-webkit-user-select:none;user-select:none}
+  .vers{
+    display:flex;flex-wrap:nowrap;overflow-x:auto;justify-content:flex-start;width:100%;
+    gap:6px;padding:2px 2px 6px;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch;
+    scrollbar-width:none;-ms-overflow-style:none;
+  }
+  .vers::-webkit-scrollbar{display:none}
+  .vers a{flex:none;font-size:13px;padding:12px 15px;scroll-snap-align:center}
+  .lv{padding:11px 4px}
+  .btn{height:56px}
+}
 </style>
 </head>
 <body>
@@ -752,5 +766,6 @@ for(let y=0;y<ROWS;y++) for(let x=0;x<COLS;x++) grid[y][x] = newCell((y+1)*(x+1)
 paint();
 tick(true);
 </script>
+<script src="assets/lock.js"></script>
 </body>
 </html>
