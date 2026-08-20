@@ -4,6 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>小虎乘法大冒險・找答案挑戰</title>
+<meta name="theme-color" content="#120b1c">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="assets/icon-192.png">
+<link rel="apple-touch-icon" href="assets/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="小虎乘法">
 <style>
 :root{
   --bg:#120b1c; --bg2:#241634; --panel:#1d1230; --line:#573a7d;
@@ -303,7 +310,7 @@ h1{
 </style>
 </head>
 <body>
-<img class="hero" id="hero" src="assets/princess.png" alt="">
+<img class="hero" id="hero" src="assets/princess.webp" alt="" loading="lazy" decoding="async" fetchpriority="low">
 <div class="say" id="say"></div>
 <h1>找 答 案 挑 戰</h1>
 <div class="vers">
@@ -334,7 +341,7 @@ h1{
 <div class="stage" id="stage">
   <div class="board locked" id="board"></div>
   <div class="combo" id="comboFx"></div>
-  <img class="cat" id="cat" src="assets/cat_jump.png" alt="">
+  <img class="cat" id="cat" src="assets/cat_jump.webp" alt="" loading="lazy" decoding="async">
 </div>
 
 <div class="ctrl">
@@ -519,7 +526,7 @@ function paint(){
     const c = grid[y][x], d = cells[y*COLS+x];
     d.className = 'cell';
     d.querySelector('span').textContent = c.v;
-    d.style.setProperty('--gemimg', 'url(assets/' + c.gem + '.png)');
+    d.style.setProperty('--gemimg', 'url(assets/' + c.gem + '.webp)');
   }
 }
 
@@ -573,9 +580,9 @@ function floatText(rect, text, color){
 const CHEER = ['答對了！','好快！','就是這個！','再來一題！','厲害～'];
 const OOPS  = ['再看清楚一點','沒關係，再試一次','慢慢來就好'];
 const heroImg = {
-  idle:'assets/princess.png', cheer:'assets/hero_cheer.png', oops:'assets/hero_oops.png'
+  idle:'assets/princess.webp', cheer:'assets/hero_cheer.webp', oops:'assets/hero_oops.webp'
 };
-const catImg = {jump:'assets/cat_jump.png', wink:'assets/cat_wink.png'};
+const catImg = {jump:'assets/cat_jump.webp', wink:'assets/cat_wink.webp'};
 const have = {};   // 哪些角色圖已備妥
 for(const src of [...Object.values(heroImg), ...Object.values(catImg)]){
   const im = new Image();

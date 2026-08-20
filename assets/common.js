@@ -75,13 +75,13 @@ const Save = {
 /* ---------- 可選角色 ----------
    小虎姬有四格分解動作；其他三個是單張圖，攻擊動作用變形做 */
 const HEROES = [
-  {key:'tiger',  name:'小虎姬',   icon:'🐯', img:'assets/fx_hero_ready.png', frames:true,
+  {key:'tiger',  name:'小虎姬',   icon:'🐯', img:'assets/fx_hero_ready.webp', frames:true,
    desc:'什麼都會一點', atk:2,  hp:0,   crit:0,  ult:0, spell:1},
-  {key:'mage',   name:'星星法師', icon:'🔮', img:'assets/char_mage.png',
+  {key:'mage',   name:'星星法師', icon:'🔮', img:'assets/char_mage.webp',
    desc:'魔法特別強',   atk:-1, hp:-10, crit:0,  ult:3, spell:1.45},
-  {key:'knight', name:'勇氣騎士', icon:'🛡️', img:'assets/char_knight.png',
+  {key:'knight', name:'勇氣騎士', icon:'🛡️', img:'assets/char_knight.webp',
    desc:'很耐打',       atk:-1, hp:32,  crit:0,  ult:0, spell:1},
-  {key:'archer', name:'神射手',   icon:'🏹', img:'assets/char_archer.png',
+  {key:'archer', name:'神射手',   icon:'🏹', img:'assets/char_archer.webp',
    desc:'常常爆擊',     atk:0,  hp:-6,  crit:12, ult:2, spell:1}
 ];
 const heroOf = k => HEROES.find(h => h.key === k) || HEROES[0];
@@ -200,8 +200,8 @@ const Sfx = {
 /* ---------- 角色演出 ---------- */
 const CHEER = ['答對了！','好快！','就是這個！','再來一題！','厲害～','保持下去！'];
 const OOPS  = ['再看清楚一點','沒關係，再試一次','慢慢來就好'];
-const HERO_IMG = {idle:'assets/princess.png', cheer:'assets/hero_cheer.png', oops:'assets/hero_oops.png'};
-const CAT_IMG  = {jump:'assets/cat_jump.png', wink:'assets/cat_wink.png'};
+const HERO_IMG = {idle:'assets/princess.webp', cheer:'assets/hero_cheer.webp', oops:'assets/hero_oops.webp'};
+const CAT_IMG  = {jump:'assets/cat_jump.webp', wink:'assets/cat_wink.webp'};
 const _have = {};
 for(const src of [...Object.values(HERO_IMG), ...Object.values(CAT_IMG)]){
   const im = new Image();

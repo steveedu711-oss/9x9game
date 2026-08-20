@@ -4,6 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>小虎乘法大冒險</title>
+<meta name="theme-color" content="#120b1c">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="assets/icon-192.png">
+<link rel="apple-touch-icon" href="assets/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="小虎乘法">
 <link rel="stylesheet" href="assets/common.css">
 <style>
 body{gap:14px;padding-bottom:90px}
@@ -172,7 +179,7 @@ body{gap:14px;padding-bottom:90px}
 </style>
 </head>
 <body>
-<img class="hero" id="hero" src="assets/princess.png" alt="">
+<img class="hero" id="hero" src="assets/princess.webp" alt="" loading="lazy" decoding="async" fetchpriority="low">
 
 <div class="wrap">
   <div class="logo">
@@ -182,7 +189,7 @@ body{gap:14px;padding-bottom:90px}
 
   <div class="player">
     <div class="face">
-      <img id="pface" src="assets/hero_cheer.png" alt="">
+      <img id="pface" src="assets/hero_cheer.webp" alt="">
       <span class="lvbadge" id="plv">Lv 1</span>
     </div>
     <div class="pinfo">
@@ -228,7 +235,7 @@ const GAMES = [
    rec:() => Save.d.totalKill > 0
      ? '打到第 ' + Save.d.round + '-' + (Save.d.wave+1) + ' 關　打倒 ' + Save.d.totalKill + ' 隻'
      : null},
-  {f:'gems.html', n:'寶石消消樂', ac:'#c084fc', icon:'💎', img:'assets/sym_amethyst.png',
+  {f:'gems.html', n:'寶石消消樂', ac:'#c084fc', icon:'💎', img:'assets/sym_amethyst.webp',
    d:'轉出 4 顆以上連在一起的寶石就消除，接著問你「消掉幾顆 × 每顆幾分」，算對才拿得到分數。',
    rec:() => { const v = Best.get('v3_best'); return v ? '最高一轉得分 ' + v : null; }},
   {f:'findnum.html', n:'找答案挑戰', ac:'#6ea8ff', icon:'🔢',
@@ -297,8 +304,8 @@ function paintPlayer(){
   const d = Save.d, h = heroOf(d.hero);
   $('plv').textContent = 'Lv ' + d.lv;
   const face = $('pface');
-  face.onerror = () => { face.src = 'assets/hero_cheer.png'; };
-  face.src = h.frames ? 'assets/hero_cheer.png' : h.img;
+  face.onerror = () => { face.src = 'assets/hero_cheer.webp'; };
+  face.src = h.frames ? 'assets/hero_cheer.webp' : h.img;
   $('pname').textContent = h.name;
   $('pgold').textContent = d.gold;
   $('pexp').style.width = (d.exp / Save.needExp() * 100) + '%';

@@ -4,6 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>小虎乘法大冒險・寶石消消樂</title>
+<meta name="theme-color" content="#120b1c">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="assets/icon-192.png">
+<link rel="apple-touch-icon" href="assets/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="小虎乘法">
 <link rel="stylesheet" href="assets/common.css">
 <style>
 body{padding-bottom:20px}
@@ -116,7 +123,7 @@ body{padding-bottom:20px}
 </style>
 </head>
 <body>
-<img class="hero" id="hero" src="assets/princess.png" alt="">
+<img class="hero" id="hero" src="assets/princess.webp" alt="" loading="lazy" decoding="async" fetchpriority="low">
 <div class="say" id="say"></div>
 
 <h1>寶 石 消 消 樂</h1>
@@ -142,7 +149,7 @@ body{padding-bottom:20px}
       </div>
     </div>
     <div class="big-msg" id="bigMsg"><b id="bigTitle"></b><span id="bigAmt"></span></div>
-    <img class="cat" id="cat" src="assets/cat_jump.png" alt="">
+    <img class="cat" id="cat" src="assets/cat_jump.webp" alt="" loading="lazy" decoding="async">
   </div>
 
   <div class="stats">
@@ -170,11 +177,11 @@ body{padding-bottom:20px}
 /* 每種寶石的單價就是乘法的一個因數（2～9），消掉幾顆就是另一個因數 */
 /* 只留 5 種，30 格才連得起來；單價刻意用 3~8，題目才練得到中高段的乘法表 */
 const SYMS = [
-  {k:'gem',   v:3, w:24, img:'assets/sym_gem.png'},
-  {k:'amber', v:5, w:22, img:'assets/sym_amber.png'},
-  {k:'ruby',  v:6, w:20, img:'assets/sym_ruby.png'},
-  {k:'amy',   v:7, w:18, img:'assets/sym_amethyst.png'},
-  {k:'tiger', v:8, w:12, img:'assets/sym_tiger.png'}
+  {k:'gem',   v:3, w:24, img:'assets/sym_gem.webp'},
+  {k:'amber', v:5, w:22, img:'assets/sym_amber.webp'},
+  {k:'ruby',  v:6, w:20, img:'assets/sym_ruby.webp'},
+  {k:'amy',   v:7, w:18, img:'assets/sym_amethyst.webp'},
+  {k:'tiger', v:8, w:12, img:'assets/sym_tiger.webp'}
 ];
 const COLS = 6, ROWS = 5, MIN_CLUSTER = 4;
 const CHAIN = [1,2,3,5,8];

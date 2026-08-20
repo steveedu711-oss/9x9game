@@ -4,6 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>小虎乘法大冒險・飆速賽車</title>
+<meta name="theme-color" content="#120b1c">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="assets/icon-192.png">
+<link rel="apple-touch-icon" href="assets/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="小虎乘法">
 <link rel="stylesheet" href="assets/common.css">
 <style>
 body{gap:8px}
@@ -183,7 +190,7 @@ body{gap:8px}
 </style>
 </head>
 <body>
-<img class="hero" id="hero" src="assets/princess.png" alt="">
+<img class="hero" id="hero" src="assets/princess.webp" alt="" loading="lazy" decoding="async" fetchpriority="low">
 <div class="say" id="say"></div>
 
 <h1>🏎️ 飆速賽車</h1>
@@ -204,8 +211,8 @@ body{gap:8px}
     <div class="hud2"><div>分數</div><div class="big" id="score">0</div></div>
     <div class="combo" id="combo"></div>
     <div class="flash" id="flash"></div>
-    <div class="car" id="car"><div class="boost"></div><div class="inner" id="carInner"><img class="rider" id="carImg" src="assets/char_knight.png" alt=""><div class="kart"><div class="body"></div><div class="wheel l"></div><div class="wheel r"></div><div class="lamp"></div></div></div><div class="shadow"></div></div>
-    <img class="cat" id="cat" src="assets/cat_jump.png" alt="">
+    <div class="car" id="car"><div class="boost"></div><div class="inner" id="carInner"><img class="rider" id="carImg" src="assets/char_knight.webp" alt=""><div class="kart"><div class="body"></div><div class="wheel l"></div><div class="wheel r"></div><div class="lamp"></div></div></div><div class="shadow"></div></div>
+    <img class="cat" id="cat" src="assets/cat_jump.webp" alt="" loading="lazy" decoding="async">
   </div>
 
   <div class="ctrls">
@@ -266,7 +273,7 @@ $('levels').onclick = e => {
     ph.className = 'ph'; ph.textContent = h.icon;
     img.replaceWith(ph);
   };
-  img.src = h.frames ? 'assets/fx_hero_ready.png' : h.img;
+  img.src = h.frames ? 'assets/fx_hero_ready.webp' : h.img;
 })();
 
 /* ---- 速度線 ---- */

@@ -4,6 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>小虎乘法大冒險・記憶翻牌</title>
+<meta name="theme-color" content="#120b1c">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="assets/icon-192.png">
+<link rel="apple-touch-icon" href="assets/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="小虎乘法">
 <link rel="stylesheet" href="assets/common.css">
 <style>
 body{gap:8px}
@@ -89,7 +96,7 @@ body{gap:8px}
 </style>
 </head>
 <body>
-<img class="hero" id="hero" src="assets/princess.png" alt="">
+<img class="hero" id="hero" src="assets/princess.webp" alt="" loading="lazy" decoding="async" fetchpriority="low">
 <div class="say" id="say"></div>
 
 <h1>🃏 記憶翻牌</h1>
@@ -109,7 +116,7 @@ body{gap:8px}
 
   <div class="board" id="board">
     <div class="combo" id="combo"></div>
-    <img class="cat" id="cat" src="assets/cat_jump.png" alt="">
+    <img class="cat" id="cat" src="assets/cat_jump.webp" alt="" loading="lazy" decoding="async">
   </div>
 
   <button class="btn" id="start" style="width:100%">開始配對</button>
@@ -135,7 +142,7 @@ body{gap:8px}
 versionBar('memory.html');
 
 function r(a,b){ return a + ((Math.random()*(b-a+1))|0); }
-const BACK_IMG = 'assets/sym_tiger.png';   // 所有牌背同一款，才不會看背面就知道哪兩張是一對
+const BACK_IMG = 'assets/sym_tiger.webp';   // 所有牌背同一款，才不會看背面就知道哪兩張是一對
 
 const LEVELS = [
   {n:'新手', d:'6 組 ・ 2～5', pairs:6, cols:4, pick:()=>[r(2,5), r(2,9)]},
