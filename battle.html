@@ -33,11 +33,129 @@ body{padding-bottom:16px}
     radial-gradient(70% 50% at 50% 100%,#4a2a6e 0%,transparent 70%),
     linear-gradient(180deg,#2a1740 0%,#180e26 100%);
 }
-.field::after{  /* 地板 */
-  content:"";position:absolute;left:0;right:0;bottom:0;height:26%;
+/* 地板暗紋改掛在場景層裡（見 .scene .ground），鏡頭推近時才會跟著推 */
+/* ── 場景：天空／遠山／中景樹三層視差，每一大關換一種景 ──
+   三層滾動速度不一樣（遠的慢、近的快），戰場才有深度，不再是一塊底色 */
+.scene{position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden;
+  --s1:#2a1740;--s2:#1d1230;--s3:#180e26;--far:#3b2360;--mid:#241442;--sg:#6b3fa0}
+.field.sc2 .scene{--s1:#3a1414;--s2:#2a0f14;--s3:#1a0a10;--far:#5a1e22;--mid:#3a1216;--sg:#c2410c}
+.field.sc3 .scene{--s1:#0f2740;--s2:#0c1c30;--s3:#08131f;--far:#1b4468;--mid:#123048;--sg:#38bdf8}
+.field.sc4 .scene{--s1:#3a2c12;--s2:#2a1f0d;--s3:#1a1408;--far:#5c4416;--mid:#3d2d0f;--sg:#f6c453}
+.scene>*{position:absolute;inset:0}
+.scene .sky{background:linear-gradient(180deg,var(--s1) 0%,var(--s2) 58%,var(--s3) 100%)}
+.scene .glow{background:radial-gradient(70% 55% at 50% 104%,var(--sg) 0%,transparent 68%);opacity:.55;
+  animation:sceneGlow 5.5s ease-in-out infinite alternate}
+@keyframes sceneGlow{to{opacity:.85}}
+.scene .stars{
+  background-image:radial-gradient(2px 2px at 12% 22%,#fff9,transparent),
+    radial-gradient(1.6px 1.6px at 34% 12%,#fff7,transparent),
+    radial-gradient(2px 2px at 58% 26%,#fff8,transparent),
+    radial-gradient(1.4px 1.4px at 76% 14%,#fff6,transparent),
+    radial-gradient(2px 2px at 89% 30%,#fff9,transparent),
+    radial-gradient(1.4px 1.4px at 22% 38%,#fff5,transparent);
+  animation:twinkle 3.4s ease-in-out infinite alternate}
+@keyframes twinkle{from{opacity:.35}to{opacity:.9}}
+.scene .far,.scene .mid{
+  -webkit-mask-repeat:repeat-x;mask-repeat:repeat-x;-webkit-mask-position:0 bottom;mask-position:0 bottom}
+.scene .far{
+  top:auto;height:46%;bottom:22%;background:var(--far);opacity:.85;
+  -webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 100' preserveAspectRatio='none'%3E%3Cpath d='M0,100 L38,50 L68,72 L108,28 L148,68 L188,42 L228,76 L268,38 L308,66 L348,48 L400,84 L400,100 Z' fill='%23000'/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 100' preserveAspectRatio='none'%3E%3Cpath d='M0,100 L38,50 L68,72 L108,28 L148,68 L188,42 L228,76 L268,38 L308,66 L348,48 L400,84 L400,100 Z' fill='%23000'/%3E%3C/svg%3E");
+  -webkit-mask-size:62% 100%;mask-size:62% 100%;
+  animation:driftFar 68s linear infinite}
+.scene .mid{
+  top:auto;height:30%;bottom:20%;background:var(--mid);
+  -webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 100' preserveAspectRatio='none'%3E%3Cpath d='M0,100 L0,86 Q26,70 52,86 L52,100 Z M70,100 L88,46 L106,100 Z M120,100 L120,78 Q146,62 172,78 L172,100 Z M188,100 L208,40 L228,100 Z M240,100 L252,64 L264,100 Z M270,100 L270,82 Q286,72 300,82 L300,100 Z' fill='%23000'/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 100' preserveAspectRatio='none'%3E%3Cpath d='M0,100 L0,86 Q26,70 52,86 L52,100 Z M70,100 L88,46 L106,100 Z M120,100 L120,78 Q146,62 172,78 L172,100 Z M188,100 L208,40 L228,100 Z M240,100 L252,64 L264,100 Z M270,100 L270,82 Q286,72 300,82 L300,100 Z' fill='%23000'/%3E%3C/svg%3E");
+  -webkit-mask-size:44% 100%;mask-size:44% 100%;
+  animation:driftMid 34s linear infinite}
+@keyframes driftFar{to{-webkit-mask-position:-62% bottom;mask-position:-62% bottom}}
+@keyframes driftMid{to{-webkit-mask-position:-44% bottom;mask-position:-44% bottom}}
+/* 飄浮的光點：靠近地面往上飄，畫面就不會死板 */
+.scene .ground{top:auto;height:26%;bottom:0;
   background:linear-gradient(180deg,#00000000,#00000066),
-             repeating-linear-gradient(90deg,#ffffff08 0 2px,transparent 2px 46px);
+             repeating-linear-gradient(90deg,#ffffff08 0 2px,transparent 2px 46px)}
+.scene .motes{
+  background-image:radial-gradient(2.5px 2.5px at 18% 80%,#ffe9a8aa,transparent),
+    radial-gradient(2px 2px at 46% 90%,#ffe9a888,transparent),
+    radial-gradient(3px 3px at 68% 76%,#ffe9a899,transparent),
+    radial-gradient(2px 2px at 86% 88%,#ffe9a877,transparent);
+  animation:motes 9s linear infinite}
+@keyframes motes{from{transform:translateY(0);opacity:.2}45%{opacity:.9}to{transform:translateY(-70px);opacity:0}}
+
+/* ── 鏡頭層：整個戰鬥世界一起推近拉遠，血條不跟著動 ── */
+#world{position:absolute;inset:0;z-index:1;transform-origin:72% 62%;
+  transition:transform .55s cubic-bezier(.2,.9,.3,1)}
+#world.zoom{transform:scale(1.12)}
+#world.zoomBig{transform:scale(1.28)}
+#world.pull{transform:scale(.96)}
+/* Boss 登場：全場壓暗只留 Boss */
+.curtain{position:absolute;inset:0;z-index:4;background:#05030a;opacity:0;pointer-events:none;
+  transition:opacity .35s}
+.curtain.on{opacity:.62}
+.field.bossmode .mobwrap{z-index:6}
+.field.bossmode #shMob{z-index:5}
+.bossname{
+  position:absolute;z-index:9;left:50%;top:44%;transform:translate(-50%,-50%);pointer-events:none;
+  font-size:clamp(24px,7vw,44px);font-weight:900;letter-spacing:6px;color:#fff;opacity:0;
+  text-shadow:0 4px 0 #7f1d1d,0 0 30px #ff6b6b,0 0 60px #ff2d2d}
+.bossname.on{animation:bossName 2.1s cubic-bezier(.2,1.3,.4,1) forwards}
+@keyframes bossName{
+  0%{opacity:0;transform:translate(-50%,-50%) scale(2.4);filter:blur(10px)}
+  16%{opacity:1;transform:translate(-50%,-50%) scale(1);filter:blur(0)}
+  70%{opacity:1;transform:translate(-50%,-50%) scale(1.02)}
+  100%{opacity:0;transform:translate(-50%,-50%) scale(1.1)}
 }
+.bossname small{display:block;font-size:13px;letter-spacing:3px;color:#ffd0a8;margin-top:6px;text-shadow:none}
+/* 落地衝擊波 */
+.wave{position:absolute;z-index:4;pointer-events:none;border-radius:50%;
+  border:3px solid #fff;opacity:0;transform:translate(-50%,-50%) scale(.2)}
+.wave.on{animation:waveOut .6s cubic-bezier(.1,.8,.3,1) forwards}
+@keyframes waveOut{
+  0%{opacity:.9;transform:translate(-50%,-50%) scale(.15)}
+  100%{opacity:0;transform:translate(-50%,-50%) scale(2.6)}
+}
+/* 待機小動作：每隔幾秒晃一下頭或跳一下，光靠呼吸還是太安靜 */
+#mob.blink{animation:mobBlink 1s cubic-bezier(.3,1.2,.4,1)}
+@keyframes mobBlink{
+  0%{transform:none}
+  20%{transform:translateY(-12px) scale(1.04,.94)}
+  42%{transform:translateY(0) scale(.96,1.06)}
+  62%{transform:translateY(-4px) rotate(-3deg)}
+  82%{transform:rotate(2deg)}
+  100%{transform:none}
+}
+#hero2.blink{animation:heroBlink 1.1s ease-in-out}
+@keyframes heroBlink{
+  0%{transform:none}
+  30%{transform:translateY(-5px) rotate(-2deg)}
+  60%{transform:translateY(-2px) rotate(2deg)}
+  100%{transform:none}
+}
+/* 起步的腳下塵土 */
+.dust{
+  position:absolute;z-index:2;pointer-events:none;width:26px;height:12px;border-radius:50%;
+  background:radial-gradient(ellipse,#e9d9ffcc,#e9d9ff00 72%);opacity:0;
+  animation:dust .5s ease-out forwards;
+}
+@keyframes dust{
+  0%{opacity:.85;transform:translate(-50%,-50%) scale(.4)}
+  100%{opacity:0;transform:translate(calc(-50% + var(--dx)),calc(-50% - 14px)) scale(1.7)}
+}
+/* ── 序列幀特效：AI 生的影片抽幀拼成雪碧圖，黑底用 screen 混掉，光暈才完整 ── */
+.fxs{
+  position:absolute;z-index:7;pointer-events:none;transform:translate(-50%,-50%);
+  mix-blend-mode:screen;background-repeat:no-repeat;will-change:background-position;
+}
+/* 擊殺：白光溶解＋光環 */
+.dring{position:absolute;z-index:6;pointer-events:none;width:120px;height:120px;border-radius:50%;
+  border:6px solid #fff6c4;box-shadow:0 0 40px #ffd066,inset 0 0 30px #fff;
+  opacity:0;transform:translate(-50%,-50%) scale(.2)}
+.dring.on{animation:dring .7s cubic-bezier(.1,.75,.3,1) forwards}
+@keyframes dring{
+  0%{opacity:1;transform:translate(-50%,-50%) scale(.2)}
+  60%{opacity:.7}
+  100%{opacity:0;transform:translate(-50%,-50%) scale(2.2)}
+}
+
 /* 鏡頭：沿攻擊方向先被推開再回彈，同時推近一點點（zoom punch）。
    一般擊、弱點擊、爆擊三種強度，衰減都很快，畫面才不會糊掉 */
 .field.cam1{animation:impactCam .3s cubic-bezier(.36,.07,.19,.97)}
@@ -78,7 +196,7 @@ body{padding-bottom:16px}
 .fighter{position:absolute;bottom:8%;z-index:3;pointer-events:none;transition:transform .12s ease-out}
 /* 衝刺殘影：留在原地淡出，看得出移動軌跡 */
 /* 單張圖角色的攻擊／受傷姿勢 */
-#hero2.poseSwing{filter:drop-shadow(0 10px 18px #000a) brightness(1.12)}
+#hero2.poseSwing{filter:drop-shadow(0 10px 18px #000a) brightness(1.12) contrast(1.06)}
 #hero2.poseHurt{filter:drop-shadow(0 10px 18px #000a) saturate(.6) brightness(.85)}
 .afterimg{
   position:absolute;bottom:8%;z-index:2;pointer-events:none;opacity:.55;
@@ -104,13 +222,27 @@ body{padding-bottom:16px}
 #shHero{left:5%;width:15%}
 #shMob{right:5%;width:16%;animation:shMob 2.2s ease-in-out infinite alternate}
 @keyframes shMob{to{transform:scale(.86);opacity:.75}}
-#hero2{left:4%;height:62%;filter:drop-shadow(0 10px 18px #000a)}
+/* 影子要跟著本體：被打飛就壓扁淡掉，死掉就收乾淨，不然會留一坨黑影在地上 */
+#shMob.hit{animation:shHit .46s ease-out}
+@keyframes shHit{
+  0%{transform:scale(1);opacity:1}
+  22%{transform:scale(1.24,.7) translateX(16px);opacity:.5}
+  100%{transform:scale(1);opacity:1}
+}
+#shMob.gone{animation:shGone .5s ease-in forwards}
+@keyframes shGone{to{transform:scale(.2);opacity:0}}
+#hero2{left:4%;height:62%;filter:drop-shadow(0 10px 18px #000a);
+  animation:heroIdle 2.6s ease-in-out infinite alternate}
+@keyframes heroIdle{from{transform:translateY(0) scale(1,1)}to{transform:translateY(-7px) scale(.99,1.02)}}
 #cat2{left:22%;height:30%;opacity:0;transform:translateX(-40px);filter:drop-shadow(0 8px 14px #000a)}
 /* 漂浮掛在外層 .mobwrap、受擊掛在 #mob 自己身上。
    兩個動畫如果掛同一層會互相覆蓋，命中結束的瞬間會「跳」一下回漂浮的相位 */
 .mobwrap{right:4%;height:56%;animation:mobIdle 2.2s ease-in-out infinite alternate}
 @keyframes mobIdle{to{transform:translateY(-10px) scale(1.02)}}
-#mob{width:auto;height:100%;display:block;filter:drop-shadow(0 10px 18px #000a)}
+#mob{width:auto;height:100%;display:block;filter:drop-shadow(0 10px 18px #000a);
+  transform-origin:50% 100%;animation:mobBreath 1.9s ease-in-out infinite alternate}
+/* 呼吸：腳底不動、身體上下起伏，靜止時也像活的 */
+@keyframes mobBreath{from{transform:scale(1,1)}to{transform:scale(.975,1.045)}}
 .fighter,.mobwrap,.afterimg{will-change:transform;backface-visibility:hidden}
 /* 受擊：擠壓 → 被打飛 → 晃回來，中間夾白閃再轉紅 */
 #mob.hit{animation:mobHit .46s cubic-bezier(.2,1.2,.4,1), mobFlash .42s linear}
@@ -163,13 +295,21 @@ body{padding-bottom:16px}
   0%{transform:translate(0,0) rotate(0) scale(1);opacity:1}
   100%{transform:translate(var(--sx),var(--sy)) rotate(var(--sr)) scale(.3);opacity:0}
 }
-#mob.die{animation:mobDie .7s ease-in forwards}
+#mob.die{animation:mobDie .9s cubic-bezier(.3,.6,.4,1) forwards}
 @keyframes mobDie{
-  30%{transform:translateY(-14px) rotate(-10deg);filter:brightness(2)}
-  100%{transform:translateY(40px) rotate(80deg) scale(.2);opacity:0}
+  0%{transform:none;filter:brightness(1)}
+  18%{transform:translateY(-18px) scale(1.1,.9);filter:brightness(6) saturate(0) drop-shadow(0 0 30px #fff)}
+  38%{transform:translateY(-26px) rotate(-12deg) scale(1.02);filter:brightness(3) drop-shadow(0 0 22px #ffd066)}
+  100%{transform:translateY(30px) rotate(60deg) scale(.15);opacity:0;filter:brightness(2) blur(6px)}
 }
 #mob.attack{animation:mobAtk .5s ease-in-out}
-@keyframes mobAtk{40%{transform:translateX(-90px) scale(1.06)}100%{transform:none}}
+@keyframes mobAtk{
+  0%{transform:none}
+  26%{transform:translateX(46px) scale(.94,1.08)}     /* 蓄力：先往後縮 */
+  46%{transform:translateX(-96px) scale(1.12,.92)}    /* 撲過來 */
+  62%{transform:translateX(-70px) scale(1.04,.98)}
+  100%{transform:none}
+}
 
 /* 斬擊特效 */
 .slash{
@@ -441,6 +581,11 @@ body{padding-bottom:16px}
       <div class="bar timerbar"><i id="mobTimer"></i></div>
       <div class="bar hero"><i class="ghost" id="heroHpGhost"></i><i id="heroHp"></i><span id="heroHpText">小勇者</span></div>
     </div>
+    <div id="world">
+    <div class="scene">
+      <div class="sky"></div><div class="glow"></div><div class="stars"></div>
+      <div class="far"></div><div class="mid"></div><div class="ground"></div><div class="motes"></div>
+    </div>
     <div class="gshadow" id="shHero"></div>
     <div class="gshadow" id="shMob"></div>
     <img class="fighter" id="hero2" src="assets/fx_hero_ready.webp" alt="">
@@ -453,6 +598,9 @@ body{padding-bottom:16px}
     <div class="comboFrame" id="comboFrame"></div>
     <div class="comboBig" id="comboBig"></div>
     <div class="impact" id="impact"></div>
+    <div class="curtain" id="curtain"></div>
+    </div><!-- /#world -->
+    <div class="bossname" id="bossName"></div>
     <div class="drop" id="drop"></div>
   </div>
 
@@ -574,7 +722,8 @@ function preloadNearby(){
 preload([...Object.values(HERO_FRAMES), 'assets/fx_cat_attack.webp', HERO.img]);
 preloadNearby();
 const preloadRest = () => {
-  preload([...MOBS.map(m => m.img), ...Object.values(SPELL_IMG), ...HEROES.map(h => h.img)]);
+  preload([...MOBS.map(m => m.img), ...Object.values(SPELL_IMG), ...HEROES.map(h => h.img),
+           'assets/fxs_fire.webp', 'assets/fxs_thunder.webp', 'assets/fxs_holy.webp']);
 };
 /* 等首屏該載的都載完、再閒個一秒多才補其餘的圖，才不會跟首屏搶頻寬 */
 addEventListener('load', () => setTimeout(() => {
@@ -602,7 +751,7 @@ function afterImage(){
   img.style.left = h.style.left || getComputedStyle(h).left;
   img.style.height = getComputedStyle(h).height;
   img.style.transform = h.style.transform;
-  F().appendChild(img);
+  W().appendChild(img);
   setTimeout(()=>img.remove(), 360);
 }
 /* 攻擊節奏照動畫原理走：預備 → 衝刺 → 命中 → 收招。
@@ -630,6 +779,9 @@ function heroSwing(onHit){
     heroFrame('swing');
     const sl = $('speedlines');
     sl.classList.remove('on'); void sl.offsetWidth; sl.classList.add('on');
+    const hr = $('hero2').getBoundingClientRect(), wr = W().getBoundingClientRect();
+    const sc = wr.width / W().offsetWidth || 1;
+    dust((hr.left - wr.left + hr.width*0.5)/sc, (hr.bottom - wr.top - 6)/sc, 6);
     afterImage();
   });
   at(.30, afterImage);
@@ -666,9 +818,20 @@ function shake(){ F().classList.remove('shake'); void F().offsetWidth; F().class
 
 /* ---------- 打擊感 ----------
    命中停頓 → 爆閃 → 碎片 → 擠壓變形 → 震動，五件事疊起來才有「打到東西」的感覺 */
+const W = () => $('world');
 function mobCenter(){
-  const f = F().getBoundingClientRect(), m = $('mob').getBoundingClientRect();
-  return {x: m.left - f.left + m.width*0.42, y: m.top - f.top + m.height*0.45};
+  // 座標基準是鏡頭層而不是戰場：推近時特效才不會飄掉
+  const f = W().getBoundingClientRect(), m = $('mob').getBoundingClientRect();
+  const sc = f.width / W().offsetWidth || 1;
+  return {x: (m.left - f.left + m.width*0.42) / sc, y: (m.top - f.top + m.height*0.45) / sc};
+}
+/* 鏡頭：出手前輕輕拉遠，命中瞬間推近，收招回原位 */
+function camPull(){ const w = W(); w.classList.remove('zoom','zoomBig'); w.classList.add('pull'); }
+function camPush(big){
+  const w = W(); w.classList.remove('pull','zoom','zoomBig');
+  w.classList.add(big ? 'zoomBig' : 'zoom');
+  clearTimeout(w._camT);
+  w._camT = setTimeout(()=>w.classList.remove('zoom','zoomBig'), big ? 900 : 620);
 }
 function impactAt(pt){
   const el = $('impact');
@@ -694,7 +857,7 @@ function shards(pt, n, crit){
     d.style.width = d.style.height = sz + 'px';
     d.style.animationDuration = (.45 + Math.random()*.3) + 's';
     if(crit && i % 3 === 0) d.style.background = '#fff';
-    F().appendChild(d);
+    W().appendChild(d);
     setTimeout(()=>d.remove(), 900);
   }
 }
@@ -718,15 +881,151 @@ function slowmoField(ms, rate){
   list.forEach(a => { try{ a.playbackRate = rate; }catch(e){} });
   setTimeout(() => list.forEach(a => { try{ a.playbackRate = 1; }catch(e){} }), ms);
 }
+/* ── 序列幀播放器 ──
+   一張雪碧圖逐格換 background-position，跟 CSS 漸層畫的假特效完全不同等級。
+   素材是 Gemini 生的 10 秒影片用 ffmpeg 抽幀拼起來的（scratchpad 的 sprite.py） */
+const FXS = {
+  fire:    {img:'assets/fxs_fire.webp',    cols:6, rows:5, n:25, ar:1,     fps:26},
+  thunder: {img:'assets/fxs_thunder.webp', cols:6, rows:4, n:24, ar:16/9,  fps:28},
+  holy:    {img:'assets/fxs_holy.webp',    cols:6, rows:5, n:27, ar:1,     fps:24}
+};
+function playFx(key, pt, opt){
+  const d = FXS[key]; if(!d) return null;
+  opt = opt || {};
+  const w = opt.size || 260, h = w / d.ar;
+  const el = document.createElement('div');
+  el.className = 'fxs';
+  el.style.cssText =
+    'width:' + w + 'px;height:' + h + 'px;left:' + pt.x + 'px;top:' + (pt.y + (opt.dy||0)) + 'px;' +
+    'background-image:url(' + d.img + ');' +
+    'background-size:' + (d.cols*100) + '% ' + (d.rows*100) + '%;';
+  if(opt.hue) el.style.filter = 'hue-rotate(' + opt.hue + 'deg) saturate(' + (opt.sat||1.4) + ')' +
+                                (opt.bright ? ' brightness(' + opt.bright + ')' : '');
+  W().appendChild(el);
+  const n = Math.min(opt.n || d.n, d.n), fps = opt.fps || d.fps;
+  let i = 0, last = 0;
+  const step = (t) => {
+    if(!el.isConnected) return;
+    if(t - last >= 1000/fps){
+      if(i >= n){ el.remove(); return; }
+      const cx = i % d.cols, cy = (i / d.cols) | 0;
+      el.style.backgroundPosition = (cx/(d.cols-1)*100) + '% ' + (cy/(d.rows-1)*100) + '%';
+      i++; last = t;
+    }
+    requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+  return el;
+}
+/* 四種魔法各自的序列幀長相（冰霜是把火焰整組轉成冰藍，同一份素材兩種用法） */
+const SPELL_FX = {
+  fire:    {key:'fire',    size:300, dy:8},
+  ice:     {key:'fire',    size:300, dy:8, hue:168, sat:1.7, bright:1.1},
+  thunder: {key:'thunder', size:460, dy:-10},
+  holy:    {key:'holy',    size:360, dy:-6}
+};
+/* 待機小動作：隨機間隔播一次，兩邊錯開才不會像在跳同一支舞 */
+let idleTimer = null;
+function idleBreak(){
+  clearTimeout(idleTimer);
+  idleTimer = setTimeout(() => {
+    if(running && !locked){
+      const el = Math.random() < .55 ? $('mob') : $('hero2');
+      el.classList.remove('blink'); void el.offsetWidth; el.classList.add('blink');
+      setTimeout(()=>el.classList.remove('blink'), 1200);
+    }
+    idleBreak();
+  }, 3600 + Math.random()*3600);
+}
+/* 腳下塵土：起步與落地都用得到 */
+function dust(x, y, n){
+  for(let i=0;i<(n||5);i++){
+    const d = document.createElement('div');
+    d.className = 'dust';
+    d.style.left = (x + (Math.random()*40-20)) + 'px';
+    d.style.top  = (y + (Math.random()*10-5)) + 'px';
+    d.style.setProperty('--dx', (Math.random()*70-20) + 'px');
+    d.style.animationDelay = (Math.random()*.12) + 's';
+    W().appendChild(d);
+    setTimeout(()=>d.remove(), 800);
+  }
+}
+/* 每一大關換一種景：紫夜森林 → 火山 → 冰原 → 黃金神殿，之後循環 */
+function applyScene(){
+  const f = F(), n = ((round - 1) % 4) + 1;
+  f.classList.remove('sc1','sc2','sc3','sc4');
+  f.classList.add('sc' + n);
+}
+/* 落地／爆裂用的白光圓環 */
+function ring(pt, cls, size){
+  const el = document.createElement('div');
+  el.className = cls;
+  el.style.left = pt.x + 'px'; el.style.top = pt.y + 'px';
+  if(size){ el.style.width = el.style.height = size + 'px'; }
+  W().appendChild(el);
+  void el.offsetWidth; el.classList.add('on');
+  setTimeout(()=>el.remove(), 900);
+}
+/* Boss 登場：壓暗全場 → 從天上砸下來 → 衝擊波＋震動 → 名字大字報 */
+function bossIntro(){
+  return new Promise(resolve => {
+    const f = F(), wrap = $('mobWrap'), cur = $('curtain'), nm = $('bossName');
+    locked = true;
+    f.classList.add('bossmode');
+    cur.classList.add('on');
+    W().classList.add('zoom');
+    Sfx.next();
+    wrap.animate([
+      {offset:0,   transform:'translateY(-320px) scale(1.5)', opacity:0},
+      {offset:.18, transform:'translateY(-300px) scale(1.45)', opacity:1, easing:'cubic-bezier(.6,0,.9,.4)'},
+      {offset:.46, transform:'translateY(14px) scale(1.06,.9)', easing:'cubic-bezier(.2,1.3,.4,1)'},
+      {offset:.62, transform:'translateY(-16px) scale(.97,1.05)'},
+      {offset:1,   transform:'translateY(0) scale(1)'}
+    ], {duration:1100, fill:'none'});
+
+    setTimeout(()=>{                       // 落地那一下
+      const pt = mobCenter();
+      ring({x:pt.x, y:pt.y + 60}, 'wave', 90);
+      playFx('fire', {x:pt.x, y:pt.y + 46}, {size:340, hue:-14, sat:.5, bright:1.2, fps:22});
+      shards({x:pt.x, y:pt.y + 60}, 16, true);
+      dust(pt.x, pt.y + 66, 10);
+      shake(); camPush(true);
+      beep(70, .38, 'sawtooth', .16);
+      beep(150, .22, 'square', .1);
+      nm.innerHTML = mob.name + '<small>弱點：' + (mob.weak || []).join('、') + ' 的乘法表</small>';
+      nm.classList.remove('on'); void nm.offsetWidth; nm.classList.add('on');
+    }, 500);
+
+    setTimeout(()=>{
+      cur.classList.remove('on');
+      f.classList.remove('bossmode');
+      W().classList.remove('zoom','zoomBig');
+      nm.classList.remove('on'); nm.innerHTML = '';
+      locked = false;
+      resolve();
+    }, 2200);
+  });
+}
+/* 擊殺爆裂：白光圓環 ×2 ＋ 大量碎片 ＋ 鏡頭推近 */
+function deathBurst(){
+  const pt = mobCenter();
+  ring(pt, 'dring', 120);
+  setTimeout(()=>ring(pt, 'dring', 190), 130);
+  shards(pt, SMALL_SCREEN ? 18 : 30, true);
+  camPush(true);
+  shake();
+}
 /* 命中：停頓 → 方向性鏡頭 → 爆閃 → 沿攻擊向量噴粒子。
    停頓長度照業界慣例：一般 3~5 幀、重擊 8 幀上下、致命一擊 0.25 秒 */
 function hitEffect(crit, weak, lethal){
-  const m = $('mob'), f = F();
+  const m = $('mob'), f = F(), sh = $('shMob');
   m.classList.remove('hit'); void m.offsetWidth; m.classList.add('hit');
+  sh.classList.remove('hit'); void sh.offsetWidth; sh.classList.add('hit');
   const pt = mobCenter();
   impactAt(pt);
   shards(pt, lethal ? 26 : crit ? 20 : weak ? 14 : 10, crit || lethal);
 
+  if(crit || lethal) playFx('fire', pt, {size: lethal ? 260 : 190, n:16, fps:30});
   const stop = lethal ? 250 : crit ? 150 : weak ? 110 : 80;
   const cam  = lethal ? 'cam3' : crit ? 'cam3' : weak ? 'cam2' : 'cam1';
   f.classList.add('freeze');
@@ -743,7 +1042,7 @@ function dmgText(text, crit){
   d.textContent = text;
   d.style.right = (12 + Math.random()*14) + '%';
   d.style.bottom = (44 + Math.random()*10) + '%';
-  F().appendChild(d);
+  W().appendChild(d);
   setTimeout(()=>d.remove(), 900);
 }
 
@@ -891,6 +1190,9 @@ function castSpell(sp){
       mobHp = Math.max(0, mobHp - dmg);
       totalDmg += dmg;
       hitEffect(true, true, mobHp <= 0);
+      const fx = SPELL_FX[sp.key];
+      if(fx) playFx(fx.key, mobCenter(), fx);
+      camPush(true);
       dmgText(sp.name + ' -' + dmg, true);
       setHp('mobHp', mobHp / mob.hp);
       $('mobHpText').textContent = mob.name + '　' + mobHp + ' / ' + mob.hp;
@@ -954,10 +1256,12 @@ function answer(v, btn){
     const isCrit = Math.random()*100 < P.crit;
     let dmg = Math.round((P.atk*0.7 + speed) * (isWeak ? 2 : 1) * (1 + Math.min(combo,8)*0.06) * (isCrit ? 1.8 : 1));
     Sfx.ok(combo);
+    camPull();
     heroSwing(()=>{
       mobHp = Math.max(0, mobHp - dmg);
       totalDmg += dmg;
       hitEffect(isCrit, isWeak, mobHp <= 0);
+      camPush(isCrit || mobHp <= 0);
       dmgText((isCrit ? '爆擊 ' : '') + '-' + dmg, isWeak || isCrit);
       setHp('mobHp', mobHp / mob.hp);
       $('mobHpText').textContent = mob.name + '　' + mobHp + ' / ' + mob.hp;
@@ -1020,7 +1324,9 @@ function killMob(){
   earnGold += gold; earnExp += exp;
   const ups = Save.addExp(exp);
 
+  deathBurst();
   $('mob').classList.add('die');
+  $('shMob').classList.remove('hit'); $('shMob').classList.add('gone');
   F().classList.add('slowmo');
   slowmoField(700, .38);
   setTimeout(()=>F().classList.remove('slowmo'), 700);
@@ -1056,12 +1362,12 @@ function killMob(){
 
   setTimeout(()=>{
     $('mob').classList.remove('die','hit');
+    $('shMob').classList.remove('gone','hit');
     wave++;
     if(wave >= MOBS.length){ round++; wave = 0; }
     Save.d.round = round; Save.d.wave = wave; Save.put();
     if(mob.boss){ return over(true); }
-    setMob();
-    newQ();
+    nextMob();
   }, 1400);
 }
 function setMob(){
@@ -1073,7 +1379,14 @@ function setMob(){
   preloadNearby();               // 順手把下一隻先抓起來
   setHp('mobHp', 1);
   $('mobHpText').textContent = mob.name + '　' + mobHp + ' / ' + mob.hp;
+  applyScene();
   paintTop();
+}
+/* 換下一隻：Boss 先播登場過場，播完才出題 */
+async function nextMob(){
+  setMob();
+  if(mob.boss) await bossIntro();
+  newQ();
 }
 function paintUlt(){
   $('ultBar').style.width = ult + '%';
@@ -1092,6 +1405,7 @@ function useUlt(){
     mobHp = Math.max(0, mobHp - dmg);
     totalDmg += dmg;
     hitEffect(true, true, mobHp <= 0);
+    playFx('fire', mobCenter(), {size:380, fps:24});
     dmgText('-' + dmg, true);
     setHp('mobHp', mobHp / mob.hp);
     $('mobHpText').textContent = mob.name + '　' + mobHp + ' / ' + mob.hp;
@@ -1127,8 +1441,9 @@ function start(){
   Save.d.playCount++; Save.put();
   $('over').classList.remove('on');
   $('mob').classList.remove('die','hit');
+  $('shMob').classList.remove('gone','hit');
   paintHeroBar();
-  setMob(); paintUlt(); newQ();
+  paintUlt(); nextMob(); idleBreak();
   clearInterval(loop); loop = setInterval(tick, 100);
   Sfx.next();
   $('start').textContent = '重 新 開 始';
