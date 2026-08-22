@@ -169,7 +169,7 @@ const Save = {
      gold＝金幣加成｜reduce＝受到傷害減免｜critBack＝爆擊回多少必殺
      spellEarly＝連擊魔法提早幾連觸發｜cdMul＝技能冷卻倍率｜scrollLuck＝卷軸多掉的機率 */
 const HEROES = [
-  {key:'royal',  name:'虎王',      icon:'👑', img:'assets/fx_hero_ready.webp', frames:true,
+  {key:'royal',  name:'王者',      icon:'👑', img:'assets/fx_hero_ready.webp', frames:true,
    desc:'帶頭的那一個', buff:'金幣 +35%、卷軸更常掉',
    atk:2, hp:10, crit:2, ult:2, spell:1.1, gold:0.35, scrollLuck:0.12},
   {key:'knight', name:'鐵壁衛士',  icon:'🛡️', img:'assets/char_knight.webp',
