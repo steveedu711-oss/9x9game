@@ -246,6 +246,18 @@ body{padding-bottom:16px}
 /* 呼吸：腳底不動、身體上下起伏，靜止時也像活的 */
 @keyframes mobBreath{from{transform:scale(1,1)}to{transform:scale(.975,1.045)}}
 .fighter,.mobwrap,.afterimg{will-change:transform;backface-visibility:hidden}
+/* 圖片兩次都載入失敗的最後防線：至少畫一團剪影，不要讓怪物整個消失不見。
+   ⚠ img 是替代元素，::after 在大多數瀏覽器不會畫出來，警示改用 JS 插一個真正的 <div>。 */
+.mobwrap.imgfail{width:clamp(90px,26vw,170px)}
+#mob.imgfail{width:100%;height:100%;opacity:.55;
+  background:radial-gradient(circle at 40% 35%,#8a63c9,#2c1b42 72%);
+  -webkit-mask-image:radial-gradient(circle,#000 62%,transparent 78%);
+  mask-image:radial-gradient(circle,#000 62%,transparent 78%);
+}
+.imgfail-warn{
+  position:absolute;font-size:32px;pointer-events:none;z-index:4;
+  filter:drop-shadow(0 2px 6px #000a);
+}
 /* 掉寶飛進背包 */
 .loot{
   position:fixed;z-index:30;pointer-events:none;font-size:30px;
@@ -2118,6 +2130,27 @@ function mobLabel(){
        + (mob.ranged ? ' 🎯' : '') + (mob.summon ? ' 🐝' : '')
        + (shield > 0 ? ' 護盾 ' + shield : '');
 }
+/* 怪物圖片沒有任何錯誤處理：CDN 一個瞬間的載入失誤、或部署後短暫的快取不同步，
+   圖片載入失敗時瀏覽器就是「什麼都不畫」（alt=""），玩家看到的就是空氣裡在打怪。
+   Steve 2026-08-23 截圖回報過。修法：載入失敗先重試一次，還是不行就換成半透明剪影，
+   絕對不讓怪物整個消失不見。 */
+let mobImgRetried = false;
+$('mob').addEventListener('error', () => {
+  const el = $('mob');
+  if(el.dataset.spr) return;               // 逐幀模式的 src 本來就是透明像素，不算失敗
+  if(!mobImgRetried){
+    mobImgRetried = true;
+    setTimeout(() => { el.src = el.src.split('?')[0] + '?retry=' + Date.now(); }, 400);
+  }else{
+    el.classList.add('imgfail');           // 兩次都失敗才顯示替代剪影，避免正常過場閃一下
+    $('mobWrap').classList.add('imgfail'); // 圖片壞掉時連容器也要給明確尺寸，不然 absolute 定位撐不出寬度
+    if(!document.getElementById('mobImgWarn')){
+      const w = document.createElement('div');
+      w.id = 'mobImgWarn'; w.className = 'imgfail-warn'; w.textContent = '⚠';
+      $('mobWrap').appendChild(w);
+    }
+  }
+});
 function setMob(){
   mob = {...MOBS[wave]};
   /* 關卡成長：**血量／攻擊跟經驗刻意脫鉤**。
@@ -2131,6 +2164,9 @@ function setMob(){
   mobMarkedUntil = 0;         // 換怪破綻歸零，不能留到下一隻
   $('mobWrap').classList.remove('shielded');
   const mel = $('mob');
+  mobImgRetried = false; mel.classList.remove('imgfail');   // 換怪就重新給圖片一次機會
+  $('mobWrap').classList.remove('imgfail');
+  const warn = document.getElementById('mobImgWarn'); if(warn) warn.remove();
   if(mob.spr && SPR[mob.spr + '_idle']) Spr.play(mel, mob.spr + '_idle', {loop:true});
   else Spr.off(mel, mob.img);    // 圖是漸進載的，直接指定就好，瀏覽器沒載好會自己補
   preloadNearby();               // 順手把下一隻先抓起來

@@ -5,7 +5,15 @@
   --ok:#4ade80; --bad:#f87171; --p1:#f6c453; --p2:#6ea8ff;
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-html,body{overflow-x:hidden;overscroll-behavior-y:contain}
+html,body{overflow-x:hidden}
+/* ⚠ 2026-08-23 Steve 回報：電腦滑鼠滾輪完全滾不動整個網頁。
+   實測抓出來是這行原本掛在 html,body 上的 overscroll-behavior-y:contain 造成的——
+   本意是防手機下拉刷新，結果連桌機滑鼠滾輪的捲動一起吃掉了（Chromium 的已知邊界案例，
+   把它設在 html 與 body 兩層同時生效時會整個吃掉捲動，不是只擋滾動鏈接到瀏覽器本身）。
+   改成只在觸控裝置上生效，滑鼠使用者（pointer:fine）完全不受影響。 */
+@media (pointer:coarse){
+  html,body{overscroll-behavior-y:contain}
+}
 body{
   min-height:100dvh;color:var(--text);
   font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
