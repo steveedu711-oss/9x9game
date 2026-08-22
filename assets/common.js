@@ -3,14 +3,42 @@
 
 const $ = id => document.getElementById(id);
 
+/* ---------- 存檔位（2026-08-23 Steve：要像放置天堂那樣有「登入」） ----------
+   那個遊戲的登入其實就是本地多存檔位＋選角畫面（`lineage_idle_save_1/2/3`），
+   不是伺服器帳號，所以純前端就做得到。這裡把每一格的資料都加上 `_sN` 後綴：
+   進度、答題統計、各遊戲最佳成績，每個角色各記各的。 */
+const SLOT_KEY = 'mul99_slot';
+const SLOT_MAX = 4;
+function curSlot(){
+  try{ const n = +localStorage.getItem(SLOT_KEY); return (n >= 1 && n <= SLOT_MAX) ? n : 1; }
+  catch(e){ return 1; }
+}
+function setSlot(n){ try{ localStorage.setItem(SLOT_KEY, String(n)); }catch(e){} }
+const sk = base => base + '_s' + curSlot();          // 這一格專用的 key
+/* 舊玩家的資料（沒有 _sN 的那份）搬進第 1 格，只搬一次，不覆蓋已存在的 */
+(function migrateOldSave(){
+  try{
+    for(const base of ['mul99_save', 'mul99_stats']){
+      const old = localStorage.getItem(base);
+      if(old && !localStorage.getItem(base + '_s1')) localStorage.setItem(base + '_s1', old);
+    }
+    for(let i = localStorage.length - 1; i >= 0; i--){
+      const k = localStorage.key(i);
+      if(k && k.startsWith('mul99_best_') && !/_s\d$/.test(k) && !localStorage.getItem(k + '_s1')){
+        localStorage.setItem(k + '_s1', localStorage.getItem(k));
+      }
+    }
+  }catch(e){}
+})();
+
 /* ---------- 答題紀錄（存這台電腦） ---------- */
 const STORE_KEY = 'mul99_stats';
 const Stats = {
-  data: (() => { try{ return JSON.parse(localStorage.getItem(STORE_KEY)) || {}; }catch(e){ return {}; } })(),
+  data: (() => { try{ return JSON.parse(localStorage.getItem(sk(STORE_KEY))) || {}; }catch(e){ return {}; } })(),
   mark(key, ok){
     const s = this.data[key] || (this.data[key] = {ok:0, bad:0});
     ok ? s.ok++ : s.bad++;
-    try{ localStorage.setItem(STORE_KEY, JSON.stringify(this.data)); }catch(e){}
+    try{ localStorage.setItem(sk(STORE_KEY), JSON.stringify(this.data)); }catch(e){}
   },
   weak(n){
     return Object.entries(this.data).filter(([,v]) => v.bad > 0)
@@ -26,7 +54,7 @@ const Stats = {
 const Best = {
   /* 兩種模式的紀錄要分開存：娛樂模式不用算數學，分數本來就衝得比較高，
      混在一起的話練習模式的紀錄永遠被蓋掉（Mode 定義在這支檔案後面，用的時候才會取到） */
-  k(k){ return 'mul99_best_' + ((typeof Mode !== 'undefined' && Mode.isArcade()) ? 'a_' : '') + k; },
+  k(k){ return sk('mul99_best_' + ((typeof Mode !== 'undefined' && Mode.isArcade()) ? 'a_' : '') + k); },
   get(k){ try{ return +localStorage.getItem(this.k(k)) || 0; }catch(e){ return 0; } },
   set(k, v){ try{ if(v > this.get(k)) localStorage.setItem(this.k(k), v); }catch(e){} }
 };
@@ -42,12 +70,29 @@ const DEFAULT_SAVE = {
 };
 const Save = {
   d: (() => {
-    try{ return Object.assign({}, DEFAULT_SAVE, JSON.parse(localStorage.getItem(SAVE_KEY)) || {}); }
+    try{ return Object.assign({}, DEFAULT_SAVE, JSON.parse(localStorage.getItem(sk(SAVE_KEY))) || {}); }
     catch(e){ return Object.assign({}, DEFAULT_SAVE); }
   })(),
   put(){
     this.d.lastPlay = new Date().toISOString().slice(0,10);
-    try{ localStorage.setItem(SAVE_KEY, JSON.stringify(this.d)); }catch(e){}
+    try{ localStorage.setItem(sk(SAVE_KEY), JSON.stringify(this.d)); }catch(e){}
+    if(typeof Cloud !== 'undefined') Cloud.sync();     // 有登入就順便同步到雲端（節流）
+  },
+  /* 某一格的摘要，選角畫面用（不動目前這格的資料） */
+  peek(n){
+    try{
+      const raw = localStorage.getItem(SAVE_KEY + '_s' + n);
+      if(!raw) return null;
+      return Object.assign({}, DEFAULT_SAVE, JSON.parse(raw));
+    }catch(e){ return null; }
+  },
+  wipe(n){
+    try{
+      for(let i = localStorage.length - 1; i >= 0; i--){
+        const k = localStorage.key(i);
+        if(k && k.endsWith('_s' + n) && k.startsWith('mul99_')) localStorage.removeItem(k);
+      }
+    }catch(e){}
   },
   reset(){
     this.d = Object.assign({}, DEFAULT_SAVE, {gear:{weapon:null,armor:null,charm:null}, bag:[]});
@@ -520,3 +565,159 @@ const Fx = {
   }
 };
 addEventListener('DOMContentLoaded', () => Fx.apply());
+
+/* ---------- 雲端帳號（2026-08-23 Steve：帳號密碼不能放前端，一定要後端） ----------
+   **帳號跟「小綸出題小幫手」(lunquiz) 共用同一套**（Steve 指定），
+   後端在 ClaudeOnly 的 `school/lunquiz/worker`，遊戲存檔存在它的 D1（表 game_saves）。
+   登入沿用它的 `/api/auth/*`，驗證走 `X-Session-Token` header。
+   這支檔案裡**只會有 token**，密碼打完就送出去、不留在本機。 */
+const Cloud = {
+  API: 'https://linquiz-api.steve-edu711.workers.dev',
+  GAME: 'mul99',
+  TK: 'mul99_token', NM: 'mul99_user',
+  token(){ try{ return localStorage.getItem(this.TK) || ''; }catch(e){ return ''; } },
+  user(){ try{ return localStorage.getItem(this.NM) || ''; }catch(e){ return ''; } },
+  logged(){ return !!this.token(); },
+  _set(token, name){
+    try{
+      if(token){ localStorage.setItem(this.TK, token); localStorage.setItem(this.NM, name || ''); }
+      else { localStorage.removeItem(this.TK); localStorage.removeItem(this.NM); }
+    }catch(e){}
+  },
+  async req(path, opt){
+    opt = opt || {};
+    const headers = Object.assign({'Content-Type':'application/json'}, opt.headers || {});
+    if(this.logged()) headers['X-Session-Token'] = this.token();
+    const r = await fetch(this.API + path, {
+      method: opt.method || 'GET', headers,
+      body: opt.body ? JSON.stringify(opt.body) : undefined
+    });
+    let j = null;
+    try{ j = await r.json(); }catch(e){}
+    if(r.status === 401) this._set('');                 // token 過期就當作登出
+    if(!j) throw new Error('連不到伺服器');
+    if(j.error) throw new Error(j.error.message || '出錯了');   // lunquiz 的錯誤格式是 {error:{message}}
+    return j;
+  },
+  async register(name, password){
+    const j = await this.req('/api/auth/register', {method:'POST',
+      body:{username:name, password, displayName:name, role:'student'}});
+    this._set(j.token, (j.user && j.user.displayName) || name); return j;
+  },
+  async login(name, password){
+    const j = await this.req('/api/auth/login', {method:'POST', body:{username:name, password}});
+    this._set(j.token, (j.user && j.user.displayName) || name); return j;
+  },
+  async logout(){ this._set(''); },        // lunquiz 的 session 是簽章 token，沒有伺服器端撤銷
+  slots(){ return this.req('/api/game/slots?game=' + this.GAME); },
+  /* 把整包（進度＋答題統計＋各遊戲最佳成績）打成一份 */
+  pack(){
+    const best = {};
+    try{
+      for(let i = localStorage.length - 1; i >= 0; i--){
+        const k = localStorage.key(i);
+        if(k && k.startsWith('mul99_best_') && k.endsWith('_s' + curSlot())) best[k] = localStorage.getItem(k);
+      }
+    }catch(e){}
+    return {save: Save.d, stats: Stats.data, best: best};
+  },
+  /* 從雲端拉下來覆蓋本機這一格 */
+  async pull(slot){
+    const j = await this.req('/api/game/save?game=' + this.GAME + '&slot=' + slot);
+    if(!j.data) return false;
+    const d = j.data;
+    try{
+      if(d.save)  localStorage.setItem(SAVE_KEY + '_s' + slot, JSON.stringify(d.save));
+      if(d.stats) localStorage.setItem(STORE_KEY + '_s' + slot, JSON.stringify(d.stats));
+      if(d.best)  for(const k in d.best) localStorage.setItem(k, d.best[k]);
+    }catch(e){}
+    return true;
+  },
+  async push(slot){
+    if(!this.logged()) return false;
+    await this.req('/api/game/save', {method:'POST',
+      body:{game:this.GAME, slot: slot || curSlot(), data: this.pack()}});
+    return true;
+  },
+  /* 存檔會很頻繁（每打一隻怪都存），節流：最多每 4 秒傳一次，離開頁面前補傳 */
+  _t:null, _dirty:false,
+  sync(){
+    if(!this.logged()) return;
+    this._dirty = true;
+    if(this._t) return;
+    this._t = setTimeout(() => {
+      this._t = null;
+      if(!this._dirty) return;
+      this._dirty = false;
+      this.push().catch(()=>{});
+    }, 4000);
+  },
+  /* 關頁面前補傳一次。sendBeacon 沒辦法帶自訂 header（token 就送不出去），
+     所以這裡用 keepalive fetch，關頁面之後請求仍會送完 */
+  flush(){
+    if(!this.logged() || !this._dirty) return;
+    this._dirty = false;
+    try{
+      fetch(this.API + '/api/game/save', {
+        method:'POST', keepalive:true,
+        headers:{'Content-Type':'application/json', 'X-Session-Token': this.token()},
+        body: JSON.stringify({game:this.GAME, slot:curSlot(), data:this.pack()})
+      }).catch(()=>{});
+    }catch(e){}
+  }
+};
+addEventListener('pagehide', () => Cloud.flush());
+
+/* ---------- 登入視窗（大廳用） ---------- */
+function loginBox(onDone){
+  const box = document.createElement('div');
+  box.className = 'pwwrap';
+  box.innerHTML =
+    '<div class="pwbox loginbox">' +
+      '<h3 id="lgTitle">登入</h3>' +
+      '<p id="lgSub">跟「小綸出題小幫手」同一組帳號。登入後進度會存在雲端，換手機也接得回來</p>' +
+      '<input id="lgName" maxlength="16" placeholder="帳號（英文或數字）" autocomplete="username">' +
+      '<input id="lgPw" type="password" maxlength="32" placeholder="密碼" autocomplete="current-password">' +
+      '<div class="pwmsg" id="lgMsg"></div>' +
+      '<div class="pwbtns">' +
+        '<button class="btn ghost" id="lgCancel">取 消</button>' +
+        '<button class="btn" id="lgGo">登 入</button>' +
+      '</div>' +
+      '<button class="swap" id="lgSwap">還沒有帳號？註冊一個</button>' +
+    '</div>';
+  document.body.appendChild(box);
+  let mode = 'login';
+  const $$ = id => box.querySelector('#' + id);
+  const msg = (t, ok) => { const m = $$('lgMsg'); m.textContent = t; m.style.color = ok ? 'var(--ok)' : 'var(--bad)'; };
+  const close = () => box.remove();
+  $$('lgSwap').onclick = () => {
+    mode = mode === 'login' ? 'reg' : 'login';
+    $$('lgTitle').textContent = mode === 'login' ? '登入' : '註冊新帳號';
+    $$('lgSub').textContent = mode === 'login'
+      ? '跟「小綸出題小幫手」同一組帳號。登入後進度會存在雲端，換手機也接得回來'
+      : '帳號請用英文或數字。這組帳號在「小綸出題小幫手」也能用，請不要用你其他重要網站的密碼';
+    $$('lgGo').textContent = mode === 'login' ? '登 入' : '註 冊';
+    $$('lgSwap').textContent = mode === 'login' ? '還沒有帳號？註冊一個' : '已經有帳號了，改成登入';
+    $$('lgPw').autocomplete = mode === 'login' ? 'current-password' : 'new-password';
+    msg('');
+  };
+  $$('lgGo').onclick = async () => {
+    const n = $$('lgName').value.trim(), p = $$('lgPw').value;
+    if(!n || !p) return msg('帳號密碼都要填');
+    $$('lgGo').disabled = true;
+    msg('連線中…', true);
+    try{
+      if(mode === 'login') await Cloud.login(n, p);
+      else await Cloud.register(n, p);
+      msg('成功', true);
+      setTimeout(() => { close(); onDone && onDone(); }, 350);
+    }catch(e){
+      msg(e.message || '出錯了');
+      $$('lgGo').disabled = false;
+    }
+  };
+  $$('lgCancel').onclick = close;
+  box.onclick = (e) => { if(e.target === box) close(); };
+  [$$('lgName'), $$('lgPw')].forEach(el => el.onkeydown = (e) => { if(e.key === 'Enter') $$('lgGo').click(); });
+  setTimeout(() => $$('lgName').focus(), 60);
+}

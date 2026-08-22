@@ -259,3 +259,21 @@ body.lowfx .spark,body.lowfx .dust{display:none}
   background:#1f1330;border:1px solid var(--line);color:var(--gold2);font-family:inherit;
 }
 .rename:hover{border-color:var(--gold)}
+
+/* ---------- 登入視窗 ---------- */
+.loginbox input{height:46px;font-size:16px;letter-spacing:1px;margin-bottom:8px;text-align:left;padding:0 14px}
+.loginbox .swap{
+  margin-top:12px;background:none;border:none;color:var(--gold2);font-size:12px;cursor:pointer;
+  text-decoration:underline;font-family:inherit;
+}
+.userbar{
+  display:flex;align-items:center;gap:8px;justify-content:center;width:100%;
+  padding:8px 12px;border-radius:12px;background:#251739;border:1px solid var(--line);font-size:13px;
+}
+.userbar b{color:var(--gold2)}
+.userbar span{color:var(--dim);font-size:11px}
+.userbar button{
+  margin-left:auto;padding:6px 12px;border-radius:99px;cursor:pointer;font-size:12px;font-family:inherit;
+  background:#1f1330;border:1px solid var(--line);color:var(--gold2);
+}
+.userbar button:hover{border-color:var(--gold)}

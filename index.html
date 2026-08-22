@@ -258,6 +258,8 @@ body{gap:14px;padding-bottom:90px}
     <p>九九乘法闖關 ・ 邊玩邊變強</p>
   </div>
 
+  <div id="userbar" class="userbar"></div>
+
   <div class="lobby">
   <aside class="colL">
   <div class="player">
@@ -389,6 +391,32 @@ function gameCard(g){
   a.append(ic, txt, go);
   return a;
 }
+/* 帳號狀態列：沒登入就是一顆登入鈕，登入了顯示名字與登出 */
+function paintUser(){
+  const el = $('userbar');
+  if(Cloud.logged()){
+    el.innerHTML = '<b>👤 ' + Cloud.user() + '</b><span>進度會存到雲端</span>' +
+                   '<button id="logoutBtn">登出</button>';
+    el.querySelector('#logoutBtn').onclick = async () => {
+      await Cloud.logout();
+      paintUser();
+    };
+  }else{
+    el.innerHTML = '<b>👤 尚未登入</b><span>目前只存在這台裝置</span>' +
+                   '<button id="loginBtn">登入／註冊</button>';
+    el.querySelector('#loginBtn').onclick = () => loginBox(async () => {
+      paintUser();
+      /* 登入後先把雲端這一格拉下來；雲端沒有就把本機的推上去，不會互相蓋掉 */
+      try{
+        const had = await Cloud.pull(curSlot());
+        if(had){ location.reload(); }
+        else { await Cloud.push(curSlot()); }
+      }catch(e){}
+    });
+  }
+}
+paintUser();
+
 $('renameBtn').onclick = askName;
 Mode.bar($('modebar'), () => { document.body.classList.toggle('arcade', Mode.isArcade()); paintGames(); modeBadge(); });
 Topic.bar($('topicbar'));
