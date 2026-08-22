@@ -1585,9 +1585,9 @@ const SPELLS = [
   {at:10, key:'holy',    name:'聖光審判', color:'#ffe9a8', mult:4.2, mode:'drop', word:'10 連擊！聖光審判', heal:20}
 ];
 function spellFor(c){
-  // 10 連之後每 5 連再放一次聖光
-  if(c >= 10 && (c - 10) % 5 === 0) return SPELLS[3];
-  return SPELLS.find(s => s.at === c) || null;
+  const early = HERO.spellEarly || 0;          // 法師提早兩連就放
+  if(c >= 10 - early && (c - (10 - early)) % 5 === 0) return SPELLS[3];
+  return SPELLS.find(s => s.at - early === c) || null;
 }
 function comboShout(text, color){
   const f = $('comboFrame'), b = $('comboBig');
@@ -1640,7 +1640,7 @@ function useSkill(key){
   const sk = SKILLS.find(x => x.key === key);
   if(!sk || !running || Save.d.lv < sk.lv) return;
   if((skillState[key] || 0) > performance.now()) return;
-  skillState[key] = performance.now() + sk.cd;
+  skillState[key] = performance.now() + sk.cd * (HERO.cdMul || 1);
 
   const f = F();
   f.style.setProperty('--sc', sk.color + '99');
@@ -1761,7 +1761,7 @@ function applyHit(dmg, isCrit, isWeak){
   dmgText((isCrit ? '爆擊 ' : '') + '-' + dmg, isWeak || isCrit);
   setHp('mobHp', mobHp / mob.hp);
   $('mobHpText').textContent = mobLabel() + '　' + fmtN(mobHp) + ' / ' + fmtN(mob.hp);
-  ult = Math.min(100, ult + P.ult);
+  ult = Math.min(100, ult + P.ult + (isCrit ? (HERO.critBack || 0) : 0));   // 妖精爆擊多回一點
   paintUlt();
   return mobHp <= 0;
 }
@@ -1946,7 +1946,9 @@ function mobAttack(){
     taken++;
     mobHitFx();
     heroHurtAnim();
-    heroHp = Math.max(0, heroHp - Math.round(mob.atk * (arcade ? D().dmg : 1)));
+    const raw = mob.atk * (arcade ? D().dmg : 1) * (1 - (HERO.reduce || 0));
+    heroHp = Math.max(0, heroHp - Math.max(1, Math.round(raw)));
+    if(HERO.hitUlt){ ult = Math.min(100, ult + HERO.hitUlt); paintUlt(); }   // 騎士被打會回必殺
     if(arcade) { combo = 0; comboAura(0); }
     paintHeroBar();
     Sfx.hurt();
@@ -1998,7 +2000,8 @@ function killMob(){
   Sfx.win();
   kills++;
   Save.d.totalKill++;
-  const gold = Math.round((18 + wave*8 + (mob.boss ? 70 : 0)) * Math.pow(1.10, round - 1));
+  const gold = Math.round((18 + wave*8 + (mob.boss ? 70 : 0)) * Math.pow(1.10, round - 1)
+                          * (1 + (HERO.gold || 0)));
   const exp  = Math.round(mob.exp * Math.pow(1.15, round - 1));   // 經驗成長比血量快，見 setMob 的說明
   Save.d.gold += gold;
   earnGold += gold; earnExp += exp;
@@ -2015,7 +2018,7 @@ function killMob(){
   dmgText('+' + fmtN(gold) + ' 金幣', true);
 
   // 掉卷軸：小怪三成、Boss 必掉兩張。強化的入口要靠打怪，不是只靠買
-  const scrolls = mob.boss ? 2 : (Math.random() < 0.3 ? 1 : 0);
+  const scrolls = mob.boss ? 2 : (Math.random() < (0.3 + (HERO.scrollLuck || 0)) ? 1 : 0);
   if(scrolls){
     Save.d.scroll = (Save.d.scroll || 0) + scrolls;
     dmgText('📜 卷軸 +' + scrolls, true);

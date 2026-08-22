@@ -94,7 +94,7 @@ function expReq(lv){                     // 從 lv 升到 lv+1 需要多少經�
 
 const SAVE_KEY = 'mul99_save';
 const DEFAULT_SAVE = {
-  lv:1, exp:0, gold:0, hero:'tiger', pname:'',   // pname＝玩家自己取的名字，空的就用角色本名
+  lv:1, exp:0, gold:0, hero:'royal', pname:'',   // pname＝玩家自己取的名字，空的就用角色本名
   scroll:0,                                      // 強化卷軸：打怪會掉，也能用金幣買
   gear:{weapon:null, armor:null, charm:null},
   bag:[],
@@ -160,21 +160,35 @@ const Save = {
 
 /* ---------- 可選角色 ----------
    小虎姬有四格分解動作；其他三個是單張圖，攻擊動作用變形做 */
+/* ---------- 職業（2026-08-23 照《天堂》那套分類，每個都要有自己的特色） ----------
+   數值差異只是底，真正的特色在 trait：每個職業有一條**別人沒有的機制**。
+   欄位說明：
+     atk/hp/crit/ult 基礎數值差；spell＝魔法倍率
+     gold＝金幣加成｜reduce＝受到傷害減免｜critBack＝爆擊回多少必殺
+     spellEarly＝連擊魔法提早幾連觸發｜cdMul＝技能冷卻倍率｜scrollLuck＝卷軸多掉的機率 */
 const HEROES = [
-  {key:'tiger',  name:'小虎姬',   icon:'🐯', img:'assets/fx_hero_ready.webp', frames:true,
-   desc:'什麼都會一點', atk:2,  hp:0,   crit:0,  ult:0, spell:1},
-  {key:'mage',   name:'星星法師', icon:'🔮', img:'assets/char_mage.webp',
-   desc:'魔法特別強',   atk:-1, hp:-10, crit:0,  ult:3, spell:1.45},
-  {key:'knight', name:'勇氣騎士', icon:'🛡️', img:'assets/char_knight.webp',
-   desc:'很耐打',       atk:-1, hp:32,  crit:0,  ult:0, spell:1},
-  {key:'archer', name:'神射手',   icon:'🏹', img:'assets/char_archer.webp',
-   desc:'常常爆擊',     atk:0,  hp:-6,  crit:12, ult:2, spell:1},
-  {key:'berserk', name:'狂戰小虎', icon:'⚔️', img:'assets/char_berserk.webp',
-   desc:'打得重但脆',   atk:6,  hp:-24, crit:6,  ult:4, spell:0.85},
-  {key:'sage',    name:'魔導小虎', icon:'✨', img:'assets/char_sage.webp',
-   desc:'魔法連發',     atk:-3, hp:-4,  crit:0,  ult:7, spell:1.7}
+  {key:'royal',  name:'王族',    icon:'👑', img:'assets/fx_hero_ready.webp', frames:true,
+   desc:'天生的領袖', buff:'金幣 +35%、卷軸更常掉',
+   atk:2, hp:10, crit:2, ult:2, spell:1.1, gold:0.35, scrollLuck:0.12},
+  {key:'knight', name:'騎士',    icon:'🛡️', img:'assets/char_knight.webp',
+   desc:'站在最前面的那個', buff:'受到傷害 -20%，被打會回必殺',
+   atk:-1, hp:36, crit:0, ult:0, spell:1, reduce:0.20, hitUlt:10},
+  {key:'elf',    name:'妖精',    icon:'🏹', img:'assets/char_archer.webp',
+   desc:'箭無虛發', buff:'爆擊 +15%，爆擊回必殺',
+   atk:1, hp:-8, crit:15, ult:2, spell:1, critBack:8},
+  {key:'mage',   name:'法師',    icon:'🔮', img:'assets/char_mage.webp',
+   desc:'魔法就是暴力', buff:'魔法 ×1.7，連擊魔法提早兩連',
+   atk:-2, hp:-12, crit:0, ult:4, spell:1.7, spellEarly:2},
+  {key:'dragon', name:'龍騎士',  icon:'🐉', img:'assets/char_berserk.webp',
+   desc:'又硬又痛', buff:'攻擊 +8、血量 +60，但技能比較慢',
+   atk:8, hp:60, crit:0, ult:-2, spell:0.9, cdMul:1.3},
+  {key:'sage',   name:'幻術師',  icon:'✨', img:'assets/char_sage.webp',
+   desc:'技能不用等', buff:'技能冷卻 -35%，必殺充得快',
+   atk:-2, hp:-4, crit:2, ult:8, spell:1.35, cdMul:0.65}
 ];
-const heroOf = k => HEROES.find(h => h.key === k) || HEROES[0];
+/* 舊存檔的角色代號要對到新職業，不然換版之後角色會被打回預設 */
+const HERO_ALIAS = {tiger:'royal', archer:'elf', berserk:'dragon'};
+const heroOf = k => HEROES.find(h => h.key === (HERO_ALIAS[k] || k)) || HEROES[0];
 /* 畫面上要顯示的名字：玩家取過名字就用他的，沒取就用角色本名 */
 function playerName(){
   const n = (Save.d.pname || '').trim();

@@ -90,6 +90,8 @@ body{gap:14px;padding-bottom:90px}
 .hcard b{display:block;font-size:13px;color:var(--gold2);margin-top:4px;letter-spacing:1px}
 .hcard small{display:block;font-size:10px;color:var(--dim);line-height:1.5;min-height:15px}
 .hcard .buff{font-size:10px;color:var(--ok);margin-top:3px;line-height:1.5;min-height:30px}
+.hcard .trait{font-size:10px;color:var(--gold2);margin-top:4px;line-height:1.45;
+  padding-top:4px;border-top:1px dashed #ffffff1f}
 .hcard.on{
   background:linear-gradient(180deg,#523775,#2c1b42);border-color:var(--gold);
   box-shadow:0 0 0 2px #f6c45344,0 10px 24px #0009;
@@ -484,6 +486,7 @@ function paintHeroes(){
   const box = $('heroes');
   box.innerHTML = '';
   for(const h of HEROES){
+    /* 數值差異列一列，但真正要讓人選的是那條「別人沒有的特色」（h.buff） */
     const buffs = [];
     if(h.atk) buffs.push('攻擊 ' + (h.atk > 0 ? '+' : '') + h.atk);
     if(h.hp)  buffs.push('血量 ' + (h.hp > 0 ? '+' : '') + h.hp);
@@ -506,7 +509,9 @@ function paintHeroes(){
     const b = document.createElement('b');      b.textContent = h.name;
     const sm = document.createElement('small'); sm.textContent = h.desc;
     const bf = document.createElement('div');   bf.className = 'buff'; bf.textContent = buffs.join('／');
-    card.append(b, sm, bf);
+    /* 職業特色（別人沒有的那條）要獨立一行，這才是選職業的理由 */
+    const sp = document.createElement('div'); sp.className = 'trait'; sp.textContent = h.buff || '';
+    card.append(b, sm, bf, sp);
     box.appendChild(card);
   }
 }
