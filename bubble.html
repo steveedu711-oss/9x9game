@@ -146,8 +146,9 @@ canvas{position:absolute;inset:0;width:100%;height:100%;z-index:3}
 <script src="assets/common.js"></script>
 <script>
 Topic.bar($('topicbar'));
-Mode.bar($('modebar'), () => document.body.classList.toggle('arcade', Mode.isArcade()));
+Mode.bar($('modebar'), () => { document.body.classList.toggle('arcade', Mode.isArcade()); modeBadge(); });
 document.body.classList.toggle('arcade', Mode.isArcade());
+modeBadge();
 versionBar('bubble.html');
 
 function r(a,b){ return a + ((Math.random()*(b-a+1))|0); }

@@ -24,8 +24,11 @@ const Stats = {
 };
 /* 最佳成績（每個版本各自一筆） */
 const Best = {
-  get(k){ try{ return +localStorage.getItem('mul99_best_' + k) || 0; }catch(e){ return 0; } },
-  set(k, v){ try{ if(v > this.get(k)) localStorage.setItem('mul99_best_' + k, v); }catch(e){} }
+  /* 兩種模式的紀錄要分開存：純玩模式不用算數學，分數本來就衝得比較高，
+     混在一起的話練習模式的紀錄永遠被蓋掉（Mode 定義在這支檔案後面，用的時候才會取到） */
+  k(k){ return 'mul99_best_' + ((typeof Mode !== 'undefined' && Mode.isArcade()) ? 'a_' : '') + k; },
+  get(k){ try{ return +localStorage.getItem(this.k(k)) || 0; }catch(e){ return 0; } },
+  set(k, v){ try{ if(v > this.get(k)) localStorage.setItem(this.k(k), v); }catch(e){} }
 };
 
 /* ---------- 存檔：關掉瀏覽器再打開也接得回來 ---------- */
@@ -317,6 +320,18 @@ const VERSIONS = [
   {f:'cloudjump.html', n:'☁️ 跳跳'},
   {f:'bubble.html', n:'🐠 泡泡'}
 ];
+/* 純玩模式在標題後面掛一顆徽章，換頁也看得出現在在哪個模式 */
+function modeBadge(){
+  const h1 = document.querySelector('h1');
+  if(!h1) return;
+  let b = document.getElementById('modeBadge');
+  if(!Mode.isArcade()){ b && b.remove(); return; }
+  if(!b){
+    b = document.createElement('span');
+    b.id = 'modeBadge'; b.className = 'modebadge'; b.textContent = '純玩模式';
+    h1.after(b);
+  }
+}
 function versionBar(current){
   const el = document.querySelector('.vers');
   if(!el) return;

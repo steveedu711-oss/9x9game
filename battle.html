@@ -1764,7 +1764,7 @@ function paintTip(){
 }
 Mode.bar($('modebar'), () => {
   document.body.classList.toggle('arcade', Mode.isArcade());
-  paintTip();
+  paintTip(); modeBadge();
 });
 Topic.bar($('topicbar'));
 $('difbar').onclick = (e) => {
@@ -1774,7 +1774,7 @@ $('difbar').onclick = (e) => {
 };
 [...$('difbar').children].forEach(x => x.classList.toggle('on', x.dataset.d === difKey()));
 document.body.classList.toggle('arcade', Mode.isArcade());
-paintTip();
+paintTip(); modeBadge();
 
 versionBar('battle.html');
 startCoins();

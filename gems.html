@@ -402,8 +402,9 @@ function paintMode(){
   document.body.classList.toggle('arcade', Mode.isArcade());
   $('noteArcade').style.display = Mode.isArcade() ? '' : 'none';
 }
-Mode.bar($('modebar'), paintMode);
+Mode.bar($('modebar'), () => { paintMode(); modeBadge(); });
 paintMode();
+modeBadge();
 versionBar('gems.html');
 startCoins();
 build();

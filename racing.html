@@ -258,8 +258,9 @@ body{gap:8px}
 <script src="assets/common.js"></script>
 <script>
 Topic.bar($('topicbar'));
-Mode.bar($('modebar'), () => document.body.classList.toggle('arcade', Mode.isArcade()));
+Mode.bar($('modebar'), () => { document.body.classList.toggle('arcade', Mode.isArcade()); modeBadge(); });
 document.body.classList.toggle('arcade', Mode.isArcade());
+modeBadge();
 versionBar('racing.html');
 
 function r(a,b){ return a + ((Math.random()*(b-a+1))|0); }

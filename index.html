@@ -388,9 +388,10 @@ function gameCard(g){
   a.append(ic, txt, go);
   return a;
 }
-Mode.bar($('modebar'), () => { document.body.classList.toggle('arcade', Mode.isArcade()); paintGames(); });
+Mode.bar($('modebar'), () => { document.body.classList.toggle('arcade', Mode.isArcade()); paintGames(); modeBadge(); });
 Topic.bar($('topicbar'));
 document.body.classList.toggle('arcade', Mode.isArcade());
+modeBadge();
 
 function paintGames(){
   const main = $('gamesMain'), sub = $('gamesSub');

@@ -787,8 +787,10 @@ function end(){
     ? weak.map(([k,v]) => '<li>' + k + ' <i>錯 ' + v.bad + '</i></li>').join('')
     : '<li>目前沒有答錯紀錄，很厲害</li>';
   try{
-    const b = +localStorage.getItem('mul99_best_v1_score') || 0;
-    if(score > b) localStorage.setItem('mul99_best_v1_score', score);
+    /* 純玩模式的紀錄分開存，不然練習模式的最高分會被蓋掉 */
+    const bk = 'mul99_best_' + (arcadeNow() ? 'a_' : '') + 'v1_score';
+    const b = +localStorage.getItem(bk) || 0;
+    if(score > b) localStorage.setItem(bk, score);
   }catch(e){}
   $('over').classList.add('on');
   beep(520,.16,'sine',.09);
