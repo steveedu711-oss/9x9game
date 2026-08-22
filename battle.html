@@ -254,6 +254,33 @@ body{padding-bottom:16px}
 .bagbtn.gotloot{animation:bagPop .5s cubic-bezier(.2,1.6,.4,1)}
 @keyframes bagPop{40%{transform:scale(1.22);box-shadow:0 0 0 4px #f6c45355}}
 
+/* ---------- 裝備強化 ---------- */
+.enh{
+  display:inline-block;padding:1px 7px;border-radius:99px;font-size:12px;font-weight:900;
+  color:#3a2400;background:linear-gradient(180deg,#ffe9a8,#f6c453);vertical-align:middle;
+}
+.enhbtn{
+  margin-top:8px;width:100%;padding:7px 6px;border-radius:10px;cursor:pointer;font-family:inherit;
+  background:linear-gradient(180deg,#fff0c4,var(--gold));color:#3a2400;border:none;
+  font-size:13px;font-weight:800;line-height:1.3;box-shadow:0 3px 0 #a97a12;
+}
+.enhbtn small{display:block;font-size:10px;font-weight:600;opacity:.8}
+.enhbtn:active{transform:translateY(2px);box-shadow:none}
+.enhbtn.no{background:#2a1a40;color:var(--dim);box-shadow:none;cursor:default}
+.enhmax{margin-top:8px;font-size:11px;color:var(--gold2);text-align:center}
+.enhmsg{
+  position:absolute;left:50%;top:22%;transform:translateX(-50%);z-index:30;pointer-events:none;
+  font-size:clamp(20px,4.6vw,30px);font-weight:900;text-shadow:0 3px 10px #000,0 0 20px currentColor;
+  animation:enhPop 1.4s cubic-bezier(.2,1.5,.4,1) forwards;
+}
+@keyframes enhPop{
+  0%{opacity:0;transform:translateX(-50%) scale(.5)}
+  18%{opacity:1;transform:translateX(-50%) scale(1.12)}
+  30%{transform:translateX(-50%) scale(1)}
+  80%{opacity:1}
+  100%{opacity:0;transform:translateX(-50%) translateY(-26px) scale(.95)}
+}
+
 /* ---------- 主動技能 ---------- */
 .skills{display:flex;gap:8px;width:min(96vw,560px)}
 .skill{
@@ -1348,19 +1375,26 @@ function paintGear(){
     const it = Save.d.gear[k];
     if(!it) return '<div class="slot empty"><div class="ic">➕</div><div class="nm">' +
       slotName[k] + '</div><div class="st2">還沒有裝備</div></div>';
+    const lv = enhLv(it), cost = enhCost(it), rate = enhRate(lv);
+    const can = lv < ENH_MAX && Save.d.gold >= cost;
     return '<div class="slot" style="border-style:solid;border-color:' + it.color + '">' +
       '<div class="ic">' + it.icon + '</div>' +
-      '<div class="nm" style="color:' + it.color + '">' + it.name + '</div>' +
-      '<div class="st2">' + gearLine(it) + '</div></div>';
+      '<div class="nm" style="color:' + it.color + '">' + it.name + enhTag(it) + '</div>' +
+      '<div class="st2">' + gearLine(it) + '</div>' +
+      (lv >= ENH_MAX
+        ? '<div class="enhmax">已經滿級 +' + ENH_MAX + '</div>'
+        : '<button class="enhbtn' + (can ? '' : ' no') + '" data-enh="' + k + '">' +
+            '強化 +' + (lv+1) + '<small>' + cost + ' 金幣・成功 ' + rate + '%</small></button>') +
+      '</div>';
   }).join('');
 
-  const bag = Save.d.bag.slice().sort((a,b)=>b.score-a.score);
+  const bag = Save.d.bag.slice().sort((a,b)=>gearScore(b)-gearScore(a));
   $('baglist').innerHTML = bag.length ? bag.map(it => {
     const cur = Save.d.gear[it.slot];
-    const better = !cur || it.score > cur.score;
+    const better = !cur || gearScore(it) > gearScore(cur);
     return '<div class="bagitem' + (better ? ' better' : '') + '">' +
       '<div class="ic">' + it.icon + '</div>' +
-      '<div class="info"><b style="color:' + it.color + '">' + it.name +
+      '<div class="info"><b style="color:' + it.color + '">' + it.name + enhTag(it) +
         ' <span class="rar">' + it.rarity + '</span>' + (better ? ' ⬆' : '') + '</b>' +
         '<small>' + gearLine(it) + '</small></div>' +
       '<button class="eq" data-eq="' + it.id + '">裝備</button>' +
@@ -1368,7 +1402,45 @@ function paintGear(){
   }).join('') : '<div class="empty-tip">背包是空的，打倒敵人就會掉裝備</div>';
   paintTop();
 }
-const sellPrice = it => Math.max(5, Math.round(it.score * 0.8));
+const sellPrice = it => Math.max(5, Math.round(gearScore(it) * 0.8));
+
+/* 強化：花金幣賭一把。成功 +1、失敗掉級（前段不掉），但裝備永遠不會消失 */
+function enhance(slotKey){
+  const it = Save.d.gear[slotKey];
+  if(!it) return;
+  const lv = enhLv(it);
+  if(lv >= ENH_MAX) return;
+  const cost = enhCost(it);
+  if(Save.d.gold < cost){ enhShout('金幣不夠', '#f87171'); return; }
+
+  Save.d.gold -= cost;
+  const ok = Math.random() * 100 < enhRate(lv);
+  if(ok){
+    it.enh = lv + 1;
+    enhShout('強化成功！+' + it.enh, '#ffe066');
+    Sfx.win && Sfx.win();
+  }else{
+    const drop = enhDrop(lv);
+    it.enh = Math.max(0, lv - drop);
+    enhShout(drop ? ('失敗，掉到 +' + it.enh) : '失敗，等級沒變', '#f87171');
+    Sfx.bad && Sfx.bad();
+  }
+  Save.put();
+  P = Save.power();
+  if(maxHp < P.hp){ heroHp += P.hp - maxHp; }   // 換算後血量上限變高就補上差額
+  maxHp = P.hp;
+  paintHeroBar();
+  paintGear();
+}
+function enhShout(text, color){
+  $('gearwin').querySelectorAll('.enhmsg').forEach(x => x.remove());   // 連點時不要疊成一團
+  const el = document.createElement('div');
+  el.className = 'enhmsg';
+  el.textContent = text;
+  el.style.color = color;
+  $('gearwin').appendChild(el);
+  setTimeout(() => el.remove(), 1400);
+}
 function equip(id){
   const i = Save.d.bag.findIndex(x => x.id === id);
   if(i < 0) return;
@@ -1391,6 +1463,10 @@ function sell(id){
   Save.d.bag.splice(i,1);
   Save.put(); paintGear(); Sfx.tick();
 }
+$('slots').addEventListener('click', e => {
+  const b = e.target.closest('[data-enh]');
+  if(b) enhance(b.dataset.enh);
+});
 $('baglist').addEventListener('click', e => {
   const eq = e.target.closest('[data-eq]'), sl = e.target.closest('[data-sell]');
   if(eq) equip(eq.dataset.eq);

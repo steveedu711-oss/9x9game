@@ -107,7 +107,8 @@ const Save = {
     let crit = 5 + h.crit, ult = 11 + h.ult;
     for(const k of ['weapon','armor','charm']){
       const it = g[k]; if(!it) continue;
-      atk += it.atk||0; hp += it.hp||0; crit += it.crit||0; ult += it.ult||0;
+      atk += gearStat(it,'atk'); hp += gearStat(it,'hp');
+      crit += gearStat(it,'crit'); ult += gearStat(it,'ult');
     }
     return {atk, hp: Math.max(40, hp), crit, ult, spell: h.spell, hero: h};
   },
@@ -186,12 +187,33 @@ function rollGear(level, bonus){
   it.score = it.atk*3 + it.hp*0.6 + it.crit*2 + it.ult*1.5;
   return it;
 }
+/* ---------- 裝備強化（2026-08-23，天堂式的高風險高報酬） ----------
+   每強化一級主屬性 +12%。前面幾級穩，後面越來越難，失敗只會掉級**不會消失**——
+   小學生也在玩，裝備直接爆掉太傷。金幣終於有用途了。 */
+const ENH_MAX = 10;
+function enhLv(it){ return Math.max(0, Math.min(ENH_MAX, (it && it.enh) || 0)); }
+/* 成功率：+0～+2 穩過，之後每級降，+9 只剩三成 */
+function enhRate(lv){ return [100, 100, 100, 85, 75, 65, 55, 45, 38, 30][lv] || 30; }
+/* 費用：跟著等級翻，後面才有「要不要賭」的感覺 */
+function enhCost(it){ return Math.round((30 + it.score * 0.35) * Math.pow(1.55, enhLv(it))); }
+/* 失敗會掉幾級：前段不掉，中段掉 1，後段掉 2（但永遠不會消失） */
+function enhDrop(lv){ return lv >= 7 ? 2 : (lv >= 4 ? 1 : 0); }
+/* 算進強化倍率之後的數值 */
+function gearStat(it, key){
+  const base = it[key] || 0;
+  if(!base) return 0;
+  return Math.round(base * (1 + enhLv(it) * 0.12));
+}
+function gearScore(it){
+  return gearStat(it,'atk')*3 + gearStat(it,'hp')*0.6 + gearStat(it,'crit')*2 + gearStat(it,'ult')*1.5;
+}
+function enhTag(it){ return enhLv(it) ? ' <span class="enh">+' + enhLv(it) + '</span>' : ''; }
 function gearLine(it){
   const bits = [];
-  if(it.atk) bits.push('攻擊 +' + it.atk);
-  if(it.hp)  bits.push('血量 +' + it.hp);
-  if(it.crit)bits.push('爆擊 +' + it.crit + '%');
-  if(it.ult) bits.push('必殺充能 +' + it.ult);
+  if(it.atk) bits.push('攻擊 +' + gearStat(it,'atk'));
+  if(it.hp)  bits.push('血量 +' + gearStat(it,'hp'));
+  if(it.crit)bits.push('爆擊 +' + gearStat(it,'crit') + '%');
+  if(it.ult) bits.push('必殺充能 +' + gearStat(it,'ult'));
   return bits.join('　');
 }
 
