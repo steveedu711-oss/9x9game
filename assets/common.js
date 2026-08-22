@@ -3,6 +3,15 @@
 
 const $ = id => document.getElementById(id);
 
+/* 數字變大之後要好讀：一萬以上用「萬」，其餘加千分位。
+   後期怪物血量會到幾萬，一長串數字在小螢幕上完全看不出差別 */
+function fmtN(n){
+  n = Math.round(n || 0);
+  if(n >= 100000000) return (n/100000000).toFixed(2).replace(/\.?0+$/,'') + '億';
+  if(n >= 10000)     return (n/10000).toFixed(n >= 100000 ? 0 : 1).replace(/\.0$/,'') + '萬';
+  return n.toLocaleString('en-US');
+}
+
 /* ---------- 存檔位（2026-08-23 Steve：要像放置天堂那樣有「登入」） ----------
    那個遊戲的登入其實就是本地多存檔位＋選角畫面（`lineage_idle_save_1/2/3`），
    不是伺服器帳號，所以純前端就做得到。這裡把每一格的資料都加上 `_sN` 後綴：
@@ -67,20 +76,26 @@ const Best = {
    3. Lv35 之後改線性，才不會變成天文數字（參考站也是在 Lv70 改線性化）
    ⚠ 後期變慢一律靠「需求變高」，**不要調低打怪拿到的經驗**：
       拿到的變少玩家會覺得被扣，需求變高則是自然的難度曲線。 */
-const MAX_LV = 60;
-const EXP_EARLY = [8, 22, 45, 80];      // Lv1→2、2→3、3→4、4→5
-const EXP_MID_BASE = 80, EXP_MID_RATE = 1.26, EXP_LINEAR_AT = 35;
-function expReq(lv){                    // 從 lv 升到 lv+1 需要多少經驗
+const MAX_LV = 200;                      // Steve 2026-08-23：開放到 200 級
+const EXP_EARLY = [8, 22, 45, 80];       // Lv1→2、2→3、3→4、4→5
+const EXP_MID_BASE = 80, EXP_MID_RATE = 1.20, EXP_MID_END = 30;   // 指數段到 Lv30
+const EXP_S2_END = 100;                  // Lv30～100 一段、100 以上再一段
+/* 斜率壓得比第一版低很多：Lv200 累計約 4,000 萬，配上怪物經驗隨關卡指數成長才打得到。
+   算過 1.24/0.22/0.5 那組要 9.5 億，等於永遠練不完，那不是難度是絕望 */
+function expReq(lv){                     // 從 lv 升到 lv+1 需要多少經驗
   if(lv >= MAX_LV) return Infinity;
   if(lv <= EXP_EARLY.length) return EXP_EARLY[lv - 1];
-  if(lv < EXP_LINEAR_AT) return Math.round(EXP_MID_BASE * Math.pow(EXP_MID_RATE, lv - EXP_EARLY.length));
-  const at = Math.round(EXP_MID_BASE * Math.pow(EXP_MID_RATE, EXP_LINEAR_AT - EXP_EARLY.length));
-  return Math.round(at * (1 + (lv - EXP_LINEAR_AT + 1) * 0.5));
+  if(lv < EXP_MID_END) return Math.round(EXP_MID_BASE * Math.pow(EXP_MID_RATE, lv - EXP_EARLY.length));
+  const at30 = EXP_MID_BASE * Math.pow(EXP_MID_RATE, EXP_MID_END - EXP_EARLY.length);
+  if(lv < EXP_S2_END) return Math.round(at30 * (1 + (lv - EXP_MID_END + 1) * 0.08));
+  const at100 = at30 * (1 + (EXP_S2_END - EXP_MID_END + 1) * 0.08);
+  return Math.round(at100 * (1 + (lv - EXP_S2_END + 1) * 0.10));
 }
 
 const SAVE_KEY = 'mul99_save';
 const DEFAULT_SAVE = {
   lv:1, exp:0, gold:0, hero:'tiger', pname:'',   // pname＝玩家自己取的名字，空的就用角色本名
+  scroll:0,                                      // 強化卷軸：打怪會掉，也能用金幣買
   gear:{weapon:null, armor:null, charm:null},
   bag:[],
   round:1, wave:0,
@@ -212,19 +227,38 @@ function rollGear(level, bonus){
 /* ---------- 裝備強化（2026-08-23，天堂式的高風險高報酬） ----------
    每強化一級主屬性 +12%。前面幾級穩，後面越來越難，失敗只會掉級**不會消失**——
    小學生也在玩，裝備直接爆掉太傷。金幣終於有用途了。 */
+/* 強化規則照《天堂》那套（Steve 2026-08-23 指定）：
+   **+6 以前用強化卷軸一定成功，+7 開始失敗會爆炸，裝備直接消失。**
+   所以 +6 是安全線，要不要往上賭是玩家自己的決定——這正是天堂最上癮的地方。 */
 const ENH_MAX = 10;
+const ENH_SAFE = 6;                     // 這一級（含）以前用卷軸必定成功
 function enhLv(it){ return Math.max(0, Math.min(ENH_MAX, (it && it.enh) || 0)); }
-/* 成功率：+0～+2 穩過，之後每級降，+9 只剩三成 */
-function enhRate(lv){ return [100, 100, 100, 85, 75, 65, 55, 45, 38, 30][lv] || 30; }
-/* 費用：跟著等級翻，後面才有「要不要賭」的感覺 */
-function enhCost(it){ return Math.round((30 + it.score * 0.35) * Math.pow(1.55, enhLv(it))); }
-/* 失敗會掉幾級：前段不掉，中段掉 1，後段掉 2（但永遠不會消失） */
-function enhDrop(lv){ return lv >= 7 ? 2 : (lv >= 4 ? 1 : 0); }
+/* 成功率：升到 +7 起才有失敗，而且失敗就是爆炸 */
+function enhRate(lv){
+  if(lv < ENH_SAFE) return 100;         // lv 是目前等級，要升到 lv+1
+  return [60, 50, 40, 30][lv - ENH_SAFE] || 30;
+}
+/* 會不會爆：+7 開始，失敗就整件消失 */
+function enhBoom(lv){ return lv >= ENH_SAFE; }
+/* 卷軸之外還要一點金幣，越後面越貴 */
+function enhCost(it){ return Math.round((20 + it.score * 0.25) * Math.pow(1.4, enhLv(it))); }
+/* 強化倍率分兩段（Steve 2026-08-23）：
+   安定值 +6 以內每級只加 12%（穩穩來）；**超過之後每一級都大跳，而且越往上跳越多**
+   （+7 加 35%、+8 加 45%、+9 加 60%、+10 加 80%）。
+   要冒爆炸的風險，回報就得一級比一級明顯，不然沒有人要賭。
+     +6 ＝1.72 倍｜+7 ＝2.07｜+8 ＝2.52｜+9 ＝3.12｜+10＝3.92（是 +6 的 2.3 倍） */
+const ENH_STEP_SAFE = 0.12;
+const ENH_STEP_RISK = [0.35, 0.45, 0.60, 0.80];      // +7、+8、+9、+10 各自的增幅
+function enhMult(lv){
+  let m = 1 + Math.min(lv, ENH_SAFE) * ENH_STEP_SAFE;
+  for(let i = 0; i < lv - ENH_SAFE; i++) m += ENH_STEP_RISK[i] || ENH_STEP_RISK[ENH_STEP_RISK.length-1];
+  return m;
+}
 /* 算進強化倍率之後的數值 */
 function gearStat(it, key){
   const base = it[key] || 0;
   if(!base) return 0;
-  return Math.round(base * (1 + enhLv(it) * 0.12));
+  return Math.round(base * enhMult(enhLv(it)));
 }
 function gearScore(it){
   return gearStat(it,'atk')*3 + gearStat(it,'hp')*0.6 + gearStat(it,'crit')*2 + gearStat(it,'ult')*1.5;

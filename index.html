@@ -437,7 +437,7 @@ function paintPlayer(){
   face.src = h.frames ? 'assets/hero_cheer.webp' : h.img;
   $('pname').textContent = playerName();
   $('renameBtn').textContent = Save.d.pname ? '✏️ 改名字' : '✏️ 取名字';
-  $('pgold').textContent = d.gold;
+  $('pgold').textContent = fmtN(d.gold);
   const full = d.lv >= MAX_LV;
   $('pexp').style.width = full ? '100%' : (d.exp / Save.needExp() * 100) + '%';
   $('pexpText').textContent = full

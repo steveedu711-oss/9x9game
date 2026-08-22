@@ -255,6 +255,26 @@ body{padding-bottom:16px}
 @keyframes bagPop{40%{transform:scale(1.22);box-shadow:0 0 0 4px #f6c45355}}
 
 /* ---------- 裝備強化 ---------- */
+.scrollbar{
+  display:flex;align-items:center;gap:10px;margin-top:10px;padding:8px 12px;border-radius:12px;
+  background:#241638;border:1px solid var(--line);font-size:13px;
+}
+.scrollbar b{color:var(--gold2);font-size:15px}
+.scrollbar button{
+  margin-left:auto;padding:6px 12px;border-radius:99px;cursor:pointer;font-family:inherit;font-size:12px;
+  background:linear-gradient(180deg,#fff0c4,var(--gold));color:#3a2400;border:none;font-weight:700;
+}
+.scrollbar button.no{background:#2a1a40;color:var(--dim);cursor:default}
+.enhbtn.risky{background:linear-gradient(180deg,#ffb4b4,#f87171);box-shadow:0 3px 0 #7f2020;color:#2a0808}
+.enhbtn.risky.no{background:#2a1a40;color:var(--dim);box-shadow:none}
+.boomfx{
+  position:absolute;inset:0;z-index:29;pointer-events:none;
+  background:radial-gradient(circle at 50% 40%,#fff 0%,#ffb648 18%,#f8717155 38%,transparent 65%);
+  animation:boomOut .7s ease-out forwards;
+}
+@keyframes boomOut{0%{opacity:0;transform:scale(.3)}18%{opacity:1}100%{opacity:0;transform:scale(1.5)}}
+
+
 .enh{
   display:inline-block;padding:1px 7px;border-radius:99px;font-size:12px;font-weight:900;
   color:#3a2400;background:linear-gradient(180deg,#ffe9a8,#f6c453);vertical-align:middle;
@@ -819,6 +839,7 @@ body.playing .setup{display:none}
   <div class="gearbox">
     <h2>裝 備</h2>
     <div class="power" id="power"></div>
+    <div class="scrollbar" id="scrollBar"></div>
     <div class="slots" id="slots"></div>
     <div class="baglist" id="baglist"></div>
     <button class="btn" id="closeGear" style="width:100%;margin-top:14px">關 閉</button>
@@ -1352,8 +1373,8 @@ function dmgText(text, crit){
 /* ---------- 存檔面板 ---------- */
 function paintTop(){
   $('lv').textContent = Save.d.lv;
-  $('gold').textContent = Save.d.gold;
-  $('expBar').style.width = (Save.d.exp / Save.needExp() * 100) + '%';
+  $('gold').textContent = fmtN(Save.d.gold);
+  $('expBar').style.width = Save.d.lv >= MAX_LV ? '100%' : (Save.d.exp / Save.needExp() * 100) + '%';
   $('stage').textContent = round + '-' + (wave+1);
   $('bagDot').classList.toggle('on', hasBetter());
 }
@@ -1376,17 +1397,25 @@ function paintGear(){
     if(!it) return '<div class="slot empty"><div class="ic">➕</div><div class="nm">' +
       slotName[k] + '</div><div class="st2">還沒有裝備</div></div>';
     const lv = enhLv(it), cost = enhCost(it), rate = enhRate(lv);
-    const can = lv < ENH_MAX && Save.d.gold >= cost;
+    const risky = enhBoom(lv);
+    const can = lv < ENH_MAX && Save.d.gold >= cost && (Save.d.scroll || 0) >= 1;
     return '<div class="slot" style="border-style:solid;border-color:' + it.color + '">' +
       '<div class="ic">' + it.icon + '</div>' +
       '<div class="nm" style="color:' + it.color + '">' + it.name + enhTag(it) + '</div>' +
       '<div class="st2">' + gearLine(it) + '</div>' +
       (lv >= ENH_MAX
         ? '<div class="enhmax">已經滿級 +' + ENH_MAX + '</div>'
-        : '<button class="enhbtn' + (can ? '' : ' no') + '" data-enh="' + k + '">' +
-            '強化 +' + (lv+1) + '<small>' + cost + ' 金幣・成功 ' + rate + '%</small></button>') +
+        : '<button class="enhbtn' + (can ? '' : ' no') + (risky ? ' risky' : '') + '" data-enh="' + k + '">' +
+            '強化 +' + (lv+1) + (risky ? ' ⚠' : '') +
+            '<small>' + enhPreview(it) + '</small>' +
+            '<small>卷軸 1 ＋ ' + cost + ' 金幣・' +
+            (risky ? '成功 ' + rate + '%，失敗會爆' : '一定成功') + '</small></button>') +
       '</div>';
   }).join('');
+
+  $('scrollBar').innerHTML =
+    '<span>📜 強化卷軸 <b>' + (Save.d.scroll || 0) + '</b> 張</span>' +
+    '<button id="buyScroll"' + (Save.d.gold < SCROLL_PRICE ? ' class="no"' : '') + '>買一張 ' + SCROLL_PRICE + ' 金幣</button>';
 
   const bag = Save.d.bag.slice().sort((a,b)=>gearScore(b)-gearScore(a));
   $('baglist').innerHTML = bag.length ? bag.map(it => {
@@ -1404,15 +1433,24 @@ function paintGear(){
 }
 const sellPrice = it => Math.max(5, Math.round(gearScore(it) * 0.8));
 
-/* 強化：花金幣賭一把。成功 +1、失敗掉級（前段不掉），但裝備永遠不會消失 */
+/* 強化：吃一張強化卷軸 ＋ 一點金幣。
+   +6 以前必定成功；+7 起失敗會**爆炸消失**，所以要先確認過才動手。 */
 function enhance(slotKey){
   const it = Save.d.gear[slotKey];
   if(!it) return;
   const lv = enhLv(it);
   if(lv >= ENH_MAX) return;
   const cost = enhCost(it);
+  if((Save.d.scroll || 0) < 1){ enhShout('沒有強化卷軸', '#f87171'); return; }
   if(Save.d.gold < cost){ enhShout('金幣不夠', '#f87171'); return; }
 
+  if(enhBoom(lv) && !confirmBoom){        // 危險區第一次要先看過警告
+    askBoom(slotKey, lv);
+    return;
+  }
+  confirmBoom = false;
+
+  Save.d.scroll--;
   Save.d.gold -= cost;
   const ok = Math.random() * 100 < enhRate(lv);
   if(ok){
@@ -1420,9 +1458,10 @@ function enhance(slotKey){
     enhShout('強化成功！+' + it.enh, '#ffe066');
     Sfx.win && Sfx.win();
   }else{
-    const drop = enhDrop(lv);
-    it.enh = Math.max(0, lv - drop);
-    enhShout(drop ? ('失敗，掉到 +' + it.enh) : '失敗，等級沒變', '#f87171');
+    // 失敗＝爆炸。裝備直接從身上消失，這就是 +7 以上的代價
+    Save.d.gear[slotKey] = null;
+    enhShout('💥 爆炸了！' + it.name + ' 消失', '#f87171');
+    boomFx();
     Sfx.bad && Sfx.bad();
   }
   Save.put();
@@ -1431,6 +1470,38 @@ function enhance(slotKey){
   maxHp = P.hp;
   paintHeroBar();
   paintGear();
+}
+let confirmBoom = false;
+/* +7 以上一定要先看過這個警告：爆掉是不可逆的，不能讓人手滑 */
+function askBoom(slotKey, lv){
+  const it = Save.d.gear[slotKey];
+  const box = document.createElement('div');
+  box.className = 'pwwrap';
+  box.innerHTML =
+    '<div class="pwbox">' +
+      '<h3 style="color:var(--bad)">⚠ 這一級會爆炸</h3>' +
+      '<p>要把 <b style="color:' + it.color + '">' + it.name + ' +' + lv + '</b> 強化到 <b>+' + (lv+1) + '</b><br>' +
+        '成功率只有 <b>' + enhRate(lv) + '%</b>，<b style="color:var(--bad)">失敗裝備會直接消失</b>。<br>' +
+        '要賭嗎？</p>' +
+      '<div class="pwbtns">' +
+        '<button class="btn ghost" id="bmNo">算 了</button>' +
+        '<button class="btn" id="bmYes" style="background:linear-gradient(180deg,#ffb4b4,#f87171);box-shadow:0 5px 0 #7f2020">賭下去</button>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(box);
+  box.querySelector('#bmNo').onclick = () => box.remove();
+  box.querySelector('#bmYes').onclick = () => {
+    box.remove();
+    confirmBoom = true;
+    enhance(slotKey);
+  };
+  box.onclick = (e) => { if(e.target === box) box.remove(); };
+}
+function boomFx(){
+  const el = document.createElement('div');
+  el.className = 'boomfx';
+  $('gearwin').appendChild(el);
+  setTimeout(() => el.remove(), 700);
 }
 function enhShout(text, color){
   $('gearwin').querySelectorAll('.enhmsg').forEach(x => x.remove());   // 連點時不要疊成一團
@@ -1463,6 +1534,23 @@ function sell(id){
   Save.d.bag.splice(i,1);
   Save.put(); paintGear(); Sfx.tick();
 }
+/* 強化後主屬性會變多少——過了安定值之後跳很大，要讓玩家看得到才會想賭 */
+function enhPreview(it){
+  const key = it.atk ? 'atk' : (it.hp ? 'hp' : (it.crit ? 'crit' : 'ult'));
+  const name = {atk:'攻擊', hp:'血量', crit:'爆擊', ult:'必殺'}[key];
+  const now = gearStat(it, key);
+  const next = Math.round((it[key] || 0) * enhMult(enhLv(it) + 1));
+  return name + ' ' + now + ' → ' + next + '（+' + (next - now) + '）';
+}
+const SCROLL_PRICE = 160;
+$('scrollBar').addEventListener('click', e => {
+  if(!e.target.closest('#buyScroll')) return;
+  if(Save.d.gold < SCROLL_PRICE){ enhShout('金幣不夠', '#f87171'); return; }
+  Save.d.gold -= SCROLL_PRICE;
+  Save.d.scroll = (Save.d.scroll || 0) + 1;
+  Save.put(); paintGear();
+  enhShout('買到一張卷軸', '#ffe066');
+});
 $('slots').addEventListener('click', e => {
   const b = e.target.closest('[data-enh]');
   if(b) enhance(b.dataset.enh);
@@ -1486,7 +1574,7 @@ $('resetSave').onclick = () => {
 function paintHeroBar(){
   setHp('heroHp', heroHp / maxHp);
   $('heroHpText').textContent = playerName() + ' Lv' + Save.d.lv +
-    (Save.d.lv >= MAX_LV ? '（滿等）' : '') + '　' + heroHp + ' / ' + maxHp;
+    (Save.d.lv >= MAX_LV ? '（滿等）' : '') + '　' + fmtN(heroHp) + ' / ' + fmtN(maxHp);
 }
 
 /* ---------- 魔法：連續答對到門檻自動施放，越連越強 ---------- */
@@ -1611,7 +1699,7 @@ function castSpell(sp){
       camPush(true);
       dmgText(sp.name + ' -' + dmg, true);
       setHp('mobHp', mobHp / mob.hp);
-      $('mobHpText').textContent = mobLabel() + '　' + mobHp + ' / ' + mob.hp;
+      $('mobHpText').textContent = mobLabel() + '　' + fmtN(mobHp) + ' / ' + fmtN(mob.hp);
       if(sp.heal){
         heroHp = Math.min(maxHp, heroHp + sp.heal);
         paintHeroBar();
@@ -1663,7 +1751,7 @@ function applyHit(dmg, isCrit, isWeak){
       dmgText('護盾破了！', true);
       ring(mobCenter(), 'dring', 170);
     }
-    $('mobHpText').textContent = mobLabel() + '　' + mobHp + ' / ' + mob.hp;
+    $('mobHpText').textContent = mobLabel() + '　' + fmtN(mobHp) + ' / ' + fmtN(mob.hp);
     return false;
   }
   mobHp = Math.max(0, mobHp - dmg);
@@ -1672,7 +1760,7 @@ function applyHit(dmg, isCrit, isWeak){
   camPush(isCrit || mobHp <= 0);
   dmgText((isCrit ? '爆擊 ' : '') + '-' + dmg, isWeak || isCrit);
   setHp('mobHp', mobHp / mob.hp);
-  $('mobHpText').textContent = mobLabel() + '　' + mobHp + ' / ' + mob.hp;
+  $('mobHpText').textContent = mobLabel() + '　' + fmtN(mobHp) + ' / ' + fmtN(mob.hp);
   ult = Math.min(100, ult + P.ult);
   paintUlt();
   return mobHp <= 0;
@@ -1813,7 +1901,7 @@ function summonGuards(){
   w.classList.add('shielded');
   dmgText('召喚護衛！', true);
   ring(mobCenter(), 'dring', 150);
-  $('mobHpText').textContent = mobLabel() + '　' + mobHp + ' / ' + mob.hp;
+  $('mobHpText').textContent = mobLabel() + '　' + fmtN(mobHp) + ' / ' + fmtN(mob.hp);
 }
 function mobAttack(){
   if(!running) return;
@@ -1910,8 +1998,8 @@ function killMob(){
   Sfx.win();
   kills++;
   Save.d.totalKill++;
-  const gold = 18 + wave*8 + (mob.boss ? 70 : 0) + (round-1)*10;
-  const exp  = Math.round(mob.exp * (1 + (round-1)*0.35));
+  const gold = Math.round((18 + wave*8 + (mob.boss ? 70 : 0)) * Math.pow(1.10, round - 1));
+  const exp  = Math.round(mob.exp * Math.pow(1.15, round - 1));   // 經驗成長比血量快，見 setMob 的說明
   Save.d.gold += gold;
   earnGold += gold; earnExp += exp;
   const ups = Save.addExp(exp);
@@ -1924,7 +2012,14 @@ function killMob(){
   setTimeout(()=>F().classList.remove('slowmo'), 700);
   Char.react(true, true, mob.boss ? '把 Boss 打倒了！' : '打倒一隻！');
   Char.cat(true);
-  dmgText('+' + gold + ' 金幣', true);
+  dmgText('+' + fmtN(gold) + ' 金幣', true);
+
+  // 掉卷軸：小怪三成、Boss 必掉兩張。強化的入口要靠打怪，不是只靠買
+  const scrolls = mob.boss ? 2 : (Math.random() < 0.3 ? 1 : 0);
+  if(scrolls){
+    Save.d.scroll = (Save.d.scroll || 0) + scrolls;
+    dmgText('📜 卷軸 +' + scrolls, true);
+  }
 
   // 掉裝備：Boss 必掉，小怪看機率；打越後面越容易出好貨
   let dropped = null;
@@ -1971,8 +2066,12 @@ function mobLabel(){
 }
 function setMob(){
   mob = {...MOBS[wave]};
-  mob.hp = Math.round(mob.hp * (1 + (round-1)*0.5));
-  mob.atk = Math.round(mob.atk * (1 + (round-1)*0.3));
+  /* 關卡成長：**血量／攻擊跟經驗刻意脫鉤**。
+     玩家的戰力大致是線性成長（等級＋裝備），怪物血量若也用 1.15 指數，
+     第 60 輪會變成幾十萬血、玩家打不動；但經驗需要指數才追得上 200 級的需求。
+     所以血量走 1.06、經驗走 1.15——高關卡＝經驗效率高，不是變成肉山。 */
+  mob.hp  = Math.round(mob.hp  * Math.pow(1.06, round - 1));
+  mob.atk = Math.round(mob.atk * Math.pow(1.05, round - 1));
   mobHp = mob.hp;
   shield = 0; shieldMax = 0;
   $('mobWrap').classList.remove('shielded');
@@ -1981,7 +2080,7 @@ function setMob(){
   else Spr.off(mel, mob.img);    // 圖是漸進載的，直接指定就好，瀏覽器沒載好會自己補
   preloadNearby();               // 順手把下一隻先抓起來
   setHp('mobHp', 1);
-  $('mobHpText').textContent = mobLabel() + '　' + mobHp + ' / ' + mob.hp;
+  $('mobHpText').textContent = mobLabel() + '　' + fmtN(mobHp) + ' / ' + fmtN(mob.hp);
   applyScene();
   paintTop();
 }
@@ -2011,7 +2110,7 @@ function useUlt(){
     playFx('fire', mobCenter(), {size:380, fps:24});
     dmgText('-' + dmg, true);
     setHp('mobHp', mobHp / mob.hp);
-    $('mobHpText').textContent = mobLabel() + '　' + mobHp + ' / ' + mob.hp;
+    $('mobHpText').textContent = mobLabel() + '　' + fmtN(mobHp) + ' / ' + fmtN(mob.hp);
     shake();
     $('ultfx').classList.remove('on');
     if(mobHp <= 0) return killMob();
@@ -2081,11 +2180,11 @@ function over(win){
   $('ovTitle').textContent = win ? '全部打倒了！' : '這次沒過關';
   $('ovBig').textContent = win ? '🏆 第 ' + round + ' 輪' : round + '-' + (wave+1);
   $('ovKill').textContent = kills + ' 隻';
-  $('ovDmg').textContent = totalDmg;
+  $('ovDmg').textContent = fmtN(totalDmg);
   $('ovQAline').firstChild.textContent = arcade ? '出手／被打 ' : '答對／答錯 ';
   $('ovQA').textContent = arcade ? (hits + ' 下 / ' + taken + ' 下') : (right + ' / ' + wrong);
   $('ovFast').textContent = fastest === null ? '—' : fastest.toFixed(2) + ' 秒';
-  $('ovGold').textContent = earnGold + ' 金幣　經驗 +' + earnExp +
+  $('ovGold').textContent = fmtN(earnGold) + ' 金幣　經驗 +' + fmtN(earnExp) +
     (drops.length ? '　裝備 ×' + drops.length : '');
   $('ovWeak').innerHTML = Stats.weakHTML(6);
   setTimeout(()=>$('over').classList.add('on'), 700);
