@@ -254,6 +254,27 @@ body{padding-bottom:16px}
 .bagbtn.gotloot{animation:bagPop .5s cubic-bezier(.2,1.6,.4,1)}
 @keyframes bagPop{40%{transform:scale(1.22);box-shadow:0 0 0 4px #f6c45355}}
 
+/* ---------- 主動技能 ---------- */
+.skills{display:flex;gap:8px;width:min(96vw,560px)}
+.skill{
+  flex:1;min-height:56px;border-radius:14px;cursor:pointer;position:relative;overflow:hidden;
+  background:linear-gradient(180deg,#3a2456,#241638);border:1px solid var(--line);
+  color:var(--text);font-family:inherit;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:1px;padding:6px 8px;
+  transition:transform .12s ease,border-color .18s;
+}
+.skill b{font-size:14px;font-weight:800;letter-spacing:1px;color:var(--gold2)}
+.skill small{font-size:10px;color:var(--dim)}
+.skill em{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-style:normal;font-size:15px;font-weight:800;color:#fff;background:#0b0714aa;
+}
+.skill em:empty{display:none}
+.skill:not(:disabled):hover{transform:translateY(-2px);border-color:var(--gold)}
+.skill:not(:disabled):active{transform:translateY(2px)}
+.skill:disabled{cursor:default}
+.skill.locked{opacity:.65}
+
 /* 精簡特效模式：把量測到會掉幀的那幾層關掉（星星、光點、影子、殘影、外框光暈） */
 body.lowfx .scene .stars,
 body.lowfx .scene .motes,
@@ -728,6 +749,9 @@ body.playing .setup{display:none}
     <button id="ultBtn" disabled>小虎撲擊</button>
   </div>
 
+  <!-- 主動技能：兩顆就好，多了手機按不完（冷卻時底下那條會補回來） -->
+  <div class="skills" id="skills"></div>
+
   <div class="setup" id="setup">
     <div id="modebar"></div>
     <div id="topicwrap">
@@ -874,7 +898,8 @@ function preloadNearby(){
 preload([...Object.values(HERO_FRAMES), 'assets/fx_cat_attack.webp', HERO.img]);
 /* 逐幀雪碧圖：角色自己那組跟第一隻怪的先載，播到才抓會閃一下空白 */
 if(HERO.frames) preload(['assets/spr_hero_idle.webp', 'assets/spr_hero_atk.webp']);
-preload(['assets/spr_slime_idle.webp', 'assets/spr_slime_atk.webp']);
+preload(['assets/spr_slime_idle.webp', 'assets/spr_slime_atk.webp',
+         'assets/fx_whirl.webp', 'assets/fx_heal.webp']);
 preloadNearby();
 const preloadRest = () => {
   preload([...MOBS.map(m => m.img), ...Object.values(SPELL_IMG), ...HEROES.map(h => h.img),
@@ -1095,7 +1120,9 @@ const Spr = {
   },
   frame(el, d, i){
     const cx = i % d.cols, cy = (i / d.cols) | 0;
-    el.style.backgroundPosition = (cx/(d.cols-1)*100) + '% ' + (cy/(d.rows-1)*100) + '%';
+    const px = d.cols > 1 ? cx/(d.cols-1)*100 : 0;
+    const py = d.rows > 1 ? cy/(d.rows-1)*100 : 0;
+    el.style.backgroundPosition = px + '% ' + py + '%';
   },
   stop(el){ if(el._sprRaf){ cancelAnimationFrame(el._sprRaf); el._sprRaf = 0; } },
   /* loop:true 一直播（待機）；false 播完一次跑 done（出手） */
@@ -1127,6 +1154,10 @@ const Spr = {
   }
 };
 const FXS = {
+  /* 這三張是單張特效圖，當成 1 格的雪碧圖用，播放器就不必分兩套 */
+  whirl:   {img:'assets/fx_whirl.webp',    cols:1, rows:1, n:1, ar:16/9, fps:1.6},
+  poison:  {img:'assets/fx_poison.webp',   cols:1, rows:1, n:1, ar:16/9, fps:1.6},
+  heal:    {img:'assets/fx_heal.webp',     cols:1, rows:1, n:1, ar:16/9, fps:1.6},
   fire:    {img:'assets/fxs_fire.webp',    cols:6, rows:5, n:25, ar:1,     fps:26},
   thunder: {img:'assets/fxs_thunder.webp', cols:6, rows:4, n:24, ar:16/9,  fps:28},
   holy:    {img:'assets/fxs_holy.webp',    cols:6, rows:5, n:27, ar:1,     fps:24}
@@ -1151,7 +1182,10 @@ function playFx(key, pt, opt){
     if(t - last >= 1000/fps){
       if(i >= n){ el.remove(); return; }
       const cx = i % d.cols, cy = (i / d.cols) | 0;
-      el.style.backgroundPosition = (cx/(d.cols-1)*100) + '% ' + (cy/(d.rows-1)*100) + '%';
+      // 單張圖當 1 格用時 cols-1 會是 0，除下去就是 NaN、整張圖不見
+      const px = d.cols > 1 ? cx/(d.cols-1)*100 : 0;
+      const py = d.rows > 1 ? cy/(d.rows-1)*100 : 0;
+      el.style.backgroundPosition = px + '% ' + py + '%';
       i++; last = t;
     }
     requestAnimationFrame(step);
@@ -1405,6 +1439,69 @@ function comboAura(c){
   else if(c >= 6) f.classList.add('aura2');
   else if(c >= 3) f.classList.add('aura1');
 }
+/* ── 主動技能（2026-08-23）──
+   兩顆按鈕、各自冷卻、跟著等級解鎖。兩種模式都能用：
+   練習模式在等答題的空檔按，娛樂模式就是連段的一部分。 */
+const SKILLS = [
+  {key:'whirl', name:'旋風斬', icon:'🌀', lv:3,  cd:9000,  color:'#7fe6ff',
+   fx:{key:'whirl', size:460, bright:1.35, sat:1.3}, mult:2.4, desc:'一圈掃過去的大傷害'},
+  {key:'heal',  name:'治療術', icon:'💚', lv:6,  cd:22000, color:'#8affc4',
+   fx:{key:'heal', size:340, dy:14, bright:1.25}, heal:0.3, desc:'回一大口血'}
+];
+const skillState = {};              // key → 可以再用的時間點
+function paintSkills(){
+  const box = $('skills');
+  if(!box.children.length){
+    box.innerHTML = SKILLS.map(s =>
+      '<button class="skill" data-k="' + s.key + '">' +
+        '<b>' + s.icon + ' ' + s.name + '</b><small>' + s.desc + '</small>' +
+        '<i></i><em></em></button>').join('');
+    box.onclick = (e) => {
+      const b = e.target.closest('.skill'); if(!b) return;
+      useSkill(b.dataset.k);
+    };
+  }
+  [...box.children].forEach(b => {
+    const sk = SKILLS.find(x => x.key === b.dataset.k);
+    const locked = Save.d.lv < sk.lv;
+    const left = Math.max(0, (skillState[sk.key] || 0) - performance.now());
+    b.classList.toggle('locked', locked);
+    b.disabled = locked || left > 0 || !running || locked;
+    b.querySelector('em').textContent = locked ? ('Lv' + sk.lv + ' 解鎖')
+                                      : (left > 0 ? Math.ceil(left/1000) + ' 秒' : '');
+  });
+}
+function useSkill(key){
+  const sk = SKILLS.find(x => x.key === key);
+  if(!sk || !running || Save.d.lv < sk.lv) return;
+  if((skillState[key] || 0) > performance.now()) return;
+  skillState[key] = performance.now() + sk.cd;
+
+  const f = F();
+  f.style.setProperty('--sc', sk.color + '99');
+  comboShout(sk.name + '！', sk.color);
+  Sfx.next();
+
+  if(sk.heal){
+    const back = Math.round(maxHp * sk.heal);
+    heroHp = Math.min(maxHp, heroHp + back);
+    paintHeroBar();
+    playFx(sk.fx.key, heroCenter(), sk.fx);
+    dmgText('+' + back, true);
+  }else{
+    heroSwing(() => {
+      /* 先讓招式看得見，再結算傷害：同一格同時噴命中火花會把技能特效蓋掉 */
+      playFx(sk.fx.key, mobCenter(), sk.fx);
+      setTimeout(() => {
+        if(!running) return;
+        const dmg = Math.round(P.atk * sk.mult * (P.spell || 1) + 8);
+        if(applyHit(dmg, true, false)) killMob();
+      }, 150);
+    });
+  }
+  paintSkills();
+}
+
 /* 施法：魔法陣 → 投射物飛過去 → 命中 */
 function castSpell(sp){
   return new Promise(resolve => {
@@ -1845,6 +1942,7 @@ function useUlt(){
   }, 900);
 }
 function tick(){
+  paintSkills();                     // 技能冷卻倒數跟著這個 100ms 的計時器跑
   if(!running || locked){ paintTimer(); return; }
   mobTimer = Math.max(0, mobTimer - 0.1);
   paintTimer();
@@ -1894,7 +1992,7 @@ function start(){
   $('mob').classList.remove('die','hit');
   $('shMob').classList.remove('gone','hit');
   paintHeroBar();
-  paintUlt(); nextMob(); idleBreak();
+  paintUlt(); paintSkills(); nextMob(); idleBreak();
   clearInterval(loop); loop = setInterval(tick, 100);
   Sfx.next();
   $('start').textContent = '重 新 開 始';
@@ -1948,6 +2046,7 @@ $('difbar').onclick = (e) => {
 document.body.classList.toggle('arcade', Mode.isArcade());
 paintTip(); modeBadge();
 
+paintSkills();
 versionBar('battle.html');
 startCoins();
 setTimeout(()=>heroFrame('ready'), 300);
