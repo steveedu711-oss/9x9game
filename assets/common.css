@@ -159,6 +159,10 @@ h1{
   body{padding:8px 8px 76px;gap:8px;-webkit-user-select:none;user-select:none}
   h1{font-size:clamp(16px,4.6vw,20px);letter-spacing:2px}
 
+  /* 手機省效能：整片背景的漸層一直在慢慢飄，一秒六十次重畫一整個畫面，
+     手機實測光這一項就把打怪頁從 60fps 砍到 30fps。看不太出來的東西先關掉 */
+  body::before{animation:none}
+
   /* 八個遊戲擠成兩三行很難按：改成一行、可以左右滑，每顆也做大一點 */
   .vers{
     flex-wrap:nowrap;overflow-x:auto;justify-content:flex-start;width:100%;

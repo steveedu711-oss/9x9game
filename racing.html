@@ -68,10 +68,16 @@ body{gap:8px}
     linear-gradient(90deg,transparent calc(50% - 45px * var(--k,1)),#ffffff2e calc(50% - 45px * var(--k,1)) calc(50% - 41px * var(--k,1)),transparent calc(50% - 41px * var(--k,1))),
     linear-gradient(90deg,transparent calc(50% + 41px * var(--k,1)),#ffffff2e calc(50% + 41px * var(--k,1)) calc(50% + 45px * var(--k,1)),transparent calc(50% + 45px * var(--k,1))),
     linear-gradient(90deg,transparent calc(50% + 121px * var(--k,1)),#ffffff2e calc(50% + 121px * var(--k,1)) calc(50% + 125px * var(--k,1)),transparent calc(50% + 125px * var(--k,1))),
-    repeating-linear-gradient(180deg,#ffe9a833 0 26px,transparent 26px 70px);
-  animation:roadRun .5s linear infinite;
+    linear-gradient(180deg,transparent,transparent);
 }
-@keyframes roadRun{to{background-position:0 0,0 0,0 0,0 0,0 96px}}
+/* 路面往前跑：原本是動 background-position，等於每一幀重畫一整片還帶 3D 變形，
+   手機實測只有 15fps。改成獨立一層用 transform 位移（走合成、不重繪）就回到 60fps */
+.linesInner .dash{
+  position:absolute;left:0;right:0;top:-96px;bottom:0;
+  background:repeating-linear-gradient(180deg,#ffe9a833 0 26px,transparent 26px 70px);
+  animation:roadRun .5s linear infinite;will-change:transform;
+}
+@keyframes roadRun{to{transform:translate3d(0,96px,0)}}
 .edge{position:absolute;bottom:0;width:38%;height:100%;pointer-events:none;
   background:linear-gradient(90deg,#f6c45326,transparent)}
 .edge.r{right:0;transform:scaleX(-1)}
@@ -202,7 +208,7 @@ body{gap:8px}
   <div class="stage" id="stage">
     <div class="sky"><div class="sun"></div><div class="mts2"></div><div class="mts"></div></div>
     <div class="road">
-      <div class="lines"><div class="linesInner"></div></div>
+      <div class="lines"><div class="linesInner"><div class="dash"></div></div></div>
       <div class="edge"></div><div class="edge r"></div>
     </div>
     <div class="speed" id="speed"></div>

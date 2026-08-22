@@ -16,6 +16,9 @@
 body{gap:14px;padding-bottom:90px}
 .wrap{width:min(96vw,620px);display:flex;flex-direction:column;gap:14px}
 
+/* ---------- 桌機兩欄（手機不受影響，仍是單欄同順序） ---------- */
+.lobby{display:flex;flex-direction:column;gap:14px}
+
 /* ---------- 標題 ---------- */
 .logo{text-align:center;margin-top:6px;position:relative}
 .logo h1{font-size:clamp(24px,6.4vw,36px);letter-spacing:6px}
@@ -135,6 +138,34 @@ body{gap:14px;padding-bottom:90px}
   background:#1b1029;border:1px solid var(--line);border-radius:99px;padding:2px 9px;
 }
 .game .go{font-size:22px;color:var(--ac);flex:none;opacity:.8}
+/* 主線那張是「先玩這個」，份量要跟練習小遊戲拉開 */
+#gamesMain .game{
+  padding:18px 18px 18px 22px;gap:16px;border-radius:22px;
+  background:linear-gradient(120deg,#4a2f6d,#2a1840 62%,#1d1230);
+  border-color:#f6c45355;box-shadow:0 16px 38px #000a,inset 0 1px 0 #ffffff1a;
+}
+#gamesMain .game::before{width:6px;top:8%;bottom:8%}
+#gamesMain .game .ic{width:76px;height:76px;font-size:38px;border-radius:20px}
+#gamesMain .game .ic,#gamesMain .game .txt,#gamesMain .game .go{position:relative;z-index:1}
+#gamesMain .game .txt b{font-size:22px}
+#gamesMain .game .txt small{-webkit-line-clamp:3;font-size:13px}
+#gamesMain .game .go{font-size:28px;opacity:1}
+/* 主線卡右下角壓一隻淡淡的 Boss，一眼看得出這張是去打怪的（原本這層是掃光，換掉） */
+#gamesMain .game::after{
+  content:"";position:absolute;left:auto;right:26px;top:0;bottom:0;width:180px;transform:none;
+  background:url(assets/mob_dragon.webp) no-repeat right -18px center/auto 104%;
+  opacity:.55;filter:saturate(1) brightness(1.05);
+  -webkit-mask-image:linear-gradient(90deg,transparent 2%,#000 52%);
+  mask-image:linear-gradient(90deg,transparent 2%,#000 52%);
+  -webkit-mask-image:linear-gradient(100deg,transparent 18%,#000 62%);
+  mask-image:linear-gradient(100deg,transparent 18%,#000 62%);
+}
+#gamesMain .game:hover::after{animation:none;opacity:.6}
+/* 練習小遊戲：說明壓成一行，卡片矮一點，一眼看得完 */
+.games.grid .game .txt small{-webkit-line-clamp:2}
+.games.grid .game{align-items:flex-start}
+.games.grid .game .ic{margin-top:2px}
+
 .game.new .ic::after{
   content:"新";position:absolute;top:-6px;right:-6px;background:var(--bad);color:#fff;
   font-size:9px;font-weight:800;padding:2px 7px;border-radius:99px;box-shadow:0 3px 8px #0009;
@@ -166,16 +197,53 @@ body{gap:14px;padding-bottom:90px}
   .gold span{font-size:19px}
   .panel{padding:13px}
   .heroes{grid-template-columns:repeat(2,1fr);gap:8px}
-  .hcard img{height:96px}
-  .hcard .ph{line-height:96px}
+  .hcard{padding:8px 5px 7px}
+  .hcard img{height:76px}
+  .hcard .ph{line-height:76px}
   .hcard .buff{min-height:0}
   .game{padding:11px 12px 11px 14px;gap:11px}
   .game .ic{width:52px;height:52px;font-size:25px}
   .game .txt b{font-size:16px}
   .game .txt small{font-size:11.5px}
+  /* 手機一屏放得下的張數有限：練習小遊戲的說明壓成一行，整頁少滑一大截 */
+  .games.grid{gap:8px}
+  .games.grid .game{padding:10px 11px 10px 13px}
+  .games.grid .game .ic{width:46px;height:46px;font-size:22px}
+  .games.grid .game .txt small{-webkit-line-clamp:1;margin-top:2px}
+  .games.grid .game .rec{margin-top:4px}
+  #gamesMain .game{padding:15px 15px 15px 17px}
+  #gamesMain .game .ic{width:64px;height:64px;font-size:32px}
+  #gamesMain .game .txt b{font-size:19px}
+  #gamesMain .game .txt small{-webkit-line-clamp:2}
+  /* 手機卡片高，同一隻龍會變超大又壓到字，縮小並再淡一點 */
+  #gamesMain .game::after{right:14px;width:124px;background-size:auto 92%;opacity:.4}
   .nums{gap:6px}
   .nums span{font-size:17px}
 }
+
+/* ---------- 桌機兩欄（放最後，才蓋得過上面單欄的設定） ---------- */
+@media (min-width:900px){
+  .wrap{width:min(96vw,1080px)}
+  .lobby{display:grid;grid-template-columns:328px minmax(0,1fr);gap:20px;align-items:start}
+  .colL{position:sticky;top:14px;display:flex;flex-direction:column;gap:12px}
+  .colR{display:flex;flex-direction:column;gap:14px;min-width:0}
+  /* 左欄只有 328px，四張角色卡擠成一排會把字折斷，改兩排 */
+  .heroes{grid-template-columns:repeat(2,1fr);gap:10px}
+  .hcard img{height:100px}
+  .hcard .ph{line-height:100px}
+  .hcard .buff{min-height:0}
+  /* 小遊戲排兩欄，不用一直往下滑 */
+  .games.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+  .games.grid .game .txt small{-webkit-line-clamp:3}
+  /* 玩家卡在窄欄裡改直式：頭像、名字、經驗、金幣由上而下 */
+  .player{flex-direction:column;align-items:center;text-align:center;gap:9px;padding:18px 16px 16px}
+  .player .pinfo{width:100%}
+  .player .gearrow{justify-content:center}
+  .player .gold{display:flex;align-items:baseline;justify-content:center;gap:9px;padding:7px 16px}
+  .player .gold b{display:inline;font-size:11px}
+}
+/* 左下那張大立繪在 1080～1400 會壓到左欄，超寬螢幕才放出來 */
+@media (max-width:1399px){ .hero{display:none} }
 </style>
 </head>
 <body>
@@ -187,6 +255,8 @@ body{gap:14px;padding-bottom:90px}
     <p>九九乘法闖關 ・ 邊玩邊變強</p>
   </div>
 
+  <div class="lobby">
+  <aside class="colL">
   <div class="player">
     <div class="face">
       <img id="pface" src="assets/hero_cheer.webp" alt="">
@@ -205,12 +275,14 @@ body{gap:14px;padding-bottom:90px}
   <div class="panel" style="padding:13px">
     <div class="heroes" id="heroes"></div>
   </div>
+  </aside>
 
+  <main class="colR">
   <div class="sec"><h2>主線冒險</h2><i></i></div>
   <div class="games" id="gamesMain"></div>
 
   <div class="sec"><h2>練習小遊戲</h2><i></i></div>
-  <div class="games" id="gamesSub"></div>
+  <div class="games grid" id="gamesSub"></div>
 
   <div class="sec"><h2>練習狀況</h2><i></i></div>
   <div class="panel">
@@ -224,13 +296,15 @@ body{gap:14px;padding-bottom:90px}
     <ul id="sWeak"></ul>
     <button class="clearbtn" id="clearAll">清除所有紀錄（等級、裝備、答題紀錄）</button>
   </div>
+  </main>
+  </div>
 </div>
 
 <script src="assets/common.js"></script>
 <script>
 /* 遊戲清單：要加新遊戲只改這一份，卡片與紀錄都會自己長出來 */
 const GAMES = [
-  {f:'battle.html', n:'打怪大作戰', ac:'#f6c453', icon:'⚔️', main:true,
+  {f:'battle.html', n:'打怪大作戰', ac:'#f6c453', icon:'⚔️', main:true, img:'assets/fx_hero_ready.webp',
    d:'答對就出手打怪，答錯被反擊。打中敵人害怕的乘法表傷害兩倍，還會掉裝備、升等級。',
    rec:() => Save.d.totalKill > 0
      ? '打到第 ' + Save.d.round + '-' + (Save.d.wave+1) + ' 關　打倒 ' + Save.d.totalKill + ' 隻'

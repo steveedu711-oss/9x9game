@@ -240,10 +240,14 @@ body{padding-bottom:16px}
 .mobwrap{right:4%;height:56%;animation:mobIdle 2.2s ease-in-out infinite alternate}
 @keyframes mobIdle{to{transform:translateY(-10px) scale(1.02)}}
 #mob{width:auto;height:100%;display:block;filter:drop-shadow(0 10px 18px #000a);
-  transform-origin:50% 100%;animation:mobBreath 1.9s ease-in-out infinite alternate}
+  transform-origin:50% 100%}
+/* 逐幀素材自己就在呼吸，再疊 CSS 那套會變兩個節奏打架；受擊／死亡的還是要留 */
+#mob:not(.sprmode){animation:mobBreath 1.9s ease-in-out infinite alternate}
 /* 呼吸：腳底不動、身體上下起伏，靜止時也像活的 */
 @keyframes mobBreath{from{transform:scale(1,1)}to{transform:scale(.975,1.045)}}
 .fighter,.mobwrap,.afterimg{will-change:transform;backface-visibility:hidden}
+/* 逐幀模式：img 本身變成雪碧圖的視窗，寬度由 aspect-ratio 算，其餘定位照舊 */
+.sprmode{width:auto;background-repeat:no-repeat}
 /* 受擊：擠壓 → 被打飛 → 晃回來，中間夾白閃再轉紅 */
 #mob.hit{animation:mobHit .46s cubic-bezier(.2,1.2,.4,1), mobFlash .42s linear}
 @keyframes mobHit{
@@ -553,6 +557,11 @@ body{padding-bottom:16px}
   .mobwrap{right:1%;height:46%}
   #shHero{left:2%;width:17%}
   #shMob{right:2%;width:17%}
+  /* 手機省效能（實測 CPU 放慢四倍：這兩項讓打怪頁從 30fps 回到 60fps）
+     1. drop-shadow 每換一格逐幀都要重算一次整張圖的陰影，最貴；地上本來就有 .gshadow 影子
+     2. 星星與飄浮光點是整片覆蓋的動畫層，畫面小根本看不出來 */
+  #hero2,#mob,#cat2,.afterimg{filter:none}
+  .scene .stars,.scene .motes{display:none}
   .qbox{padding:10px 12px}
   .qbox .q{font-size:clamp(26px,8vw,38px)}
   .ans button{height:56px;font-size:22px}
@@ -661,7 +670,7 @@ body{padding-bottom:16px}
 <script>
 /* ---------- 敵人：每隻怕不同的乘法表，打弱點兩倍傷害 ---------- */
 const MOBS = [
-  {img:'assets/mob_slime.webp',  name:'黏黏怪',   hp:110, atk:10, weak:[2,3],   exp:24, drop:0.40},
+  {img:'assets/mob_slime.webp',  name:'黏黏怪',   hp:110, atk:10, weak:[2,3],   exp:24, drop:0.40, spr:'slime'},
   {img:'assets/mob_bat.webp',    name:'小蝙蝠',   hp:135, atk:12, weak:[4,5],   exp:30, drop:0.45},
   {img:'assets/mob_mush.webp',   name:'香菇怪',   hp:165, atk:13, weak:[6],     exp:36, drop:0.50},
   {img:'assets/mob_rock.webp',   name:'石頭怪',   hp:195, atk:15, weak:[7],     exp:42, drop:0.55},
@@ -671,7 +680,7 @@ const MOBS = [
   {img:'assets/mob_flame.webp',  name:'火焰怪',   hp:320, atk:19, weak:[8,9],   exp:70, drop:0.65},
   {img:'assets/mob_robot.webp',  name:'鐵皮機器', hp:355, atk:20, weak:[7,8],   exp:80, drop:0.70},
   {img:'assets/mob_boss.webp',   name:'虎王石像', hp:430, atk:22, weak:[7,8,9], exp:110, drop:1, boss:true},
-  {img:'assets/mob_dragon.webp', name:'紫金巨龍', hp:560, atk:26, weak:[6,7,8,9], exp:150, drop:1, boss:true}
+  {img:'assets/mob_dragon.webp', name:'紫金巨龍', hp:560, atk:26, weak:[6,7,8,9], exp:150, drop:1, boss:true, spr:'dragon'}
 ];
 const ANSWER_TIME = 9;
 
@@ -720,10 +729,14 @@ function preloadNearby(){
   preload([MOBS[i] && MOBS[i].img, MOBS[i+1] && MOBS[i+1].img]);
 }
 preload([...Object.values(HERO_FRAMES), 'assets/fx_cat_attack.webp', HERO.img]);
+/* 逐幀雪碧圖：角色自己那組跟第一隻怪的先載，播到才抓會閃一下空白 */
+if(HERO.frames) preload(['assets/spr_hero_idle.webp', 'assets/spr_hero_atk.webp']);
+preload(['assets/spr_slime_idle.webp', 'assets/spr_slime_atk.webp']);
 preloadNearby();
 const preloadRest = () => {
   preload([...MOBS.map(m => m.img), ...Object.values(SPELL_IMG), ...HEROES.map(h => h.img),
-           'assets/fxs_fire.webp', 'assets/fxs_thunder.webp', 'assets/fxs_holy.webp']);
+           'assets/fxs_fire.webp', 'assets/fxs_thunder.webp', 'assets/fxs_holy.webp',
+           'assets/spr_dragon_idle.webp', 'assets/spr_dragon_atk.webp']);
 };
 /* 等首屏該載的都載完、再閒個一秒多才補其餘的圖，才不會跟首屏搶頻寬 */
 addEventListener('load', () => setTimeout(() => {
@@ -733,6 +746,15 @@ addEventListener('load', () => setTimeout(() => {
 /* 小虎姬有分解動作就換圖；其他角色只有一張，改用變形表現動作 */
 function heroFrame(k){
   const el = $('hero2');
+  /* 小虎姬有整組逐幀，走 Spr；挑第 7～22 格（揮擊那段）對上 heroSwing 的節奏 */
+  if(HERO.frames && SPR.hero_idle){
+    el.classList.remove('poseSwing','poseHurt');
+    if(k === 'swing')      Spr.play(el, 'hero_atk', {from:7, to:23, fps:45,
+                                     done:() => Spr.play(el, 'hero_idle', {loop:true})});
+    else if(k === 'hurt'){ Spr.play(el, 'hero_idle', {from:0, to:1}); el.classList.add('poseHurt'); }
+    else if(k !== 'after') Spr.play(el, 'hero_idle', {loop:true});
+    return;
+  }
   if(HERO.frames){
     if(ready[HERO_FRAMES[k]]) el.src = HERO_FRAMES[k];
     el.classList.remove('poseSwing','poseHurt');
@@ -748,6 +770,14 @@ function afterImage(){
   const img = document.createElement('img');
   img.className = 'afterimg';
   img.src = h.src;
+  if(h.dataset.spr){                                  // 逐幀模式：src 是透明像素，要連背景一起複製
+    img.classList.add('sprmode');
+    const s = getComputedStyle(h);
+    img.style.aspectRatio = h.style.aspectRatio;
+    img.style.backgroundImage = s.backgroundImage;
+    img.style.backgroundSize = s.backgroundSize;
+    img.style.backgroundPosition = s.backgroundPosition;
+  }
   img.style.left = h.style.left || getComputedStyle(h).left;
   img.style.height = getComputedStyle(h).height;
   img.style.transform = h.style.transform;
@@ -840,7 +870,7 @@ function impactAt(pt){
   el.classList.remove('on'); void el.offsetWidth; el.classList.add('on');
 }
 const SMALL_SCREEN = matchMedia('(max-width:520px)').matches;
-function shards(pt, n, crit){
+function shards(pt, n, crit, dir){
   n = Math.max(4, Math.round(n * (SMALL_SCREEN ? .6 : 1)));   // 手機少噴一點，才不會掉幀
   for(let i=0;i<n;i++){
     const d = document.createElement('div');
@@ -848,7 +878,7 @@ function shards(pt, n, crit){
     // 沿攻擊方向（由左往右）噴出去，扇形 ±55 度，這樣看得出這一下是從哪個方向打的
     const ang = (-55 + Math.random()*110) * Math.PI/180;
     const dist = 50 + Math.random()*(crit ? 150 : 95);
-    d.style.setProperty('--sx', Math.cos(ang)*dist + 'px');
+    d.style.setProperty('--sx', Math.cos(ang)*dist*(dir || 1) + 'px');   // dir=-1：怪打過來，往左噴
     d.style.setProperty('--sy', (Math.sin(ang)*dist + 30) + 'px');   // 尾端受重力往下掉
     d.style.setProperty('--sr', (Math.random()*720-360) + 'deg');
     d.style.left = (pt.x + (Math.random()*30-15)) + 'px';
@@ -884,6 +914,72 @@ function slowmoField(ms, rate){
 /* ── 序列幀播放器 ──
    一張雪碧圖逐格換 background-position，跟 CSS 漸層畫的假特效完全不同等級。
    素材是 Gemini 生的 10 秒影片用 ffmpeg 抽幀拼起來的（scratchpad 的 sprite.py） */
+/* ── 角色／怪物的逐幀動畫 ──
+   素材是 Gemini（帳號 A）生的黑底動作影片，用 tools/sprite_char.py 抽幀去背拼成雪碧圖。
+   不另外加 DOM：直接讓原本的 <img> 掛 sprmode，src 換成透明像素、改用 background 顯示，
+   這樣定位、drop-shadow、受擊／死亡那些既有 class 全部照舊能用。 */
+const PX1 = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+const SPR = {
+  hero_idle:   {img:'assets/spr_hero_idle.webp',   cols:5, rows:3, n:15, ar:224/174, fps:8},
+  hero_atk:    {img:'assets/spr_hero_atk.webp',    cols:6, rows:5, n:29, ar:224/174, fps:24},
+  slime_idle:  {img:'assets/spr_slime_idle.webp',  cols:5, rows:4, n:16, ar:224/125, fps:8},
+  slime_atk:   {img:'assets/spr_slime_atk.webp',   cols:6, rows:5, n:29, ar:224/125, fps:20},
+  dragon_idle: {img:'assets/spr_dragon_idle.webp', cols:6, rows:4, n:24, ar:224/211, fps:10},
+  dragon_atk:  {img:'assets/spr_dragon_atk.webp',  cols:6, rows:5, n:30, ar:224/211, fps:14}
+};
+const Spr = {
+  /* 掛上去之後這個 img 就由 Spr 接管，回靜圖要呼叫 Spr.off() */
+  on(el, key){
+    const d = SPR[key]; if(!d) return false;
+    if(el.dataset.spr !== key){
+      el.dataset.spr = key;
+      el.src = PX1;
+      el.classList.add('sprmode');
+      el.style.aspectRatio = d.ar;
+      el.style.backgroundImage = 'url(' + d.img + ')';
+      el.style.backgroundSize = (d.cols*100) + '% ' + (d.rows*100) + '%';
+    }
+    return true;
+  },
+  off(el, src){
+    if(el.dataset.spr){
+      delete el.dataset.spr;
+      el.classList.remove('sprmode');
+      el.style.aspectRatio = el.style.backgroundImage = el.style.backgroundSize = '';
+      this.stop(el);
+    }
+    el.src = src;
+  },
+  frame(el, d, i){
+    const cx = i % d.cols, cy = (i / d.cols) | 0;
+    el.style.backgroundPosition = (cx/(d.cols-1)*100) + '% ' + (cy/(d.rows-1)*100) + '%';
+  },
+  stop(el){ if(el._sprRaf){ cancelAnimationFrame(el._sprRaf); el._sprRaf = 0; } },
+  /* loop:true 一直播（待機）；false 播完一次跑 done（出手） */
+  play(el, key, opt){
+    opt = opt || {};
+    if(!this.on(el, key)) return;
+    const d = SPR[key];
+    this.stop(el);
+    const from = opt.from || 0, to = Math.min(opt.to || d.n, d.n);
+    const fps = opt.fps || d.fps;
+    let i = from, last = 0;
+    this.frame(el, d, i);
+    const step = (t) => {
+      if(!el.isConnected){ el._sprRaf = 0; return; }
+      if(t - last >= 1000/fps){
+        i++;
+        if(i >= to){
+          if(opt.loop){ i = from; }
+          else { el._sprRaf = 0; opt.done && opt.done(); return; }
+        }
+        this.frame(el, d, i); last = t;
+      }
+      el._sprRaf = requestAnimationFrame(step);
+    };
+    el._sprRaf = requestAnimationFrame(step);
+  }
+};
 const FXS = {
   fire:    {img:'assets/fxs_fire.webp',    cols:6, rows:5, n:25, ar:1,     fps:26},
   thunder: {img:'assets/fxs_thunder.webp', cols:6, rows:4, n:24, ar:16/9,  fps:28},
@@ -1290,10 +1386,47 @@ function answer(v, btn){
     setTimeout(mobAttack, 420);
   }
 }
+/* 怪物打中角色的那一下：原本只有紅閃，看不太出來被攻擊，補一朵爆散＋碎片＋圓環 */
+function heroCenter(){
+  const f = W().getBoundingClientRect(), h = $('hero2').getBoundingClientRect();
+  const sc = f.width / W().offsetWidth || 1;
+  return {x: (h.left - f.left + h.width*0.62) / sc, y: (h.top - f.top + h.height*0.46) / sc};
+}
+function mobHitFx(){
+  const pt = heroCenter();
+  playFx('fire', pt, {size:190, fps:30, hue:-28, sat:1.5});   // 轉紅＝被打，跟自己放火球分得開
+  ring(pt, 'dring', 110);
+  shards(pt, 10, false, -1);
+}
+/* 怪物出手：有逐幀就播自己的攻擊動作，命中點對到牠真的撲到／噴到的那一格 */
+const MOB_ATK = {
+  slime:  {from:4, to:24, fps:32, hit:.46, back:34,  rush:-150},
+  dragon: {from:0, to:27, fps:24, hit:.34, back:22,  rush:-56}   /* Boss 噴火，人不用衝那麼近 */
+};
 function mobAttack(){
   if(!running) return;
-  $('mob').classList.remove('attack'); void $('mob').offsetWidth; $('mob').classList.add('attack');
+  const el = $('mob');
+  const key = mob.spr && SPR[mob.spr + '_atk'] ? mob.spr : null;
+  let hitDelay = 260;
+  if(key){
+    const a = MOB_ATK[key];
+    const total = Math.round((a.to - a.from) / a.fps * 1000);
+    hitDelay = Math.round(total * a.hit);
+    Spr.play(el, key + '_atk', {from:a.from, to:a.to, fps:a.fps,
+      done:() => Spr.play(el, key + '_idle', {loop:true})});
+    // 逐幀只在自己那格裡動，不會真的靠近角色，位移另外補一條時間軸
+    el.animate([
+      {offset:0,          transform:'translateX(0)'},
+      {offset:a.hit*0.55, transform:'translateX(' + (a.back || 34) + 'px)'},   // 蓄力往後
+      {offset:a.hit,      transform:'translateX(' + (a.rush || -120) + 'px)'}, // 撲到面前
+      {offset:Math.min(1, a.hit + .18), transform:'translateX(' + ((a.rush || -120)*0.55) + 'px)'},
+      {offset:1,          transform:'translateX(0)'}
+    ], {duration:total, easing:'ease-in-out', fill:'none'});
+  }else{
+    el.classList.remove('attack'); void el.offsetWidth; el.classList.add('attack');
+  }
   setTimeout(()=>{
+    mobHitFx();
     heroHurtAnim();
     heroHp = Math.max(0, heroHp - mob.atk);
     paintHeroBar();
@@ -1375,7 +1508,9 @@ function setMob(){
   mob.hp = Math.round(mob.hp * (1 + (round-1)*0.5));
   mob.atk = Math.round(mob.atk * (1 + (round-1)*0.3));
   mobHp = mob.hp;
-  $('mob').src = mob.img;        // 圖是漸進載的，直接指定就好，瀏覽器沒載好會自己補
+  const mel = $('mob');
+  if(mob.spr && SPR[mob.spr + '_idle']) Spr.play(mel, mob.spr + '_idle', {loop:true});
+  else Spr.off(mel, mob.img);    // 圖是漸進載的，直接指定就好，瀏覽器沒載好會自己補
   preloadNearby();               // 順手把下一隻先抓起來
   setHp('mobHp', 1);
   $('mobHpText').textContent = mob.name + '　' + mobHp + ' / ' + mob.hp;

@@ -186,6 +186,10 @@ $('levels').onclick = e => {
 
 const tank = $('tank'), cv = $('cv'), ctx = cv.getContext('2d');
 let W = 0, H = 0, dpr = Math.min(2, window.devicePixelRatio || 1);
+/* canvas 的 shadowBlur 每畫一顆就要做一次模糊，泡泡有十幾顆＝每幀十幾次，
+   手機實測整頁卡在 30fps。小螢幕一律不畫陰影，泡泡本身的漸層與高光還在，看不太出來 */
+const SMALL_SCREEN = matchMedia('(max-width:520px)').matches;
+const GLOW = SMALL_SCREEN ? 0 : 18;
 function resize(){
   W = tank.clientWidth; H = tank.clientHeight;
   cv.width = W * dpr; cv.height = H * dpr;
@@ -268,7 +272,7 @@ function draw(t){
     g.addColorStop(0.32, b.c1);
     g.addColorStop(1, b.c2);
     ctx.save();
-    ctx.shadowColor = b.c1; ctx.shadowBlur = 18;
+    ctx.shadowColor = b.c1; ctx.shadowBlur = GLOW;
     ctx.beginPath(); ctx.arc(b.x, b.y, rr, 0, 6.283); ctx.fillStyle = g; ctx.fill();
     ctx.restore();
     // 外框與高光
@@ -291,7 +295,7 @@ function draw(t){
     s.x += s.vx*dt; s.y += s.vy*dt;
     s.life -= 0.02*dt;
     ctx.save();
-    ctx.shadowColor = '#ffe9a8'; ctx.shadowBlur = 16;
+    ctx.shadowColor = '#ffe9a8'; ctx.shadowBlur = GLOW ? 16 : 0;
     ctx.beginPath(); ctx.arc(s.x, s.y, 7, 0, 6.283);
     ctx.fillStyle = '#fff6d8'; ctx.fill();
     ctx.restore();
