@@ -19,6 +19,13 @@ body{gap:14px;padding-bottom:90px}
 /* ---------- 桌機兩欄（手機不受影響，仍是單欄同順序） ---------- */
 .lobby{display:flex;flex-direction:column;gap:14px}
 
+/* ---------- 玩法選擇（進場第一個決定，獨立一整條、不跟別的東西擠） ---------- */
+.modesec, .herosec{width:100%}
+.modepanel{display:flex;flex-direction:column;gap:12px}
+.modepanel .modebar button{min-height:64px}
+.modepanel .modebar button b{font-size:17px}
+.modepanel .modebar button small{font-size:12px}
+
 /* ---------- 標題 ---------- */
 .logo{text-align:center;margin-top:6px;position:relative}
 .logo h1{font-size:clamp(24px,6.4vw,36px);letter-spacing:6px}
@@ -229,17 +236,13 @@ body{gap:14px;padding-bottom:90px}
   .lobby{display:grid;grid-template-columns:328px minmax(0,1fr);gap:20px;align-items:start}
   .colL{position:sticky;top:14px;display:flex;flex-direction:column;gap:12px}
   .colR{display:flex;flex-direction:column;gap:14px;min-width:0}
-  /* 左欄只有 328px，四張角色卡擠成一排會把字折斷，改兩排 */
-  .heroes{grid-template-columns:repeat(2,1fr);gap:10px}
-  .hcard img{height:100px}
-  .hcard .ph{line-height:100px}
-  .hcard .buff{min-height:0}
+  /* 選角現在是獨立滿版的一條，卡片給足空間：每張至少 150px，自動排幾欄都行 */
+  .heroes{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+  .hcard img{height:112px}
+  .hcard .ph{line-height:112px}
   /* 小遊戲排兩欄，不用一直往下滑 */
   .games.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
   .games.grid .game .txt small{-webkit-line-clamp:3}
-  /* 左欄只有 328px，模式兩顆並排會撐破，改成上下 */
-  .colL .modebar{flex-direction:column}
-  .colL .modebar button{min-height:46px}
   /* 玩家卡在窄欄裡改直式：頭像、名字、經驗、金幣由上而下 */
   .player{flex-direction:column;align-items:center;text-align:center;gap:9px;padding:18px 16px 16px}
   .player .pinfo{width:100%}
@@ -262,6 +265,27 @@ body{gap:14px;padding-bottom:90px}
 
   <div id="userbar" class="userbar"></div>
 
+  <!-- 玩法選擇擺在最上面、獨立一整條——這是進場第一個要做的決定，
+       Steve 2026-08-23：不能跟角色卡片、玩家狀態擠在同一個窄欄裡 -->
+  <div class="modesec">
+    <div class="sec"><h2>玩法</h2><i></i></div>
+    <div class="panel modepanel">
+      <div id="modebar"></div>
+      <div id="topicwrap">
+        <div class="setlab">練習模式要出哪種題目</div>
+        <div id="topicbar"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 選角也是獨立一條、橫向滿版——原本擠在 328px 的窄側欄，卡片小到看不清楚 -->
+  <div class="herosec">
+    <div class="sec"><h2>選一個角色出戰</h2><i></i></div>
+    <div class="panel" style="padding:13px">
+      <div class="heroes" id="heroes"></div>
+    </div>
+  </div>
+
   <div class="lobby">
   <aside class="colL">
   <div class="player">
@@ -277,20 +301,6 @@ body{gap:14px;padding-bottom:90px}
       <div class="gearrow" id="pgear"></div>
     </div>
     <div class="gold"><b>金幣</b><span id="pgold">0</span></div>
-  </div>
-
-  <div class="sec"><h2>玩法</h2><i></i></div>
-  <div class="panel" style="padding:13px;display:flex;flex-direction:column;gap:10px">
-    <div id="modebar"></div>
-    <div id="topicwrap">
-      <div class="setlab">練習模式要出哪種題目</div>
-      <div id="topicbar"></div>
-    </div>
-  </div>
-
-  <div class="sec"><h2>選一個角色出戰</h2><i></i></div>
-  <div class="panel" style="padding:13px">
-    <div class="heroes" id="heroes"></div>
   </div>
   </aside>
 
