@@ -246,6 +246,40 @@ body{padding-bottom:16px}
 /* 呼吸：腳底不動、身體上下起伏，靜止時也像活的 */
 @keyframes mobBreath{from{transform:scale(1,1)}to{transform:scale(.975,1.045)}}
 .fighter,.mobwrap,.afterimg{will-change:transform;backface-visibility:hidden}
+/* 掉寶飛進背包 */
+.loot{
+  position:fixed;z-index:30;pointer-events:none;font-size:30px;
+  filter:drop-shadow(0 0 12px var(--gl,#ffe9a8)) drop-shadow(0 4px 8px #000a);
+}
+.bagbtn.gotloot{animation:bagPop .5s cubic-bezier(.2,1.6,.4,1)}
+@keyframes bagPop{40%{transform:scale(1.22);box-shadow:0 0 0 4px #f6c45355}}
+
+/* 遠程怪的投射物 */
+.mobshot{
+  position:absolute;z-index:7;pointer-events:none;width:26px;height:26px;border-radius:50%;
+  background:radial-gradient(circle at 35% 32%,#eaffd0,#7ddc4a 46%,#2f7d1e 100%);
+  box-shadow:0 0 16px #9dff6ecc;
+}
+/* 召喚出護盾的怪：身上罩一層光殼 */
+.mobwrap.shielded::after{
+  content:"";position:absolute;inset:-8% -12%;border-radius:50%;pointer-events:none;
+  border:2px solid #8fd8ffcc;background:radial-gradient(circle,#8fd8ff22,transparent 68%);
+  box-shadow:0 0 22px #8fd8ff66,inset 0 0 18px #8fd8ff44;
+  animation:shieldPulse 1.6s ease-in-out infinite alternate;
+}
+@keyframes shieldPulse{to{transform:scale(1.05);opacity:.72}}
+
+/* 出手預告：怪物繃緊＋頭上跳一顆驚嘆號 */
+.mobwrap.warn{animation:mobWarn .42s ease-in-out 3}
+@keyframes mobWarn{50%{transform:translateY(-6px) scale(1.05,.96)}}
+.warnMark{
+  position:absolute;left:50%;top:-14%;transform:translateX(-50%);z-index:9;pointer-events:none;
+  font-size:clamp(26px,5vw,40px);font-weight:900;color:#ffe066;
+  text-shadow:0 0 14px #ff9d00,0 3px 0 #a35a00;
+  animation:warnPop .5s cubic-bezier(.2,1.6,.4,1) infinite alternate;
+}
+@keyframes warnPop{from{transform:translateX(-50%) scale(.8)}to{transform:translateX(-50%) scale(1.15)}}
+
 /* 逐幀模式：img 本身變成雪碧圖的視窗，寬度由 aspect-ratio 算，其餘定位照舊 */
 .sprmode{width:auto;background-repeat:no-repeat}
 /* 受擊：擠壓 → 被打飛 → 晃回來，中間夾白閃再轉紅 */
@@ -731,13 +765,13 @@ const MOBS = [
   {img:'assets/mob_mush.webp',   name:'香菇怪',   hp:165, atk:13, weak:[6],     exp:36, drop:0.50},
   {img:'assets/mob_rock.webp',   name:'石頭怪',   hp:195, atk:15, weak:[7],     exp:42, drop:0.55},
   {img:'assets/mob_ghost.webp',  name:'幽靈球',   hp:225, atk:16, weak:[8],     exp:48, drop:0.55},
-  {img:'assets/mob_cactus.webp', name:'仙人掌',   hp:255, atk:17, weak:[9],     exp:54, drop:0.60},
+  {img:'assets/mob_cactus.webp', name:'仙人掌',   hp:255, atk:17, weak:[9],     exp:54, drop:0.60, ranged:true},
   {img:'assets/mob_ice.webp',    name:'冰晶怪',   hp:290, atk:18, weak:[6,7],   exp:62, drop:0.62},
   {img:'assets/mob_flame.webp',  name:'火焰怪',   hp:320, atk:19, weak:[8,9],   exp:70, drop:0.65},
   {img:'assets/mob_robot.webp',  name:'鐵皮機器', hp:355, atk:20, weak:[7,8],   exp:80, drop:0.70},
   /* 2026-08-22 新增：出手快的衝鋒型、會擋傷害的精英、閃來閃去的刺客 */
   {img:'assets/mob_boar.webp',     name:'暴走野豬', hp:300, atk:21, weak:[3,4],   exp:76, drop:0.62, fast:0.75},
-  {img:'assets/mob_bee.webp',      name:'蜂后',     hp:330, atk:18, weak:[5,6],   exp:84, drop:0.66},
+  {img:'assets/mob_bee.webp',      name:'蜂后',     hp:330, atk:18, weak:[5,6],   exp:84, drop:0.66, summon:true},
   {img:'assets/mob_ninja.webp',    name:'影武者貓', hp:340, atk:23, weak:[8,9],   exp:92, drop:0.70, fast:0.8},
   {img:'assets/mob_gargoyle.webp', name:'石像守衛', hp:480, atk:24, weak:[6,7,9], exp:120, drop:0.9, armor:0.72},
   {img:'assets/mob_boss.webp',   name:'虎王石像', hp:430, atk:22, weak:[7,8,9], exp:110, drop:1, boss:true},
@@ -767,6 +801,7 @@ function difKey(){ try{ const d = localStorage.getItem(DIFF_KEY); return DIFFS[d
 const D = () => DIFFS[difKey()];
 let turnTime = ANSWER_TIME;        // 這一回合的倒數總長（兩種模式不一樣）
 let atkReady = true, dodgeReady = true, invuln = 0, hits = 0, taken = 0;
+let telegraphed = false;        // 這一回合的攻擊預告放過了沒
 
 const F = () => $('field');
 const setBar = (el, r) => el.style.transform = 'scaleX(' + Math.max(0, Math.min(1, r)) + ')';
@@ -1402,12 +1437,25 @@ function newQ(){
   }
   qStart = performance.now();
   turnTime = ANSWER_TIME * (mob.fast || 1);      // 衝鋒型出手比較快，思考時間就比較短
+  telegraphed = false;
   mobTimer = turnTime;
   locked = false;
 }
 /* 打中敵人之後的共同處理：扣血、特效、鏡頭、必殺充能。回傳「有沒有打死」 */
 function applyHit(dmg, isCrit, isWeak){
   if(mob.armor) dmg = Math.max(1, Math.round(dmg * mob.armor));   // 石像守衛那種有護甲的
+  if(shield > 0){                                                 // 先吃護盾，本體不掉血
+    shield = Math.max(0, shield - dmg);
+    dmgText('護盾 -' + dmg, false);
+    hitEffect(false, false, false);
+    if(shield === 0){
+      $('mobWrap').classList.remove('shielded');
+      dmgText('護盾破了！', true);
+      ring(mobCenter(), 'dring', 170);
+    }
+    $('mobHpText').textContent = mobLabel() + '　' + mobHp + ' / ' + mob.hp;
+    return false;
+  }
   mobHp = Math.max(0, mobHp - dmg);
   totalDmg += dmg;
   hitEffect(isCrit, isWeak, mobHp <= 0);
@@ -1426,6 +1474,7 @@ function applyHit(dmg, isCrit, isWeak){
 function newTurn(){
   turnTime = D().time * (mob.boss ? 1.15 : 1) * (mob.fast || 1);
   mobTimer = turnTime;
+  telegraphed = false;
   locked = false;
 }
 function cool(btn, ms, doneFlag){
@@ -1524,11 +1573,44 @@ const MOB_ATK = {
   slime:  {from:4, to:24, fps:32, hit:.46, back:34,  rush:-150},
   dragon: {from:0, to:27, fps:24, hit:.34, back:22,  rush:-56}   /* Boss 噴火，人不用衝那麼近 */
 };
+/* 遠程型：不撲過來，改成噴一發投射物；打中之前有一段飛行時間，看得到才躲得掉 */
+function shotAtHero(){
+  const from = mobCenter(), to = heroCenter();
+  const el = document.createElement('div');
+  el.className = 'mobshot';
+  el.style.left = from.x + 'px'; el.style.top = from.y + 'px';
+  W().appendChild(el);
+  el.animate([{transform:'translate(-50%,-50%)'},
+              {transform:'translate(' + (to.x - from.x - 10) + 'px,' + (to.y - from.y) + 'px) scale(1.15)'}],
+             {duration:420, easing:'linear', fill:'forwards'});
+  setTimeout(()=>el.remove(), 460);
+}
+/* 召喚型：叫出護盾擋在前面，玩家要先把護盾打掉才傷得到本體 */
+let shield = 0, shieldMax = 0;
+function summonGuards(){
+  shieldMax = Math.round(mob.hp * 0.22);
+  shield = shieldMax;
+  const w = $('mobWrap');
+  w.classList.add('shielded');
+  dmgText('召喚護衛！', true);
+  ring(mobCenter(), 'dring', 150);
+  $('mobHpText').textContent = mobLabel() + '　' + mobHp + ' / ' + mob.hp;
+}
 function mobAttack(){
   if(!running) return;
   const el = $('mob');
+  if(mob.summon && shield <= 0){          // 護盾被打光才會再召，不然一直疊很煩
+    summonGuards();
+    setTimeout(newQ, 900);
+    return;
+  }
   const key = mob.spr && SPR[mob.spr + '_atk'] ? mob.spr : null;
   let hitDelay = 260;
+  if(mob.ranged){
+    el.classList.remove('attack'); void el.offsetWidth; el.classList.add('attack');
+    shotAtHero();
+    hitDelay = 420;
+  }else
   if(key){
     const a = MOB_ATK[key];
     const total = Math.round((a.to - a.from) / a.fps * 1000);
@@ -1570,6 +1652,34 @@ function mobAttack(){
   }, 260);
 }
 
+/* 掉寶演出：從怪物身上噴出來，轉一圈飛進右上角的背包，落點閃一下。
+   稀有度用顏色分，越好的噴得越誇張 */
+function lootFly(item){
+  const bag = $('bagBtn').getBoundingClientRect();
+  const from = $('mob').getBoundingClientRect();
+  const el = document.createElement('div');
+  el.className = 'loot';
+  el.textContent = item.icon || '⭐';
+  el.style.color = item.color || '#ffe9a8';
+  el.style.setProperty('--gl', item.color || '#ffe9a8');
+  el.style.left = (from.left + from.width*0.45) + 'px';
+  el.style.top  = (from.top + from.height*0.4) + 'px';
+  document.body.appendChild(el);
+  const dx = bag.left + bag.width/2 - (from.left + from.width*0.45);
+  const dy = bag.top + bag.height/2 - (from.top + from.height*0.4);
+  el.animate([
+    {transform:'translate(-50%,-50%) scale(.4) rotate(0)', opacity:0},
+    {offset:.16, transform:'translate(-50%,-50%) translate(' + (dx*0.1) + 'px,-70px) scale(1.5) rotate(-25deg)', opacity:1},
+    {offset:.52, transform:'translate(-50%,-50%) translate(' + (dx*0.45) + 'px,' + (dy*0.25 - 40) + 'px) scale(1.25) rotate(20deg)', opacity:1},
+    {transform:'translate(-50%,-50%) translate(' + dx + 'px,' + dy + 'px) scale(.5) rotate(0)', opacity:.2}
+  ], {duration:1150, easing:'cubic-bezier(.35,.9,.3,1)'});
+  setTimeout(() => {
+    el.remove();
+    const b = $('bagBtn');
+    b.classList.remove('gotloot'); void b.offsetWidth; b.classList.add('gotloot');
+  }, 1120);
+}
+
 /* ---------- 打倒敵人：經驗、金幣、掉裝備 ---------- */
 function showDrop(html){
   const d = $('drop');
@@ -1603,6 +1713,7 @@ function killMob(){
     dropped = rollGear(Save.d.lv, (round-1)*0.25 + (mob.boss ? 0.6 : 0));
     Save.d.bag.push(dropped);
     drops.push(dropped);
+    lootFly(dropped);            // 打到寶要看得到它飛進背包，不能只跳一行字
   }
   Save.put();
 
@@ -1635,13 +1746,17 @@ function killMob(){
 }
 /* 名字後面標出特性，玩家才知道為什麼這隻不一樣 */
 function mobLabel(){
-  return mob.name + (mob.armor ? ' 🛡' : '') + (mob.fast ? ' ⚡' : '');
+  return mob.name + (mob.armor ? ' 🛡' : '') + (mob.fast ? ' ⚡' : '')
+       + (mob.ranged ? ' 🎯' : '') + (mob.summon ? ' 🐝' : '')
+       + (shield > 0 ? ' 護盾 ' + shield : '');
 }
 function setMob(){
   mob = {...MOBS[wave]};
   mob.hp = Math.round(mob.hp * (1 + (round-1)*0.5));
   mob.atk = Math.round(mob.atk * (1 + (round-1)*0.3));
   mobHp = mob.hp;
+  shield = 0; shieldMax = 0;
+  $('mobWrap').classList.remove('shielded');
   const mel = $('mob');
   if(mob.spr && SPR[mob.spr + '_idle']) Spr.play(mel, mob.spr + '_idle', {loop:true});
   else Spr.off(mel, mob.img);    // 圖是漸進載的，直接指定就好，瀏覽器沒載好會自己補
@@ -1688,6 +1803,12 @@ function tick(){
   if(!running || locked){ paintTimer(); return; }
   mobTimer = Math.max(0, mobTimer - 0.1);
   paintTimer();
+  /* 出手前 1.2 秒給預告：怪物繃緊＋頭上驚嘆號。
+     沒有預告的攻擊只會讓人覺得被偷打，有預告才有「看懂就躲得掉」的感覺 */
+  if(mobTimer <= 1.2 && !telegraphed){
+    telegraphed = true;
+    warnMob();
+  }
   if(mobTimer <= 0){
     locked = true;
     wrong++; combo = 0;
@@ -1697,6 +1818,15 @@ function tick(){
     }
     mobAttack();
   }
+}
+function warnMob(){
+  const w = $('mobWrap');
+  w.classList.remove('warn'); void w.offsetWidth; w.classList.add('warn');
+  const m = document.createElement('div');
+  m.className = 'warnMark'; m.textContent = '!';
+  w.appendChild(m);
+  setTimeout(() => { m.remove(); w.classList.remove('warn'); }, 1250);
+  Sfx.tick && Sfx.tick();
 }
 const paintTimer = () => $('mobTimer').style.transform = 'scaleX(' + (mobTimer/turnTime) + ')';
 
