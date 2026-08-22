@@ -235,6 +235,9 @@ body{gap:14px;padding-bottom:90px}
   /* 小遊戲排兩欄，不用一直往下滑 */
   .games.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
   .games.grid .game .txt small{-webkit-line-clamp:3}
+  /* 左欄只有 328px，模式兩顆並排會撐破，改成上下 */
+  .colL .modebar{flex-direction:column}
+  .colL .modebar button{min-height:46px}
   /* 玩家卡在窄欄裡改直式：頭像、名字、經驗、金幣由上而下 */
   .player{flex-direction:column;align-items:center;text-align:center;gap:9px;padding:18px 16px 16px}
   .player .pinfo{width:100%}
@@ -269,6 +272,15 @@ body{gap:14px;padding-bottom:90px}
       <div class="gearrow" id="pgear"></div>
     </div>
     <div class="gold"><b>金幣</b><span id="pgold">0</span></div>
+  </div>
+
+  <div class="sec"><h2>玩法</h2><i></i></div>
+  <div class="panel" style="padding:13px;display:flex;flex-direction:column;gap:10px">
+    <div id="modebar"></div>
+    <div id="topicwrap">
+      <div class="setlab">練習模式要出哪種題目</div>
+      <div id="topicbar"></div>
+    </div>
   </div>
 
   <div class="sec"><h2>選一個角色出戰</h2><i></i></div>
@@ -306,26 +318,33 @@ body{gap:14px;padding-bottom:90px}
 const GAMES = [
   {f:'battle.html', n:'打怪大作戰', ac:'#f6c453', icon:'⚔️', main:true, img:'assets/fx_hero_ready.webp',
    d:'答對就出手打怪，答錯被反擊。打中敵人害怕的乘法表傷害兩倍，還會掉裝備、升等級。',
+   da:'自己按攻擊與閃避打怪，敵人倒數完就撲上來。掉裝備、升等級一樣有，還能挑難度。',
    rec:() => Save.d.totalKill > 0
      ? '打到第 ' + Save.d.round + '-' + (Save.d.wave+1) + ' 關　打倒 ' + Save.d.totalKill + ' 隻'
      : null},
   {f:'gems.html', n:'寶石消消樂', ac:'#c084fc', icon:'💎', img:'assets/sym_amethyst.webp',
    d:'轉出 4 顆以上連在一起的寶石就消除，接著問你「消掉幾顆 × 每顆幾分」，算對才拿得到分數。',
+   da:'轉出 4 顆以上連在一起的寶石就消除，不出題，消到多少直接拿多少分。',
    rec:() => { const v = Best.get('v3_best'); return v ? '最高一轉得分 ' + v : null; }},
   {f:'findnum.html', n:'找答案挑戰', ac:'#6ea8ff', icon:'🔢',
    d:'出一題「6 × 7」，把盤面上所有 42 點掉，限時 60 秒衝分數。最單純的速度練習。',
+   da:'直接給你一個數字，把盤面上所有一樣的點掉，限時 60 秒比眼力。',
    rec:() => { const v = Best.get('v1_score'); return v ? '最高分 ' + v : null; }},
   {f:'racing.html', n:'飆速賽車', ac:'#ff8a5c', icon:'🏎️', isNew:true,
    d:'三線道往前衝，撞上答案正確的牌子就加速加分，撞錯會打滑扣愛心。',
+   da:'三線道往前衝，閃過路障開到空的那一道，越開越快。',
    rec:() => { const v = Best.get('v5_score'); return v ? '最高分 ' + v : null; }},
   {f:'memory.html', n:'記憶翻牌', ac:'#f0a3d0', icon:'🃏', isNew:true,
    d:'翻開一張算式牌跟一張答案牌配成一對，全部配完就過關。比誰記得住、翻得少。',
+   da:'翻開兩張一樣的圖案配成一對，全部配完就過關，純比記性。',
    rec:() => { const v = Best.get('v6_time'); return v ? '最快 ' + v + ' 秒配完' : null; }},
   {f:'cloudjump.html', n:'雲端跳跳', ac:'#8fd8ff', icon:'☁️', isNew:true,
    d:'跳到答案正確的那朵雲上就往上爬一層，跳錯雲會碎掉掉下去。看能爬到幾樓。',
+   da:'跳到有星星的那朵雲，其他一踩就碎；越高雲飄得越快。',
    rec:() => { const v = Best.get('v7_floor'); return v ? '爬到 ' + v + ' 樓' : null; }},
   {f:'bubble.html', n:'深海泡泡', ac:'#5ee6c0', icon:'🐠', isNew:true,
    d:'海裡漂著一堆答案泡泡，限時 60 秒把正確的射破。射錯扣 3 秒，連續射中分數愈高。',
+   da:'畫面指定一種顏色，限時 60 秒把那個顏色的泡泡射破。射錯扣 3 秒。',
    rec:() => { const v = Best.get('v8_score'); return v ? '最高分 ' + v : null; }}
 ];
 
@@ -355,7 +374,8 @@ function gameCard(g){
   const txt = document.createElement('div');
   txt.className = 'txt';
   const b = document.createElement('b');      b.textContent = g.n;
-  const sm = document.createElement('small'); sm.textContent = g.d;
+  const sm = document.createElement('small');
+  sm.textContent = (Mode.isArcade() && g.da) ? g.da : g.d;   // 純玩模式講的是純玩的玩法
   txt.append(b, sm);
   const r = g.rec();
   if(r){
@@ -368,6 +388,10 @@ function gameCard(g){
   a.append(ic, txt, go);
   return a;
 }
+Mode.bar($('modebar'), () => { document.body.classList.toggle('arcade', Mode.isArcade()); paintGames(); });
+Topic.bar($('topicbar'));
+document.body.classList.toggle('arcade', Mode.isArcade());
+
 function paintGames(){
   const main = $('gamesMain'), sub = $('gamesSub');
   main.innerHTML = ''; sub.innerHTML = '';

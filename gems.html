@@ -159,6 +159,8 @@ body{padding-bottom:20px}
     <div class="st"><b>算對率</b><span id="rate">—</span></div>
   </div>
 
+  <div id="modebar"></div>
+
   <div class="ctrl">
     <div class="bet"><button id="minus">−</button><div id="bet">1</div><button id="plus">＋</button></div>
     <button class="btn" id="spin">轉 動</button>
@@ -168,6 +170,7 @@ body{padding-bottom:20px}
   <p class="note">
   轉出 <b>4 顆以上連在一起</b>的同款寶石就會消除，接著問你一題：<br>
   <b>消掉幾顆 × 每顆幾分 = ?</b>　算對才拿得到那些分數，算錯只拿一半。<br>
+  <span id="noteArcade" style="display:none">（<b>純玩模式</b>不出題，消到就直接全額給分。）<br></span>
   消完的位置由上方掉落遞補，連續消除有倍數 ×1 ×2 ×3 ×5 ×8。
   </p>
 </div>
@@ -258,6 +261,8 @@ const sleep = ms => new Promise(r=>setTimeout(r,ms));
 
 /* ---------- 乘法結算 ---------- */
 function askQuiz(count, value){
+  /* 純玩模式：不問算式，消到就直接全額給分（大人只想轉盤看爆分） */
+  if(Mode.isArcade()) return Promise.resolve(true);
   return new Promise(resolve => {
     const ans = count * value;
     $('quizCnt').textContent = '消掉 ' + count + ' 顆，每顆 ' + value + ' 分';
@@ -393,6 +398,12 @@ $('minus').onclick = () => { bet = BETS[Math.max(BETS.indexOf(bet)-1, 0)]; rende
 $('auto').onclick = () => { auto = !auto; $('auto').classList.toggle('on', auto); if(auto && !spinning) spin(); };
 $('cat').onerror = () => { $('cat').style.display = 'none'; };
 
+function paintMode(){
+  document.body.classList.toggle('arcade', Mode.isArcade());
+  $('noteArcade').style.display = Mode.isArcade() ? '' : 'none';
+}
+Mode.bar($('modebar'), paintMode);
+paintMode();
 versionBar('gems.html');
 startCoins();
 build();

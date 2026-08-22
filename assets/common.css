@@ -181,3 +181,37 @@ h1{
   .card{padding:16px;border-radius:18px}
   .card .btn{height:54px}
 }
+
+/* ---------- 模式切換（練習／純玩，八頁共用） ---------- */
+.modebar{display:flex;gap:8px;width:100%}
+.modebar button{
+  flex:1;min-height:52px;padding:7px 10px;border-radius:14px;cursor:pointer;
+  background:#251739;border:1px solid var(--line);color:var(--dim);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+  transition:transform .14s ease,border-color .18s,background .18s;
+}
+.modebar button b{font-size:15px;font-weight:800;letter-spacing:1px}
+.modebar button small{font-size:11px;opacity:.85}
+.modebar button:hover{transform:translateY(-2px);border-color:#8a63c9}
+.modebar button.on{
+  background:linear-gradient(180deg,#523775,#2c1b42);border-color:var(--gold);color:var(--text);
+  box-shadow:0 0 0 2px #f6c45333,0 8px 20px #0009;
+}
+.modebar button.on b{color:var(--gold2)}
+
+/* ---------- 題型選單 ---------- */
+.topicbar{display:flex;gap:6px;width:100%;flex-wrap:wrap}
+.topicbar button{
+  flex:1 1 88px;min-height:46px;padding:6px 8px;border-radius:12px;cursor:pointer;
+  background:#2a1a40;border:1px solid var(--line);color:var(--gold2);
+  font-size:13px;font-weight:700;line-height:1.35;
+}
+.topicbar button b{display:block;font-size:10px;font-weight:500;color:var(--dim)}
+.topicbar button.on{background:linear-gradient(180deg,var(--gold2),var(--gold));color:#3a2400;border-color:var(--gold)}
+.topicbar button.on b{color:#6b4a00}
+.setlab2{font-size:12px;color:var(--dim);letter-spacing:1px;width:min(96vw,560px);margin-bottom:-4px}
+#topicbar{width:min(96vw,560px)}
+/* 純玩模式不出題，題型選單就沒有意義，收起來 */
+body.arcade #topicwrap{display:none}
+#modebar{width:min(96vw,560px)}
+.setlab{font-size:12px;color:var(--dim);letter-spacing:1px;margin-bottom:6px;display:block}

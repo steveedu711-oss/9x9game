@@ -294,6 +294,18 @@ h1{
 .vers a.on{background:linear-gradient(180deg,var(--gold2),var(--gold));color:#3a2400;font-weight:700}
 .note{font-size:11px;color:var(--dim);text-align:center;max-width:560px;line-height:1.7}
 
+/* 這頁沒吃 assets/common.css，題型選單的樣式也要自己寫一份 */
+.setlab2{font-size:12px;color:#a894c4;letter-spacing:1px;width:min(96vw,560px);margin-bottom:-4px}
+.topicbar{display:flex;gap:6px;width:min(96vw,560px);flex-wrap:wrap}
+.topicbar button{
+  flex:1 1 88px;min-height:46px;padding:6px 8px;border-radius:12px;cursor:pointer;
+  background:#2a1a40;border:1px solid #573a7d;color:#ffe9a8;font-size:13px;font-weight:700;
+  line-height:1.35;font-family:inherit;
+}
+.topicbar button b{display:block;font-size:10px;font-weight:500;color:#a894c4}
+.topicbar button.on{background:linear-gradient(180deg,#ffe9a8,#f6c453);color:#3a2400;border-color:#f6c453}
+.topicbar button.on b{color:#6b4a00}
+
 /* 手機：這頁沒吃 assets/common.css，樣式要自己寫一份 */
 @media (max-width:520px){
   body{padding-bottom:96px;overscroll-behavior-y:contain;-webkit-user-select:none;user-select:none}
@@ -345,6 +357,10 @@ h1{
 </div>
 
 <div class="ctrl">
+  <div class="topicbar" id="modebar"></div>
+  <div id="topicwrap"><div class="setlab2">要出哪種題目</div>
+  <div class="topicbar" id="topicbar"></div></div>
+  <div class="setlab2">難度</div>
   <div class="levels" id="levels">
     <button class="lv on" data-lv="0">初級<b>2～5 的乘法</b></button>
     <button class="lv" data-lv="1">中級<b>2～9 的乘法</b></button>
@@ -425,6 +441,8 @@ const sndNext = () => { beep(660,.12,'sine',.09); setTimeout(()=>beep(880,.16,'s
 
 /* ---------- 盤面 ---------- */
 const pool = () => {
+  /* 加減法時盤面塞的是 0～22 的數字；還用乘積當干擾的話答案一眼就看出來 */
+  if(topicNow() !== 'mul'){ const out = []; for(let i=0;i<=22;i++) out.push(i); return out; }
   const L = LEVELS[lv], out = [];
   for(const a of L.a) for(const b of L.b) out.push(a*b);
   return out;
@@ -437,12 +455,44 @@ function randOther(){
 }
 function newCell(v){ return {v, id:++uid, gem:GEMS[(Math.random()*GEMS.length)|0]}; }
 
+/* 題型：這頁沒吃 common.js，自己讀同一把 key，行為要跟 common.js 的 makeQ 一致 */
+const TOPIC_KEY2 = 'mul99_topic';
+const TOPICS2 = {mul:'九九乘法', add:'加法', sub:'減法', addsub:'加減混合', all:'全部混合'};
+function topicNow(){
+  try{ const t = localStorage.getItem(TOPIC_KEY2); return TOPICS2[t] ? t : 'mul'; }catch(e){ return 'mul'; }
+}
+let qop = '×';
+function pickQ(L){
+  let t = topicNow();
+  if(t === 'addsub') t = Math.random() < .5 ? 'add' : 'sub';
+  if(t === 'all')    t = ['add','sub','mul'][(Math.random()*3)|0];
+  if(t === 'add'){
+    const a = 1 + (Math.random()*15|0), b = 1 + (Math.random()*(20-a)|0);
+    return {a:a, b:b, op:'＋', ans:a+b};
+  }
+  if(t === 'sub'){
+    const a = 3 + (Math.random()*18|0), b = 1 + (Math.random()*(a-1)|0);
+    return {a:a, b:b, op:'－', ans:a-b};
+  }
+  const a = L.a[(Math.random()*L.a.length)|0], b = L.b[(Math.random()*L.b.length)|0];
+  return {a:a, b:b, op:'×', ans:a*b};
+}
+function arcadeNow(){
+  try{ return localStorage.getItem('mul99_mode') === 'arcade'; }catch(e){ return false; }
+}
 function newQuestion(){
   const L = LEVELS[lv];
-  qa = L.a[(Math.random()*L.a.length)|0];
-  qb = L.b[(Math.random()*L.b.length)|0];
-  ans = qa * qb;
-  $('q').innerHTML = qa + ' <em>×</em> ' + qb + ' <em>=</em> ?';
+  if(arcadeNow()){
+    /* 純玩模式：不算數學，直接把畫面上所有的目標數字點掉，比眼力與速度 */
+    const p2 = pool();
+    ans = p2[(Math.random()*p2.length)|0];
+    qa = ans; qb = 0; qop = '找';
+    $('q').innerHTML = '找出所有 <em>' + ans + '</em>';
+  }else{
+    const q = pickQ(L);
+    qa = q.a; qb = q.b; qop = q.op; ans = q.ans;
+    $('q').innerHTML = qa + ' <em>' + qop + '</em> ' + qb + ' <em>=</em> ?';
+  }
   $('ask').classList.remove('pop','swipe');
   void $('ask').offsetWidth;
   $('ask').classList.add('pop','swipe');
@@ -639,7 +689,7 @@ function tap(y, x, d){
     const mult = combo >= 10 ? 4 : combo >= 6 ? 3 : combo >= 3 ? 2 : 1;
     const got = 10 * mult;
     score += got;
-    mark(qa + '×' + qb, true);
+    if(!arcadeNow()) mark(qa + qop + qb, true);
     sndOk(combo);
     d.classList.add('win');
     boardEl.classList.add('dim');
@@ -677,7 +727,7 @@ function tap(y, x, d){
   }else{
     combo = 0;
     wrong++;
-    mark(qa + '×' + qb, false);
+    if(!arcadeNow()) mark(qa + qop + qb, false);
     sndBad();
     d.classList.remove('wrong'); void d.offsetWidth;
     d.classList.add('wrong');
@@ -744,6 +794,36 @@ function end(){
   beep(520,.16,'sine',.09);
   setTimeout(()=>beep(392,.24,'sine',.09), 180);
 }
+
+/* 題型選單（這頁自己畫一份，選擇跟其他頁共用同一把 localStorage） */
+(function(){
+  const el = $('topicbar');
+  const D = {mul:'2×2 到 9×9', add:'20 以內', sub:'20 以內，不會出負數', addsub:'20 以內', all:'加減乘一起來'};
+  el.innerHTML = Object.keys(TOPICS2).map(k =>
+    '<button data-t="' + k + '">' + TOPICS2[k] + '<b>' + D[k] + '</b></button>').join('');
+  const paint = () => [...el.children].forEach(b => b.classList.toggle('on', b.dataset.t === topicNow()));
+  el.onclick = (e) => {
+    const b = e.target.closest('button'); if(!b) return;
+    try{ localStorage.setItem(TOPIC_KEY2, b.dataset.t); }catch(err){}
+    paint();
+  };
+  paint();
+})();
+
+(function(){
+  const el = $('modebar');
+  el.innerHTML = '<button data-m="practice">練習模式<b>會出算術題</b></button>' +
+                 '<button data-m="arcade">純玩模式<b>直接找數字</b></button>';
+  const paint = () => [...el.children].forEach(b => b.classList.toggle('on', b.dataset.m === (arcadeNow() ? 'arcade' : 'practice')));
+  el.onclick = (e) => {
+    const b = e.target.closest('button'); if(!b) return;
+    try{ localStorage.setItem('mul99_mode', b.dataset.m); }catch(err){}
+    paint();
+    document.getElementById('topicwrap').style.display = arcadeNow() ? 'none' : '';
+  };
+  paint();
+  document.getElementById('topicwrap').style.display = arcadeNow() ? 'none' : '';
+})();
 
 $('start').onclick = start;
 $('again').onclick = start;

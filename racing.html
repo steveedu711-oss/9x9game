@@ -13,6 +13,9 @@
 <meta name="apple-mobile-web-app-title" content="小虎乘法">
 <link rel="stylesheet" href="assets/common.css">
 <style>
+.board.pass{background:linear-gradient(180deg,#d6ffe6,#4ade80 70%);border-color:#12603a;color:#08331c}
+.board.block{background:linear-gradient(180deg,#ffd9d9,#f87171 70%);border-color:#6b1414;color:#3a0808}
+
 body{gap:8px}
 .wrap{width:min(96vw,560px);display:flex;flex-direction:column;gap:8px}
 
@@ -203,6 +206,10 @@ body{gap:8px}
 <nav class="vers"></nav>
 
 <div class="wrap">
+  <div id="modebar"></div>
+  <div id="topicwrap"><div class="setlab2">要出哪種題目</div>
+  <div id="topicbar"></div></div>
+  <div class="setlab2">難度</div>
   <div class="levels" id="levels"></div>
 
   <div class="stage" id="stage">
@@ -250,6 +257,9 @@ body{gap:8px}
 
 <script src="assets/common.js"></script>
 <script>
+Topic.bar($('topicbar'));
+Mode.bar($('modebar'), () => document.body.classList.toggle('arcade', Mode.isArcade()));
+document.body.classList.toggle('arcade', Mode.isArcade());
 versionBar('racing.html');
 
 function r(a,b){ return a + ((Math.random()*(b-a+1))|0); }
@@ -325,23 +335,22 @@ stage.addEventListener('pointerdown', e => {
 
 /* ---- 出題 ---- */
 function nextQuestion(){
+  if(Mode.isArcade()) return nextQuestionArcade();
   const L = LEVELS[lvIdx];
-  const pair = L.pick(), a = pair[0], b = pair[1];
-  const ans = a*b;
-  const wrongs = new Set();
-  let guard = 0;
-  while(wrongs.size < 2 && guard++ < 60){
-    const d = [-1,1,-2,2,a,-a,b,-b][(Math.random()*8)|0];
-    const w = ans + d;
-    if(w > 0 && w !== ans) wrongs.add(w);
+  /* 乘法沿用這一關自己的出題範圍（難度分段才有意義），加減法走共用出題器 */
+  let q;
+  if(Topic.isMul()){
+    const pair = L.pick(), a = pair[0], b = pair[1];
+    q = {a:a, b:b, op:'×', ans:a*b, text:a + ' × ' + b, key:a + '×' + b};
+  }else{
+    q = makeQ();
   }
-  while(wrongs.size < 2) wrongs.add(ans + wrongs.size + 3);
-  const opts = [ans, ...wrongs];
-  for(let i=opts.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; const t=opts[i]; opts[i]=opts[j]; opts[j]=t; }
+  const a = q.a, b = q.b, ans = q.ans;
+  const opts = makeOptions(q, 3);
 
   qno++; $('qno').textContent = qno;
   const qb = $('qbar');
-  qb.textContent = a + ' × ' + b + ' = ?';
+  qb.textContent = q.text + ' = ?';
   qb.classList.remove('pulse'); void qb.offsetWidth; qb.classList.add('pulse');
 
   gates.forEach(g => g.remove()); gates = [];
@@ -352,7 +361,29 @@ function nextQuestion(){
     stage.appendChild(g);
     gates.push(g);
   }
-  cur = {a:a, b:b, ans:ans, key: a + '×' + b, opts:opts, p:0, ms:L.ms, done:false, els:gates};
+  cur = {a:a, b:b, ans:ans, key:q.key, opts:opts, p:0, ms:L.ms, done:false, els:gates};
+}
+
+/* 純玩模式：不算數學，三個閘門只有一個開著，其他是路障，看到就要換道 */
+function nextQuestionArcade(){
+  const okIdx = (Math.random()*3)|0;
+  qno++; $('qno').textContent = qno;
+  const qb = $('qbar');
+  qb.textContent = '開到沒有路障的那一道';
+  qb.classList.remove('pulse'); void qb.offsetWidth; qb.classList.add('pulse');
+
+  gates.forEach(g => g.remove()); gates = [];
+  for(let i=0;i<3;i++){
+    const g = document.createElement('div');
+    g.className = 'gate';
+    g.innerHTML = '<div class="board' + (i === okIdx ? ' pass' : ' block') + '">' +
+                  (i === okIdx ? '➜' : '🚧') + '</div><div class="pole"></div>';
+    stage.appendChild(g);
+    gates.push(g);
+  }
+  /* 越玩越快：每五題縮短一點衝過來的時間，最低 1.1 秒 */
+  const ms = Math.max(1100, LEVELS[lvIdx].ms - Math.floor(qno/5)*120);
+  cur = {arcade:true, okIdx:okIdx, opts:[0,1,2], p:0, ms:ms, done:false, els:gates};
 }
 
 /* ---- 每幀更新 ---- */
@@ -377,10 +408,9 @@ function frame(t){
 }
 
 function judge(){
-  const picked = cur.opts[lane];
-  const ok = picked === cur.ans;
-  Stats.mark(cur.key, ok);
-  cur.els[cur.opts.indexOf(cur.ans)].classList.add('good','pop');
+  const ok = cur.arcade ? (lane === cur.okIdx) : (cur.opts[lane] === cur.ans);
+  if(!cur.arcade) Stats.mark(cur.key, ok);       // 純玩模式不寫進答題統計
+  cur.els[cur.arcade ? cur.okIdx : cur.opts.indexOf(cur.ans)].classList.add('good','pop');
   if(!ok) cur.els[lane].classList.add('bad','pop');
 
   const fl = $('flash');

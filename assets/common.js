@@ -82,7 +82,11 @@ const HEROES = [
   {key:'knight', name:'勇氣騎士', icon:'🛡️', img:'assets/char_knight.webp',
    desc:'很耐打',       atk:-1, hp:32,  crit:0,  ult:0, spell:1},
   {key:'archer', name:'神射手',   icon:'🏹', img:'assets/char_archer.webp',
-   desc:'常常爆擊',     atk:0,  hp:-6,  crit:12, ult:2, spell:1}
+   desc:'常常爆擊',     atk:0,  hp:-6,  crit:12, ult:2, spell:1},
+  {key:'berserk', name:'狂戰小虎', icon:'⚔️', img:'assets/char_berserk.webp',
+   desc:'打得重但脆',   atk:6,  hp:-24, crit:6,  ult:4, spell:0.85},
+  {key:'sage',    name:'魔導小虎', icon:'✨', img:'assets/char_sage.webp',
+   desc:'魔法連發',     atk:-3, hp:-4,  crit:0,  ult:7, spell:1.7}
 ];
 const heroOf = k => HEROES.find(h => h.key === k) || HEROES[0];
 
@@ -318,4 +322,101 @@ function versionBar(current){
   if(!el) return;
   el.innerHTML = VERSIONS.map(v =>
     '<a href="' + v.f + '"' + (v.f === current ? ' class="on"' : '') + '>' + v.n + '</a>').join('');
+}
+
+/* ---------- 兩種模式（2026-08-22 Steve：大人玩不想在那邊答題） ----------
+   practice＝練習模式（原本的，會出乘法題、答題紀錄進統計）
+   arcade  ＝純玩模式（不出題，改成純操作，不寫入答題統計）
+   選擇存在 localStorage，八頁共用，換頁也記得。 */
+const MODE_KEY = 'mul99_mode';
+const Mode = {
+  get(){ try{ return localStorage.getItem(MODE_KEY) === 'arcade' ? 'arcade' : 'practice'; }catch(e){ return 'practice'; } },
+  set(m){ try{ localStorage.setItem(MODE_KEY, m); }catch(e){} },
+  isArcade(){ return this.get() === 'arcade'; },
+  /* 在指定容器畫出「練習模式／純玩模式」切換；onChange 回傳新模式 */
+  bar(el, onChange){
+    if(!el) return;
+    el.className = 'modebar';
+    el.innerHTML =
+      '<button data-m="practice"><b>練習模式</b><small>會出算術題</small></button>' +
+      '<button data-m="arcade"><b>純玩模式</b><small>不出題，純操作</small></button>';
+    const paint = () => [...el.children].forEach(b =>
+      b.classList.toggle('on', b.dataset.m === Mode.get()));
+    el.onclick = (e) => {
+      const b = e.target.closest('button'); if(!b) return;
+      Mode.set(b.dataset.m); paint();
+      onChange && onChange(Mode.get());
+    };
+    paint();
+  }
+};
+
+/* ---------- 題型（2026-08-22 Steve：不要只有九九乘法，低年級要 20 以內加減） ----------
+   八頁共用同一份出題器，換頁也記得選過的題型。
+   Stats 的 key 直接用算式（「7＋8」「12－5」「5×3」），三種題型的統計自然分開。 */
+const TOPIC_KEY = 'mul99_topic';
+const TOPICS = {
+  mul:    {n:'九九乘法', d:'2×2 到 9×9'},
+  add:    {n:'加法',     d:'20 以內'},
+  sub:    {n:'減法',     d:'20 以內，不會出負數'},
+  addsub: {n:'加減混合', d:'20 以內'},
+  all:    {n:'全部混合', d:'加減乘一起來'}
+};
+const Topic = {
+  get(){ try{ const t = localStorage.getItem(TOPIC_KEY); return TOPICS[t] ? t : 'mul'; }catch(e){ return 'mul'; } },
+  set(t){ try{ localStorage.setItem(TOPIC_KEY, t); }catch(e){} },
+  name(){ return TOPICS[this.get()].n; },
+  isMul(){ return this.get() === 'mul'; },
+  /* 畫出題型選單；onChange 回傳新題型 */
+  bar(el, onChange){
+    if(!el) return;
+    el.className = 'topicbar';
+    el.innerHTML = Object.keys(TOPICS).map(k =>
+      '<button data-t="' + k + '">' + TOPICS[k].n + '<b>' + TOPICS[k].d + '</b></button>').join('');
+    const paint = () => [...el.children].forEach(b => b.classList.toggle('on', b.dataset.t === Topic.get()));
+    el.onclick = (e) => {
+      const b = e.target.closest('button'); if(!b) return;
+      Topic.set(b.dataset.t); paint(); onChange && onChange(Topic.get());
+    };
+    paint();
+  }
+};
+/* 出一題。weak＝這隻怪害怕的乘法表（只有乘法題用得到，別的題型忽略）
+   回傳 {a, b, op, ans, text, key, weak}；text 已經是可以直接放進畫面的字串 */
+function makeQ(weak){
+  let t = Topic.get();
+  if(t === 'addsub') t = Math.random() < .5 ? 'add' : 'sub';
+  if(t === 'all')    t = ['add','sub','mul'][(Math.random()*3)|0];
+  let a, b, op, ans;
+  if(t === 'add'){
+    a = 1 + (Math.random()*15|0);
+    b = 1 + (Math.random()*(20 - a)|0);
+    op = '＋'; ans = a + b;
+  }else if(t === 'sub'){
+    a = 3 + (Math.random()*18|0);          // 被減數 3～20
+    b = 1 + (Math.random()*(a - 1)|0);     // 減數比它小，答案不會是負的
+    op = '－'; ans = a - b;
+  }else{
+    const w = weak && weak.length ? weak : null;
+    a = (w && Math.random() < .7) ? w[(Math.random()*w.length)|0] : 2 + (Math.random()*8|0);
+    b = 2 + (Math.random()*8|0);
+    op = '×'; ans = a * b;
+  }
+  const isWeak = !!(op === '×' && weak && (weak.includes(a) || weak.includes(b)));
+  return {a, b, op, ans, text: a + ' ' + op + ' ' + b, key: a + op + b, weak:isWeak, kind:t};
+}
+/* 幫一題湊出 n 個選項（含正解），數字都不重複也不會是負的 */
+function makeOptions(q, n){
+  n = n || 4;
+  const cand = new Set([q.ans]);
+  const near = q.op === '×'
+    ? [q.a*(q.b+1), q.a*(q.b-1), (q.a+1)*q.b, (q.a-1)*q.b, q.ans+q.a, q.ans-q.b, q.ans+2, q.ans-3]
+    : [q.ans+1, q.ans-1, q.ans+2, q.ans-2, q.ans+3, q.ans-3, q.ans+10, q.ans-10];
+  for(const v of near.sort(()=>Math.random()-.5)){
+    if(v >= 0 && !cand.has(v)) cand.add(v);
+    if(cand.size >= n) break;
+  }
+  let extra = 1;
+  while(cand.size < n){ if(!cand.has(q.ans + extra)) cand.add(q.ans + extra); extra++; }
+  return [...cand].slice(0, n).sort(()=>Math.random()-.5);
 }

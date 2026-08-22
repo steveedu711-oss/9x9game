@@ -13,6 +13,9 @@
 <meta name="apple-mobile-web-app-title" content="小虎乘法">
 <link rel="stylesheet" href="assets/common.css">
 <style>
+.face.imgCard{padding:6px;background:linear-gradient(180deg,#3a2456,#241638)}
+.face.imgCard img{width:80%;height:80%;object-fit:contain;filter:drop-shadow(0 4px 8px #0008)}
+
 body{gap:8px}
 .wrap{width:min(96vw,560px);display:flex;flex-direction:column;gap:10px}
 
@@ -103,6 +106,10 @@ body{gap:8px}
 <nav class="vers"></nav>
 
 <div class="wrap">
+  <div id="modebar"></div>
+  <div id="topicwrap"><div class="setlab2">要出哪種題目</div>
+  <div id="topicbar"></div></div>
+  <div class="setlab2">難度</div>
   <div class="levels" id="levels"></div>
 
   <div class="stats">
@@ -139,6 +146,9 @@ body{gap:8px}
 
 <script src="assets/common.js"></script>
 <script>
+Topic.bar($('topicbar'));
+Mode.bar($('modebar'), () => document.body.classList.toggle('arcade', Mode.isArcade()));
+document.body.classList.toggle('arcade', Mode.isArcade());
 versionBar('memory.html');
 
 function r(a,b){ return a + ((Math.random()*(b-a+1))|0); }
@@ -164,8 +174,11 @@ let running = false, first = null, lock = false;
 let flips = 0, pairs = 0, needPairs = 0, combo = 0, bestCombo = 0;
 let t0 = 0, timer = 0, elapsed = 0;
 
+/* 純玩模式：不配算式，改成配同一張圖（純記憶，不用算） */
+const FACE_IMGS = ['sym_amber','sym_amethyst','sym_beer','sym_bell','sym_gem','sym_ruby','sym_tiger','sym_bag','sym_free'];
 function buildCards(){
   const L = LEVELS[lvIdx];
+  if(Mode.isArcade()) return buildCardsArcade(L);
   needPairs = L.pairs;
   board.style.gridTemplateColumns = 'repeat(' + L.cols + ',1fr)';
   [...board.querySelectorAll('.cd')].forEach(c => c.remove());
@@ -173,11 +186,17 @@ function buildCards(){
   const used = new Set(), items = [];
   let guard = 0;
   while(items.length < L.pairs && guard++ < 400){
-    const p = L.pick(), a = Math.min(p[0],p[1]), b = Math.max(p[0],p[1]);
-    const key = a + '×' + b;
-    if(used.has(key) || used.has('ans' + (a*b))) continue;   // 答案不重複，才不會一對多
-    used.add(key); used.add('ans' + (a*b));
-    items.push({key:key, q: a + ' × ' + b, ans: a*b});
+    let key, text, ans;
+    if(Topic.isMul()){
+      const p = L.pick(), a = Math.min(p[0],p[1]), b = Math.max(p[0],p[1]);
+      key = a + '×' + b; text = a + ' × ' + b; ans = a*b;
+    }else{
+      const q = makeQ();
+      key = q.key; text = q.text; ans = q.ans;
+    }
+    if(used.has(key) || used.has('ans' + ans)) continue;   // 答案不重複，才不會一對多
+    used.add(key); used.add('ans' + ans);
+    items.push({key:key, q:text, ans:ans});
   }
   const cards = [];
   items.forEach((it, i) => {
@@ -215,6 +234,40 @@ function buildCards(){
   });
 }
 
+function buildCardsArcade(L){
+  needPairs = L.pairs;
+  board.style.gridTemplateColumns = 'repeat(' + L.cols + ',1fr)';
+  [...board.querySelectorAll('.cd')].forEach(c => c.remove());
+
+  const pool = FACE_IMGS.slice().sort(() => Math.random() - .5).slice(0, L.pairs);
+  const cards = [];
+  pool.forEach((g, i) => { cards.push({pid:i, img:g}); cards.push({pid:i, img:g}); });
+  for(let i=cards.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; const t=cards[i]; cards[i]=cards[j]; cards[j]=t; }
+
+  cards.forEach(c => {
+    const el = document.createElement('div');
+    el.className = 'cd';
+    el.dataset.pid = c.pid;
+    el.dataset.type = 'img';
+    el.dataset.key = c.img;
+
+    const inner = document.createElement('div'); inner.className = 'cdIn';
+    const back = document.createElement('div'); back.className = 'face back';
+    const bim = document.createElement('img'); bim.alt = ''; bim.src = BACK_IMG;
+    bim.onerror = () => { const ph = document.createElement('div'); ph.className = 'ph'; ph.textContent = '💎'; bim.replaceWith(ph); };
+    back.appendChild(bim);
+
+    const front = document.createElement('div'); front.className = 'face front imgCard';
+    const fim = document.createElement('img'); fim.alt = ''; fim.src = 'assets/' + c.img + '.webp';
+    fim.onerror = () => { const ph = document.createElement('div'); ph.className = 'ph'; ph.textContent = '⭐'; fim.replaceWith(ph); };
+    front.appendChild(fim);
+
+    inner.append(back, front);
+    el.appendChild(inner);
+    board.appendChild(el);
+  });
+}
+
 board.addEventListener('click', e => {
   const el = e.target.closest('.cd');
   if(!el || !running || lock) return;
@@ -226,11 +279,13 @@ board.addEventListener('click', e => {
   if(!first){ first = el; return; }
   lock = true;
   const sameKind = first.dataset.type === el.dataset.type;
-  const match = !sameKind && first.dataset.pid === el.dataset.pid;
+  const match = Mode.isArcade()
+    ? first.dataset.pid === el.dataset.pid          // 純玩：配同一張圖
+    : (!sameKind && first.dataset.pid === el.dataset.pid);
   const key = first.dataset.key;
 
   if(match){
-    Stats.mark(key, true);
+    if(!Mode.isArcade()) Stats.mark(key, true);     // 純玩模式不寫進答題統計
     pairs++; combo++; bestCombo = Math.max(bestCombo, combo);
     $('sPair').textContent = pairs;
     setTimeout(() => {
@@ -242,7 +297,7 @@ board.addEventListener('click', e => {
       Sfx.ok(combo);
       const qb = $('qbox');
       qb.className = 'qbox ok';
-      qb.textContent = first.dataset.key.replace('×',' × ') + ' = ' + (first.dataset.type==='ans' ? first.textContent : el.textContent) + '　配對成功';
+      qb.textContent = first.dataset.key.replace(/([×＋－])/,' $1 ') + ' = ' + (first.dataset.type==='ans' ? first.textContent : el.textContent) + '　配對成功';
       if(combo >= 3){
         const c = $('combo');
         c.textContent = combo + ' 連配！';

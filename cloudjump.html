@@ -161,6 +161,10 @@ body{gap:8px}
 <nav class="vers"></nav>
 
 <div class="wrap">
+  <div id="modebar"></div>
+  <div id="topicwrap"><div class="setlab2">要出哪種題目</div>
+  <div id="topicbar"></div></div>
+  <div class="setlab2">難度</div>
   <div class="levels" id="levels"></div>
 
   <div class="stage" id="stage">
@@ -203,6 +207,9 @@ body{gap:8px}
 
 <script src="assets/common.js"></script>
 <script>
+Topic.bar($('topicbar'));
+Mode.bar($('modebar'), () => document.body.classList.toggle('arcade', Mode.isArcade()));
+document.body.classList.toggle('arcade', Mode.isArcade());
 versionBar('cloudjump.html');
 
 function r(a,b){ return a + ((Math.random()*(b-a+1))|0); }
@@ -254,21 +261,20 @@ let running = false, lock = false, hp = 3, score = 0, floorNo = 0, combo = 0, be
 let cur = null;
 
 function nextFloor(){
+  if(Mode.isArcade()) return nextFloorArcade();
   const L = LEVELS[lvIdx];
-  const p = L.pick(), a = p[0], b = p[1], ans = a*b;
-  const wrongs = new Set();
-  let guard = 0;
-  while(wrongs.size < 2 && guard++ < 60){
-    const d = [-1,1,-2,2,a,-a,b,-b][(Math.random()*8)|0];
-    const w = ans + d;
-    if(w > 0 && w !== ans) wrongs.add(w);
+  let q;
+  if(Topic.isMul()){
+    const pr = L.pick(), a0 = pr[0], b0 = pr[1];
+    q = {a:a0, b:b0, op:'×', ans:a0*b0, text:a0 + ' × ' + b0, key:a0 + '×' + b0};
+  }else{
+    q = makeQ();
   }
-  while(wrongs.size < 2) wrongs.add(ans + wrongs.size + 3);
-  const opts = [ans, ...wrongs];
-  for(let i=opts.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; const t=opts[i]; opts[i]=opts[j]; opts[j]=t; }
+  const a = q.a, b = q.b, ans = q.ans;
+  const opts = makeOptions(q, 3);
 
   const qb = $('qbar');
-  qb.textContent = a + ' × ' + b + ' = ?';
+  qb.textContent = q.text + ' = ?';
   qb.classList.remove('pulse'); void qb.offsetWidth; qb.classList.add('pulse');
 
   floorEl.classList.remove('rise');
@@ -280,7 +286,34 @@ function nextFloor(){
     d.dataset.i = i;
     floorEl.appendChild(d);
   });
-  cur = {a:a, b:b, ans:ans, key: a + '×' + b, opts:opts};
+  cur = {a:a, b:b, ans:ans, key:q.key, opts:opts};
+  lock = false;
+}
+
+/* 純玩模式：不出題，三朵雲只有一朵踩得住（有星星），其他一踩就碎。
+   樓層越高，正解那朵停留的時間越短，靠眼力與反應。 */
+function nextFloorArcade(){
+  const okIdx = (Math.random()*3)|0;
+  const qb = $('qbar');
+  qb.textContent = '跳到有 ⭐ 的那朵雲';
+  qb.classList.remove('pulse'); void qb.offsetWidth; qb.classList.add('pulse');
+
+  floorEl.classList.remove('rise');
+  floorEl.innerHTML = '';
+  for(let i=0;i<3;i++){
+    const d = document.createElement('div');
+    d.className = 'plat' + (i === okIdx ? ' good' : '');
+    d.innerHTML = '<span>' + (i === okIdx ? '⭐' : '💨') + '</span>';
+    d.dataset.i = i;
+    floorEl.appendChild(d);
+  }
+  /* 高樓層開始整排左右飄，抓時機才踩得到 */
+  const sway = Math.min(1, floorNo / 12);
+  if(sway > 0.15){
+    floorEl.animate([{transform:'translateX(-6%)'},{transform:'translateX(6%)'}],
+      {duration: Math.max(700, 2200 - sway*1300), direction:'alternate', iterations:Infinity, easing:'ease-in-out'});
+  }
+  cur = {arcade:true, okIdx:okIdx};
   lock = false;
 }
 
@@ -309,8 +342,8 @@ function pick(i){
   if(!target) { lock = false; return; }
   target.classList.add('press');
 
-  const ok = cur.opts[i] === cur.ans;
-  Stats.mark(cur.key, ok);
+  const ok = cur.arcade ? (i === cur.okIdx) : (cur.opts[i] === cur.ans);
+  if(!cur.arcade) Stats.mark(cur.key, ok);       // 純玩模式不寫進答題統計
 
   // 算跳躍位移
   const pr = pl.getBoundingClientRect(), tr = target.getBoundingClientRect();

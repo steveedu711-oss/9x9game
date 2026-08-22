@@ -101,6 +101,10 @@ canvas{position:absolute;inset:0;width:100%;height:100%;z-index:3}
 <nav class="vers"></nav>
 
 <div class="wrap">
+  <div id="modebar"></div>
+  <div id="topicwrap"><div class="setlab2">要出哪種題目</div>
+  <div id="topicbar"></div></div>
+  <div class="setlab2">難度</div>
   <div class="levels" id="levels"></div>
 
   <div class="tank" id="tank">
@@ -141,6 +145,9 @@ canvas{position:absolute;inset:0;width:100%;height:100%;z-index:3}
 
 <script src="assets/common.js"></script>
 <script>
+Topic.bar($('topicbar'));
+Mode.bar($('modebar'), () => document.body.classList.toggle('arcade', Mode.isArcade()));
+document.body.classList.toggle('arcade', Mode.isArcade());
 versionBar('bubble.html');
 
 function r(a,b){ return a + ((Math.random()*(b-a+1))|0); }
@@ -207,25 +214,23 @@ const COLORS = [
 ];
 
 function newQuestion(){
+  if(Mode.isArcade()) return newQuestionArcade();
   const L = LEVELS[lvIdx];
-  const p = L.pick(), a = p[0], b = p[1], ans = a*b;
-  const set = new Set([ans]);
-  let guard = 0;
-  while(set.size < L.bub && guard++ < 120){
-    const d = [-1,1,-2,2,-3,3,a,-a,b,-b][(Math.random()*10)|0];
-    const w = ans + d;
-    if(w > 0) set.add(w);
+  let q;
+  if(Topic.isMul()){
+    const p = L.pick(), a0 = p[0], b0 = p[1];
+    q = {a:a0, b:b0, op:'×', ans:a0*b0, text:a0 + ' × ' + b0, key:a0 + '×' + b0};
+  }else{
+    q = makeQ();
   }
-  let filler = ans + 5;
-  while(set.size < L.bub) set.add(filler++);
-  const vals = [...set];
-  for(let i=vals.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; const t=vals[i]; vals[i]=vals[j]; vals[j]=t; }
+  const a = q.a, b = q.b, ans = q.ans;
+  const vals = makeOptions(q, L.bub);
 
   const qb = $('qbar');
-  qb.textContent = a + ' × ' + b + ' = ?';
+  qb.textContent = q.text + ' = ?';
   qb.classList.remove('pulse'); void qb.offsetWidth; qb.classList.add('pulse');
 
-  cur = {a:a, b:b, ans:ans, key: a + '×' + b};
+  cur = {a:a, b:b, ans:ans, key:q.key};
   bubbles = vals.map((v,i) => {
     const c = COLORS[i % COLORS.length];
     const rr = Math.max(24, Math.min(38, W/(vals.length*2.4)));
@@ -234,6 +239,37 @@ function newQuestion(){
       x: (W/(vals.length+1))*(i+1) + (Math.random()-.5)*18,
       y: H*0.24 + Math.random()*H*0.34,
       vx: (Math.random()-.5)*0.42, vy: (Math.random()-.5)*0.3,
+      ph: Math.random()*6.28, c1: c[0], c2: c[1], dead: false, hitT: 0
+    };
+  });
+  lockShot = false;
+}
+
+/* 純玩模式：不算數學，改成「射破指定顏色的泡泡」，靠眼力與手速 */
+const COLOR_NAMES = ['水藍','橘黃','紫色','薄荷綠','粉紅','鵝黃'];
+function newQuestionArcade(){
+  const L = LEVELS[lvIdx];
+  const target = (Math.random()*COLORS.length)|0;
+  const n = L.bub;
+  // 目標色至少 2 顆、最多一半，其餘隨機挑別的顏色
+  const want = 2 + (Math.random()*Math.max(1, (n/2|0) - 1))|0;
+  const cols = [];
+  for(let i=0;i<n;i++) cols.push(i < want ? target : (target + 1 + (Math.random()*(COLORS.length-1)|0)) % COLORS.length);
+  for(let i=cols.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; const t=cols[i]; cols[i]=cols[j]; cols[j]=t; }
+
+  const qb = $('qbar');
+  qb.innerHTML = '射破 <b style="color:' + COLORS[target][0] + '">' + COLOR_NAMES[target] + '</b> 的泡泡';
+  qb.classList.remove('pulse'); void qb.offsetWidth; qb.classList.add('pulse');
+
+  cur = {arcade:true, target:target, key:'色' + target};
+  bubbles = cols.map((ci, i) => {
+    const c = COLORS[ci];
+    const rr = Math.max(24, Math.min(38, W/(n*2.4)));
+    return {
+      v: '', ci: ci, r: rr,
+      x: (W/(n+1))*(i+1) + (Math.random()-.5)*18,
+      y: H*0.24 + Math.random()*H*0.34,
+      vx: (Math.random()-.5)*0.62, vy: (Math.random()-.5)*0.45,
       ph: Math.random()*6.28, c1: c[0], c2: c[1], dead: false, hitT: 0
     };
   });
@@ -347,8 +383,8 @@ function fire(target){
 
 function hitCheck(b){
   if(!running) return;
-  const ok = b.v === cur.ans;
-  Stats.mark(cur.key, ok);
+  const ok = cur.arcade ? (b.ci === cur.target) : (b.v === cur.ans);
+  if(!cur.arcade) Stats.mark(cur.key, ok);        // 純玩模式不寫進答題統計
   const fl = $('flash');
   const rectOf = (bb) => ({left: tank.getBoundingClientRect().left + bb.x - bb.r,
     top: tank.getBoundingClientRect().top + bb.y - bb.r, width: bb.r*2, height: bb.r*2});

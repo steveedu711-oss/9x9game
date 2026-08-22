@@ -546,6 +546,35 @@ body{padding-bottom:16px}
 .tip b{color:var(--gold2)}
 
 /* ---------- 手機：小螢幕上角色跟怪物會疊在一起，戰場拉高、兩邊各自縮一點 ---------- */
+/* ---------- 純玩模式的操作面板 ---------- */
+.acts{display:none;gap:10px;width:min(96vw,560px)}
+body.arcade .acts{display:flex}
+body.arcade .qbox,body.arcade #ans{display:none}
+.act{
+  flex:1;min-height:76px;border-radius:18px;cursor:pointer;border:1px solid var(--line);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+  color:#3a2400;font-family:inherit;position:relative;overflow:hidden;
+  transition:transform .1s ease,filter .15s;
+}
+.act b{font-size:20px;font-weight:900;letter-spacing:3px}
+.act small{font-size:11px;font-weight:700;opacity:.8}
+.act.atk{background:linear-gradient(180deg,#ffd08a,#f6905c);box-shadow:0 5px 0 #a9521b,0 10px 24px #0008}
+.act.dodge{background:linear-gradient(180deg,#bfe4ff,#6ea8ff);box-shadow:0 5px 0 #2b5c9e,0 10px 24px #0008}
+.act:active{transform:translateY(4px)}
+.act:disabled{filter:grayscale(.7) brightness(.7);cursor:default}
+/* 冷卻：底下那條由左往右補回來 */
+.act i{position:absolute;left:0;bottom:0;height:5px;width:0;background:#ffffffcc}
+.act.cool i{transition:width linear}
+/* 閃避成功的瞬間，角色會有一圈藍光 */
+#hero2.evade{filter:drop-shadow(0 0 22px #6ea8ff) brightness(1.3)}
+
+/* ---------- 開始前的設定區 ---------- */
+.setup{display:flex;flex-direction:column;gap:10px;width:min(96vw,560px)}
+.setlab{font-size:12px;color:var(--dim);letter-spacing:1px;margin-bottom:-2px}
+body.arcade #topicwrap{display:none}
+body:not(.arcade) #diffwrap{display:none}
+body.playing .setup{display:none}
+
 @media (max-width:520px){
   body{padding-bottom:96px}
   .topbar{gap:6px;flex-wrap:nowrap}
@@ -620,18 +649,45 @@ body{padding-bottom:16px}
 
   <div class="ans" id="ans"></div>
 
+  <!-- 純玩模式的操作區（不出題時才顯示） -->
+  <div class="acts" id="acts">
+    <button class="act atk" id="actAtk"><b>攻　擊</b><small id="atkCd">點一下打一次</small></button>
+    <button class="act dodge" id="actDodge"><b>閃　避</b><small id="dodgeCd">敵人出手前按</small></button>
+  </div>
+
   <div class="ult">
     <span style="font-size:13px;font-weight:800;color:var(--gold2)">必殺技</span>
     <div class="bar2"><i id="ultBar"></i></div>
     <button id="ultBtn" disabled>小虎撲擊</button>
   </div>
 
+  <div class="setup" id="setup">
+    <div id="modebar"></div>
+    <div id="topicwrap">
+      <div class="setlab">練習模式要出哪種題目</div>
+      <div id="topicbar"></div>
+    </div>
+    <div id="diffwrap">
+      <div class="setlab">純玩模式的難度</div>
+      <div class="levels" id="difbar">
+        <div class="lv" data-d="easy">悠閒<b>敵人慢、傷害低</b></div>
+        <div class="lv on" data-d="normal">普通<b>標準速度</b></div>
+        <div class="lv" data-d="hard">狠角色<b>又快又痛</b></div>
+      </div>
+    </div>
+  </div>
+
   <button class="btn" id="start">開 始 冒 險</button>
 
-  <p class="tip">
+  <p class="tip" id="tipPractice">
     答對就出手，<b>答得越快傷害越高</b>；敵人上方的黃條倒數完會反擊。<br>
-    每隻敵人都有<b>害怕的乘法表</b>，打中弱點是<b>兩倍傷害</b>。<br>
+    每隻敵人都有<b>害怕的乘法表</b>，打中弱點是<b>兩倍傷害</b>（出乘法題時才有）。<br>
     連續答對會自動放魔法：<b>3 連火球術</b>、<b>5 連冰霜術</b>、<b>7 連落雷術</b>、<b>10 連聖光審判</b>（還會回血）。
+  </p>
+  <p class="tip" id="tipArcade" style="display:none">
+    不出題。按<b>攻擊</b>打人，敵人上方的黃條倒數完牠就撲上來，這時按<b>閃避</b>可以完全躲掉。<br>
+    連續打中不被打到會累積連擊，一樣會自動放魔法；被打到連擊歸零。<br>
+    鍵盤：<b>A</b> 攻擊、<b>S</b> 閃避、<b>空白鍵</b>必殺。
   </p>
 </div>
 
@@ -658,7 +714,7 @@ body{padding-bottom:16px}
     <div class="big" id="ovBig">1-1</div>
     <div class="line">打倒的敵人 <span id="ovKill">0</span></div>
     <div class="line">造成的總傷害 <span id="ovDmg">0</span></div>
-    <div class="line">答對／答錯 <span id="ovQA">0 / 0</span></div>
+    <div class="line" id="ovQAline">答對／答錯 <span id="ovQA">0 / 0</span></div>
     <div class="line">最快作答 <span id="ovFast">—</span></div>
     <div class="line">獲得金幣 <span id="ovGold">0</span></div>
     <div class="weak"><h3>最該再練的乘法</h3><ul id="ovWeak"></ul></div>
@@ -679,6 +735,11 @@ const MOBS = [
   {img:'assets/mob_ice.webp',    name:'冰晶怪',   hp:290, atk:18, weak:[6,7],   exp:62, drop:0.62},
   {img:'assets/mob_flame.webp',  name:'火焰怪',   hp:320, atk:19, weak:[8,9],   exp:70, drop:0.65},
   {img:'assets/mob_robot.webp',  name:'鐵皮機器', hp:355, atk:20, weak:[7,8],   exp:80, drop:0.70},
+  /* 2026-08-22 新增：出手快的衝鋒型、會擋傷害的精英、閃來閃去的刺客 */
+  {img:'assets/mob_boar.webp',     name:'暴走野豬', hp:300, atk:21, weak:[3,4],   exp:76, drop:0.62, fast:0.75},
+  {img:'assets/mob_bee.webp',      name:'蜂后',     hp:330, atk:18, weak:[5,6],   exp:84, drop:0.66},
+  {img:'assets/mob_ninja.webp',    name:'影武者貓', hp:340, atk:23, weak:[8,9],   exp:92, drop:0.70, fast:0.8},
+  {img:'assets/mob_gargoyle.webp', name:'石像守衛', hp:480, atk:24, weak:[6,7,9], exp:120, drop:0.9, armor:0.72},
   {img:'assets/mob_boss.webp',   name:'虎王石像', hp:430, atk:22, weak:[7,8,9], exp:110, drop:1, boss:true},
   {img:'assets/mob_dragon.webp', name:'紫金巨龍', hp:560, atk:26, weak:[6,7,8,9], exp:150, drop:1, boss:true, spr:'dragon'}
 ];
@@ -692,6 +753,20 @@ let qa = 1, qb = 1, ans = 0, qStart = 0, locked = true, running = false;
 let ult = 0, combo = 0, kills = 0, totalDmg = 0, right = 0, wrong = 0, fastest = null;
 let earnGold = 0, earnExp = 0, drops = [];
 let mobTimer = ANSWER_TIME, loop = null;
+/* ── 兩種模式（Steve 2026-08-22）──
+   練習模式：出題，答對出手（原本的玩法）
+   純玩模式：不出題，自己按攻擊與閃避，敵人倒數完就撲上來 */
+let arcade = false, QQ = null;
+const DIFF_KEY = 'mul99_diff';
+const DIFFS = {
+  easy:   {time:6.6, dmg:0.70, cd:520, name:'悠閒'},
+  normal: {time:4.6, dmg:1.00, cd:460, name:'普通'},
+  hard:   {time:3.4, dmg:1.35, cd:420, name:'狠角色'}
+};
+function difKey(){ try{ const d = localStorage.getItem(DIFF_KEY); return DIFFS[d] ? d : 'normal'; }catch(e){ return 'normal'; } }
+const D = () => DIFFS[difKey()];
+let turnTime = ANSWER_TIME;        // 這一回合的倒數總長（兩種模式不一樣）
+let atkReady = true, dodgeReady = true, invuln = 0, hits = 0, taken = 0;
 
 const F = () => $('field');
 const setBar = (el, r) => el.style.transform = 'scaleX(' + Math.max(0, Math.min(1, r)) + ')';
@@ -1291,7 +1366,7 @@ function castSpell(sp){
       camPush(true);
       dmgText(sp.name + ' -' + dmg, true);
       setHp('mobHp', mobHp / mob.hp);
-      $('mobHpText').textContent = mob.name + '　' + mobHp + ' / ' + mob.hp;
+      $('mobHpText').textContent = mobLabel() + '　' + mobHp + ' / ' + mob.hp;
       if(sp.heal){
         heroHp = Math.min(maxHp, heroHp + sp.heal);
         paintHeroBar();
@@ -1307,23 +1382,16 @@ function castSpell(sp){
 
 /* ---------- 出題 ---------- */
 function newQ(){
-  const w = mob.weak;
-  const useWeak = Math.random() < .7;
-  qa = useWeak ? w[(Math.random()*w.length)|0] : 2 + (Math.random()*8|0);
-  qb = 2 + (Math.random()*8|0);
-  ans = qa * qb;
-  $('q').innerHTML = qa + ' <em>×</em> ' + qb + ' <em>=</em> ?';
-  $('weakTip').textContent = w.includes(qa) || w.includes(qb)
+  if(arcade) return newTurn();
+  QQ = makeQ(mob.weak);                       // 題型（乘法／加法／減法）是大廳與這裡都能選的
+  qa = QQ.a; qb = QQ.b; ans = QQ.ans;
+  $('q').innerHTML = QQ.a + ' <em>' + QQ.op + '</em> ' + QQ.b + ' <em>=</em> ?';
+  $('weakTip').textContent = QQ.weak
     ? '⚡ 這題打中 ' + mob.name + ' 的弱點，傷害兩倍' : '';
   const box = $('qbox');
   box.classList.remove('in'); void box.offsetWidth; box.classList.add('in');
 
-  const cand = new Set([ans]);
-  for(const v of [qa*(qb+1), qa*(qb-1), (qa+1)*qb, (qa-1)*qb, ans+qa, ans-qb, ans+2, ans-3].sort(()=>Math.random()-.5)){
-    if(v > 0 && !cand.has(v)) cand.add(v);
-    if(cand.size >= 4) break;
-  }
-  const list = [...cand].slice(0,4).sort(()=>Math.random()-.5);
+  const list = makeOptions(QQ, 4);
   const box2 = $('ans');
   box2.innerHTML = '';
   for(const v of list){
@@ -1333,9 +1401,71 @@ function newQ(){
     box2.appendChild(b);
   }
   qStart = performance.now();
-  mobTimer = ANSWER_TIME;
+  turnTime = ANSWER_TIME * (mob.fast || 1);      // 衝鋒型出手比較快，思考時間就比較短
+  mobTimer = turnTime;
   locked = false;
 }
+/* 打中敵人之後的共同處理：扣血、特效、鏡頭、必殺充能。回傳「有沒有打死」 */
+function applyHit(dmg, isCrit, isWeak){
+  if(mob.armor) dmg = Math.max(1, Math.round(dmg * mob.armor));   // 石像守衛那種有護甲的
+  mobHp = Math.max(0, mobHp - dmg);
+  totalDmg += dmg;
+  hitEffect(isCrit, isWeak, mobHp <= 0);
+  camPush(isCrit || mobHp <= 0);
+  dmgText((isCrit ? '爆擊 ' : '') + '-' + dmg, isWeak || isCrit);
+  setHp('mobHp', mobHp / mob.hp);
+  $('mobHpText').textContent = mobLabel() + '　' + mobHp + ' / ' + mob.hp;
+  ult = Math.min(100, ult + P.ult);
+  paintUlt();
+  return mobHp <= 0;
+}
+
+/* ── 純玩模式：不出題，自己按攻擊與閃避 ──
+   樂趣來源換成「在敵人出手前塞進幾下、抓準時機閃掉那一擊」，
+   連續命中不被打到一樣會累積連擊、照樣自動放魔法。 */
+function newTurn(){
+  turnTime = D().time * (mob.boss ? 1.15 : 1) * (mob.fast || 1);
+  mobTimer = turnTime;
+  locked = false;
+}
+function cool(btn, ms, doneFlag){
+  const bar = btn.querySelector('i') || btn.appendChild(document.createElement('i'));
+  btn.disabled = true;
+  bar.classList.remove('cool'); bar.style.width = '0';
+  void bar.offsetWidth;
+  bar.style.transition = 'width ' + ms + 'ms linear';
+  bar.style.width = '100%';
+  setTimeout(() => { btn.disabled = false; bar.style.transition = 'none'; bar.style.width = '0'; doneFlag(); }, ms);
+}
+function playerAttack(){
+  if(!running || !arcade || locked || !atkReady) return;
+  atkReady = false;
+  cool($('actAtk'), D().cd, () => atkReady = true);
+  hits++;
+  combo++;
+  const isCrit = Math.random()*100 < P.crit;
+  const dmg = Math.round(P.atk * 0.62 * (1 + Math.min(combo,10)*0.05) * (isCrit ? 1.8 : 1));
+  Sfx.ok(combo);
+  camPull();
+  heroSwing(() => {
+    if(applyHit(dmg, isCrit, false)) return killMob();
+    comboAura(combo);
+    const sp = spellFor(combo);
+    if(sp) setTimeout(async () => { if(await castSpell(sp)) killMob(); }, 320);
+  });
+}
+function dodge(){
+  if(!running || !arcade || !dodgeReady) return;
+  dodgeReady = false;
+  cool($('actDodge'), 2400, () => dodgeReady = true);
+  invuln = performance.now() + 700;
+  const h = $('hero2');
+  h.classList.add('evade');
+  h.animate([{transform:'translateX(0)'}, {offset:.35, transform:'translateX(-46px)'},
+             {transform:'translateX(0)'}], {duration:620, easing:'ease-out'});
+  setTimeout(() => h.classList.remove('evade'), 700);
+}
+
 function answer(v, btn){
   if(locked || !running) return;
   locked = true;
@@ -1345,25 +1475,16 @@ function answer(v, btn){
   if(v === ans){
     right++;
     if(fastest === null || took < fastest) fastest = took;
-    combo++; Stats.mark(qa + '×' + qb, true);
+    combo++; Stats.mark(QQ.key, true);
     btn.classList.add('right');
-    const isWeak = mob.weak.includes(qa) || mob.weak.includes(qb);
+    const isWeak = QQ.weak;
     const speed = Math.max(1, Math.round((ANSWER_TIME - took) * 0.9));
     const isCrit = Math.random()*100 < P.crit;
     let dmg = Math.round((P.atk*0.7 + speed) * (isWeak ? 2 : 1) * (1 + Math.min(combo,8)*0.06) * (isCrit ? 1.8 : 1));
     Sfx.ok(combo);
     camPull();
     heroSwing(()=>{
-      mobHp = Math.max(0, mobHp - dmg);
-      totalDmg += dmg;
-      hitEffect(isCrit, isWeak, mobHp <= 0);
-      camPush(isCrit || mobHp <= 0);
-      dmgText((isCrit ? '爆擊 ' : '') + '-' + dmg, isWeak || isCrit);
-      setHp('mobHp', mobHp / mob.hp);
-      $('mobHpText').textContent = mob.name + '　' + mobHp + ' / ' + mob.hp;
-      ult = Math.min(100, ult + P.ult);
-      paintUlt();
-      if(mobHp <= 0) return killMob();
+      if(applyHit(dmg, isCrit, isWeak)) return killMob();
       comboAura(combo);
       const sp = spellFor(combo);
       if(sp){
@@ -1379,7 +1500,7 @@ function answer(v, btn){
   }else{
     wrong++; combo = 0;
     comboAura(0);
-    Stats.mark(qa + '×' + qb, false);
+    Stats.mark(QQ.key, false);
     btn.classList.add('wrong');
     [...$('ans').children].forEach(b => { if(+b.textContent === ans) b.classList.add('right'); });
     Sfx.bad();
@@ -1426,9 +1547,18 @@ function mobAttack(){
     el.classList.remove('attack'); void el.offsetWidth; el.classList.add('attack');
   }
   setTimeout(()=>{
+    if(arcade && performance.now() < invuln){        // 閃過了：不扣血，還回一點必殺
+      dmgText('閃過！', true);
+      ult = Math.min(100, ult + 8); paintUlt();
+      Sfx.next();
+      setTimeout(newQ, 520);
+      return;
+    }
+    taken++;
     mobHitFx();
     heroHurtAnim();
-    heroHp = Math.max(0, heroHp - mob.atk);
+    heroHp = Math.max(0, heroHp - Math.round(mob.atk * (arcade ? D().dmg : 1)));
+    if(arcade) { combo = 0; comboAura(0); }
     paintHeroBar();
     Sfx.hurt();
     F().classList.remove('hurt'); void F().offsetWidth; F().classList.add('hurt');
@@ -1503,6 +1633,10 @@ function killMob(){
     nextMob();
   }, 1400);
 }
+/* 名字後面標出特性，玩家才知道為什麼這隻不一樣 */
+function mobLabel(){
+  return mob.name + (mob.armor ? ' 🛡' : '') + (mob.fast ? ' ⚡' : '');
+}
 function setMob(){
   mob = {...MOBS[wave]};
   mob.hp = Math.round(mob.hp * (1 + (round-1)*0.5));
@@ -1513,7 +1647,7 @@ function setMob(){
   else Spr.off(mel, mob.img);    // 圖是漸進載的，直接指定就好，瀏覽器沒載好會自己補
   preloadNearby();               // 順手把下一隻先抓起來
   setHp('mobHp', 1);
-  $('mobHpText').textContent = mob.name + '　' + mobHp + ' / ' + mob.hp;
+  $('mobHpText').textContent = mobLabel() + '　' + mobHp + ' / ' + mob.hp;
   applyScene();
   paintTop();
 }
@@ -1543,7 +1677,7 @@ function useUlt(){
     playFx('fire', mobCenter(), {size:380, fps:24});
     dmgText('-' + dmg, true);
     setHp('mobHp', mobHp / mob.hp);
-    $('mobHpText').textContent = mob.name + '　' + mobHp + ' / ' + mob.hp;
+    $('mobHpText').textContent = mobLabel() + '　' + mobHp + ' / ' + mob.hp;
     shake();
     $('ultfx').classList.remove('on');
     if(mobHp <= 0) return killMob();
@@ -1557,14 +1691,21 @@ function tick(){
   if(mobTimer <= 0){
     locked = true;
     wrong++; combo = 0;
-    Stats.mark(qa + '×' + qb, false);
-    [...$('ans').children].forEach(b => { b.disabled = true; if(+b.textContent === ans) b.classList.add('right'); });
+    if(!arcade){
+      Stats.mark(QQ.key, false);
+      [...$('ans').children].forEach(b => { b.disabled = true; if(+b.textContent === ans) b.classList.add('right'); });
+    }
     mobAttack();
   }
 }
-const paintTimer = () => $('mobTimer').style.transform = 'scaleX(' + (mobTimer/ANSWER_TIME) + ')';
+const paintTimer = () => $('mobTimer').style.transform = 'scaleX(' + (mobTimer/turnTime) + ')';
 
 function start(){
+  arcade = Mode.isArcade();
+  document.body.classList.toggle('arcade', arcade);
+  document.body.classList.add('playing');
+  atkReady = true; dodgeReady = true; invuln = 0; hits = 0; taken = 0;
+  turnTime = arcade ? D().time : ANSWER_TIME;
   HERO = heroOf(Save.d.hero);
   heroFrame('ready');
   P = Save.power();
@@ -1585,12 +1726,14 @@ function start(){
 }
 function over(win){
   running = false; clearInterval(loop); loop = null;
+  document.body.classList.remove('playing');
   Save.put();
   $('ovTitle').textContent = win ? '全部打倒了！' : '這次沒過關';
   $('ovBig').textContent = win ? '🏆 第 ' + round + ' 輪' : round + '-' + (wave+1);
   $('ovKill').textContent = kills + ' 隻';
   $('ovDmg').textContent = totalDmg;
-  $('ovQA').textContent = right + ' / ' + wrong;
+  $('ovQAline').firstChild.textContent = arcade ? '出手／被打 ' : '答對／答錯 ';
+  $('ovQA').textContent = arcade ? (hits + ' 下 / ' + taken + ' 下') : (right + ' / ' + wrong);
   $('ovFast').textContent = fastest === null ? '—' : fastest.toFixed(2) + ' 秒';
   $('ovGold').textContent = earnGold + ' 金幣　經驗 +' + earnExp +
     (drops.length ? '　裝備 ×' + drops.length : '');
@@ -1601,11 +1744,37 @@ function over(win){
 $('start').onclick = start;
 $('again').onclick = start;
 $('ultBtn').onclick = useUlt;
+$('actAtk').onclick = playerAttack;
+$('actDodge').onclick = dodge;
 document.addEventListener('keydown', e => {
+  if(e.repeat) return;
+  if(arcade && running){
+    if(e.key === 'a' || e.key === 'A' || e.key === 'Enter'){ playerAttack(); return; }
+    if(e.key === 's' || e.key === 'S' || e.key === 'Shift'){ dodge(); return; }
+  }
   const n = +e.key;
   if(n >= 1 && n <= 4){ const b = $('ans').children[n-1]; b && b.click(); }
   if(e.key === ' ') useUlt();
 });
+
+/* 模式、題型、難度：都在開打前選，選了就記住 */
+function paintTip(){
+  $('tipPractice').style.display = Mode.isArcade() ? 'none' : '';
+  $('tipArcade').style.display   = Mode.isArcade() ? '' : 'none';
+}
+Mode.bar($('modebar'), () => {
+  document.body.classList.toggle('arcade', Mode.isArcade());
+  paintTip();
+});
+Topic.bar($('topicbar'));
+$('difbar').onclick = (e) => {
+  const d = e.target.closest('.lv'); if(!d) return;
+  try{ localStorage.setItem(DIFF_KEY, d.dataset.d); }catch(err){}
+  [...$('difbar').children].forEach(x => x.classList.toggle('on', x === d));
+};
+[...$('difbar').children].forEach(x => x.classList.toggle('on', x.dataset.d === difKey()));
+document.body.classList.toggle('arcade', Mode.isArcade());
+paintTip();
 
 versionBar('battle.html');
 startCoins();
