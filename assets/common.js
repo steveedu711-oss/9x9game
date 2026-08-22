@@ -312,7 +312,7 @@ function startCoins(){
 /* 版本切換列 */
 const VERSIONS = [
   {f:'index.html',  n:'🏠 大廳'},
-  {f:'battle.html', n:'⚔️ 打怪'},
+  {f:'battle.html', n:'⚔️ 出擊'},
   {f:'gems.html', n:'💎 消消樂'},
   {f:'findnum.html', n:'🔢 找答案'},
   {f:'racing.html', n:'🏎️ 賽車'},
