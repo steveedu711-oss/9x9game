@@ -363,6 +363,14 @@ body.lowfx .shard{animation-duration:.35s}
 }
 @keyframes shieldPulse{to{transform:scale(1.05);opacity:.72}}
 
+/* 破綻印記：紅色描邊提醒「這隻現在用旋風斬會爆傷」 */
+.mobwrap.marked::before{
+  content:"";position:absolute;inset:-4% -6%;border-radius:40%;pointer-events:none;z-index:5;
+  border:2px dashed #ff5c5ccc;box-shadow:0 0 16px #ff5c5c88;
+  animation:markSpin 2.4s linear infinite;
+}
+@keyframes markSpin{to{transform:rotate(360deg)}}
+
 /* 出手預告：怪物繃緊＋頭上跳一顆驚嘆號 */
 .mobwrap.warn{animation:mobWarn .42s ease-in-out 3}
 @keyframes mobWarn{50%{transform:translateY(-6px) scale(1.05,.96)}}
@@ -583,11 +591,12 @@ body.lowfx .shard{animation-duration:.35s}
   box-shadow:0 20px 60px #000b;animation:cardin .35s cubic-bezier(.2,1.5,.4,1);
 }
 .gearbox h2{font-size:20px;color:var(--gold);letter-spacing:2px;text-align:center;margin-bottom:4px}
-.power{display:flex;gap:6px;margin:10px 0}
-.power div{flex:1;background:#241638;border:1px solid var(--line);border-radius:10px;
+.power{display:flex;gap:6px;margin:10px 0;flex-wrap:wrap}
+.power div{flex:1;min-width:70px;background:#241638;border:1px solid var(--line);border-radius:10px;
   padding:6px 2px;text-align:center;font-size:13px;font-weight:800;color:var(--gold2)}
 .power div b{display:block;font-size:10px;color:var(--dim);font-weight:500}
-.slots{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.slots{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+@media (min-width:420px){ .slots{grid-template-columns:repeat(4,1fr)} }
 .slot{
   background:#241638;border:1px dashed var(--line);border-radius:12px;padding:8px;text-align:center;
   min-height:86px;display:flex;flex-direction:column;justify-content:center;gap:2px;cursor:pointer;
@@ -824,6 +833,8 @@ body.playing .setup{display:none}
   </p>
   <p class="tip" id="tipArcade" style="display:none">
     不出題。按<b>攻擊</b>打人，敵人上方的黃條倒數完牠就撲上來，這時按<b>閃避</b>可以完全躲掉。<br>
+    <b>倒數剩最後半秒才按閃避是「完美閃避」</b>：多回必殺、下一擊變成加成反擊。<br>
+    技能有連段：先放<b>破魂突刺</b>打上破綻，再放<b>旋風斬</b>會引爆額外傷害。<br>
     連續打中不被打到會累積連擊，一樣會自動放魔法；被打到連擊歸零。<br>
     鍵盤：<b>A</b> 攻擊、<b>S</b> 閃避、<b>空白鍵</b>必殺。
   </p>
@@ -1390,9 +1401,10 @@ function paintGear(){
     '<div><b>攻擊</b>' + P.atk + '</div>' +
     '<div><b>血量</b>' + P.hp + '</div>' +
     '<div><b>爆擊</b>' + P.crit + '%</div>' +
-    '<div><b>必殺充能</b>' + P.ult + '</div>';
-  const slotName = {weapon:'武器', armor:'防具', charm:'飾品'};
-  $('slots').innerHTML = ['weapon','armor','charm'].map(k => {
+    '<div><b>必殺充能</b>' + P.ult + '</div>' +
+    (P.cdr ? '<div><b>技能冷卻</b>-' + P.cdr + '%</div>' : '');
+  const slotName = {weapon:'武器', armor:'防具', boots:'鞋子', charm:'飾品'};
+  $('slots').innerHTML = ['weapon','armor','boots','charm'].map(k => {
     const it = Save.d.gear[k];
     if(!it) return '<div class="slot empty"><div class="ic">➕</div><div class="nm">' +
       slotName[k] + '</div><div class="st2">還沒有裝備</div></div>';
@@ -1413,9 +1425,10 @@ function paintGear(){
       '</div>';
   }).join('');
 
+  const sp = scrollPrice();
   $('scrollBar').innerHTML =
     '<span>📜 強化卷軸 <b>' + (Save.d.scroll || 0) + '</b> 張</span>' +
-    '<button id="buyScroll"' + (Save.d.gold < SCROLL_PRICE ? ' class="no"' : '') + '>買一張 ' + SCROLL_PRICE + ' 金幣</button>';
+    '<button id="buyScroll"' + (Save.d.gold < sp ? ' class="no"' : '') + '>買一張 ' + fmtN(sp) + ' 金幣</button>';
 
   const bag = Save.d.bag.slice().sort((a,b)=>gearScore(b)-gearScore(a));
   $('baglist').innerHTML = bag.length ? bag.map(it => {
@@ -1536,17 +1549,22 @@ function sell(id){
 }
 /* 強化後主屬性會變多少——過了安定值之後跳很大，要讓玩家看得到才會想賭 */
 function enhPreview(it){
-  const key = it.atk ? 'atk' : (it.hp ? 'hp' : (it.crit ? 'crit' : 'ult'));
-  const name = {atk:'攻擊', hp:'血量', crit:'爆擊', ult:'必殺'}[key];
+  const key = it.atk ? 'atk' : (it.hp ? 'hp' : (it.crit ? 'crit' : (it.cdr ? 'cdr' : 'ult')));
+  const name = {atk:'攻擊', hp:'血量', crit:'爆擊', ult:'必殺', cdr:'冷卻縮短'}[key];
   const now = gearStat(it, key);
-  const next = Math.round((it[key] || 0) * enhMult(enhLv(it) + 1));
+  const next = key === 'cdr'
+    ? Math.min(30, Math.round((it.cdr || 0) * enhMult(enhLv(it) + 1)))
+    : Math.round((it[key] || 0) * enhMult(enhLv(it) + 1));
   return name + ' ' + now + ' → ' + next + '（+' + (next - now) + '）';
 }
-const SCROLL_PRICE = 200;      // 掉落變稀有後商店是主要來源，價格要有感但打幾隻怪就買得起
+/* 卷軸要「很貴但固定」（Steve 2026-08-23：不要跟著等級漲，但也不能太好取得）。
+   價格是打怪金幣收入的量級之上，逼玩家要存一陣子，不是隨手就買。 */
+function scrollPrice(){ return 100000; }
 $('scrollBar').addEventListener('click', e => {
   if(!e.target.closest('#buyScroll')) return;
-  if(Save.d.gold < SCROLL_PRICE){ enhShout('金幣不夠', '#f87171'); return; }
-  Save.d.gold -= SCROLL_PRICE;
+  const sp = scrollPrice();
+  if(Save.d.gold < sp){ enhShout('金幣不夠', '#f87171'); return; }
+  Save.d.gold -= sp;
   Save.d.scroll = (Save.d.scroll || 0) + 1;
   Save.put(); paintGear();
   enhShout('買到一張卷軸', '#ffe066');
@@ -1607,7 +1625,15 @@ function comboAura(c){
 /* ── 主動技能（2026-08-23）──
    兩顆按鈕、各自冷卻、跟著等級解鎖。兩種模式都能用：
    練習模式在等答題的空檔按，娛樂模式就是連段的一部分。 */
+/* 印記引爆連段（2026-08-23，跟 Gemini 討論過）：
+   破魂突刺先打上「破綻」印記，接著放旋風斬引爆會有大額外傷害。
+   跟《傳說對決》那種「先放這個、再接那個」同一個精神，但改成單體版本
+   ——我們戰鬥畫面永遠只有一隻怪，沒有天堂/楓之谷那種一群小怪可以聚。 */
+let mobMarkedUntil = 0;
+const MARK_MULT = 1.9;              // 破綻沒被引爆時，旋風斬命中會自動觸發
 const SKILLS = [
+  {key:'mark',  name:'破魂突刺', icon:'💢', lv:4,  cd:7000,  color:'#ff8a8a',
+   fx:{key:'whirl', size:280, hue:-70, sat:1.6}, mult:1.1, markMs:4500, desc:'打上破綻，接旋風斬爆傷'},
   {key:'whirl', name:'旋風斬', icon:'🌀', lv:3,  cd:9000,  color:'#7fe6ff',
    fx:{key:'whirl', size:460, bright:1.35, sat:1.3}, mult:2.4, desc:'一圈掃過去的大傷害'},
   {key:'heal',  name:'治療術', icon:'💚', lv:6,  cd:22000, color:'#8affc4',
@@ -1640,7 +1666,7 @@ function useSkill(key){
   const sk = SKILLS.find(x => x.key === key);
   if(!sk || !running || Save.d.lv < sk.lv) return;
   if((skillState[key] || 0) > performance.now()) return;
-  skillState[key] = performance.now() + sk.cd * (HERO.cdMul || 1);
+  skillState[key] = performance.now() + sk.cd * (HERO.cdMul || 1) * (1 - (P.cdr || 0) / 100);
 
   const f = F();
   f.style.setProperty('--sc', sk.color + '99');
@@ -1659,8 +1685,16 @@ function useSkill(key){
       playFx(sk.fx.key, mobCenter(), sk.fx);
       setTimeout(() => {
         if(!running) return;
-        const dmg = Math.round(P.atk * sk.mult * (P.spell || 1) + 8);
-        if(applyHit(dmg, true, false)) killMob();
+        /* 連段：旋風斬打中有破綻印記的目標會引爆，傷害大幅提高並消耗印記 */
+        const combo = key === 'whirl' && mobMarkedUntil > performance.now();
+        const dmg = Math.round(P.atk * sk.mult * (combo ? MARK_MULT : 1) * (P.spell || 1) + 8);
+        if(combo){
+          mobMarkedUntil = 0;
+          comboShout('引爆連段！', '#ffe066');
+          ring(mobCenter(), 'dring', 200);
+        }
+        if(sk.markMs) mobMarkedUntil = performance.now() + sk.markMs;
+        if(applyHit(dmg, true, combo)) killMob();
       }, 150);
     });
   }
@@ -1740,7 +1774,7 @@ function newQ(){
   locked = false;
 }
 /* 打中敵人之後的共同處理：扣血、特效、鏡頭、必殺充能。回傳「有沒有打死」 */
-function applyHit(dmg, isCrit, isWeak){
+function applyHit(dmg, isCrit, isWeak, label){
   if(mob.armor) dmg = Math.max(1, Math.round(dmg * mob.armor));   // 石像守衛那種有護甲的
   if(shield > 0){                                                 // 先吃護盾，本體不掉血
     shield = Math.max(0, shield - dmg);
@@ -1758,7 +1792,7 @@ function applyHit(dmg, isCrit, isWeak){
   totalDmg += dmg;
   hitEffect(isCrit, isWeak, mobHp <= 0);
   camPush(isCrit || mobHp <= 0);
-  dmgText((isCrit ? '爆擊 ' : '') + '-' + dmg, isWeak || isCrit);
+  dmgText((label || (isCrit ? '爆擊 ' : '')) + '-' + dmg, isWeak || isCrit);
   setHp('mobHp', mobHp / mob.hp);
   $('mobHpText').textContent = mobLabel() + '　' + fmtN(mobHp) + ' / ' + fmtN(mob.hp);
   ult = Math.min(100, ult + P.ult + (isCrit ? (HERO.critBack || 0) : 0));   // 疾風獵手爆擊多回一點
@@ -1791,26 +1825,40 @@ function playerAttack(){
   hits++;
   combo++;
   const isCrit = Math.random()*100 < P.crit;
-  const dmg = Math.round(P.atk * 0.62 * (1 + Math.min(combo,10)*0.05) * (isCrit ? 1.8 : 1));
+  const counter = counterReady; counterReady = false;   // 完美閃避後的下一擊是反擊，用掉就沒了
+  const dmg = Math.round(P.atk * 0.62 * (1 + Math.min(combo,10)*0.05) * (isCrit ? 1.8 : 1) * (counter ? 1.8 : 1));
   Sfx.ok(combo);
   camPull();
   heroSwing(() => {
-    if(applyHit(dmg, isCrit, false)) return killMob();
+    if(applyHit(dmg, isCrit, false, counter ? '反擊 ' : '')) return killMob();
     comboAura(combo);
     const sp = spellFor(combo);
     if(sp) setTimeout(async () => { if(await castSpell(sp)) killMob(); }, 320);
   });
 }
+/* 完美閃避（2026-08-23，跟 Gemini 討論的「Parry」）：
+   隨便按都躲得掉，這樣不算操作。但是**在怪物出手前那半秒內**按，
+   才會觸發完美閃避——多回必殺、進慢動作、下一下攻擊變成「反擊」加成傷害。
+   這一段剛好接在既有的出手預告（warnMob，剩 1.2 秒開始亮警告）上，不用加新 UI。 */
+let counterReady = false;           // 完美閃避後，下一下攻擊是反擊
 function dodge(){
   if(!running || !arcade || !dodgeReady) return;
   dodgeReady = false;
   cool($('actDodge'), 2400, () => dodgeReady = true);
   invuln = performance.now() + 700;
+  const perfect = telegraphed && mobTimer <= 0.6 && mobTimer > 0;
   const h = $('hero2');
   h.classList.add('evade');
   h.animate([{transform:'translateX(0)'}, {offset:.35, transform:'translateX(-46px)'},
              {transform:'translateX(0)'}], {duration:620, easing:'ease-out'});
   setTimeout(() => h.classList.remove('evade'), 700);
+  if(perfect){
+    counterReady = true;
+    ult = Math.min(100, ult + 15); paintUlt();     // 比普通閃過(+8)多回一點
+    comboShout('完美閃避！', '#8fd8ff');
+    F().classList.add('slowmo'); slowmoField(500, .55);
+    setTimeout(() => F().classList.remove('slowmo'), 500);
+  }
 }
 
 function answer(v, btn){
@@ -1936,9 +1984,10 @@ function mobAttack(){
     el.classList.remove('attack'); void el.offsetWidth; el.classList.add('attack');
   }
   setTimeout(()=>{
-    if(arcade && performance.now() < invuln){        // 閃過了：不扣血，還回一點必殺
-      dmgText('閃過！', true);
-      ult = Math.min(100, ult + 8); paintUlt();
+    if(arcade && performance.now() < invuln){        // 閃過了：不扣血
+      // 完美閃避的必殺／慢動作已經在按下的當下給過了，這裡只補一般閃過的獎勵，不重複算
+      dmgText(counterReady ? '完美閃避！' : '閃過！', true);
+      if(!counterReady){ ult = Math.min(100, ult + 8); paintUlt(); }
       Sfx.next();
       setTimeout(newQ, 520);
       return;
@@ -2079,6 +2128,7 @@ function setMob(){
   mob.atk = Math.round(mob.atk * Math.pow(1.05, round - 1));
   mobHp = mob.hp;
   shield = 0; shieldMax = 0;
+  mobMarkedUntil = 0;         // 換怪破綻歸零，不能留到下一隻
   $('mobWrap').classList.remove('shielded');
   const mel = $('mob');
   if(mob.spr && SPR[mob.spr + '_idle']) Spr.play(mel, mob.spr + '_idle', {loop:true});
@@ -2124,6 +2174,7 @@ function useUlt(){
 }
 function tick(){
   paintSkills();                     // 技能冷卻倒數跟著這個 100ms 的計時器跑
+  $('mobWrap').classList.toggle('marked', mobMarkedUntil > performance.now());
   if(!running || locked){ paintTimer(); return; }
   mobTimer = Math.max(0, mobTimer - 0.1);
   paintTimer();

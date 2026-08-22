@@ -96,7 +96,7 @@ const SAVE_KEY = 'mul99_save';
 const DEFAULT_SAVE = {
   lv:1, exp:0, gold:0, hero:'royal', pname:'',   // pname＝玩家自己取的名字，空的就用角色本名
   scroll:0,                                      // 強化卷軸：打怪會掉，也能用金幣買
-  gear:{weapon:null, armor:null, charm:null},
+  gear:{weapon:null, armor:null, boots:null, charm:null},
   bag:[],
   round:1, wave:0,
   totalKill:0, playCount:0, lastPlay:''
@@ -128,7 +128,7 @@ const Save = {
     }catch(e){}
   },
   reset(){
-    this.d = Object.assign({}, DEFAULT_SAVE, {gear:{weapon:null,armor:null,charm:null}, bag:[]});
+    this.d = Object.assign({}, DEFAULT_SAVE, {gear:{weapon:null,armor:null,boots:null,charm:null}, bag:[]});
     this.put();
   },
   needExp(){ return expReq(this.d.lv); },
@@ -138,12 +138,13 @@ const Save = {
     let atk = 8 + (this.d.lv-1)*2 + h.atk;
     let hp  = 100 + (this.d.lv-1)*12 + h.hp;
     let crit = 5 + h.crit, ult = 11 + h.ult;
-    for(const k of ['weapon','armor','charm']){
+    let cdr = 0;
+    for(const k of ['weapon','armor','boots','charm']){
       const it = g[k]; if(!it) continue;
       atk += gearStat(it,'atk'); hp += gearStat(it,'hp');
-      crit += gearStat(it,'crit'); ult += gearStat(it,'ult');
+      crit += gearStat(it,'crit'); ult += gearStat(it,'ult'); cdr += gearStat(it,'cdr');
     }
-    return {atk, hp: Math.max(40, hp), crit, ult, spell: h.spell, hero: h};
+    return {atk, hp: Math.max(40, hp), crit, ult, cdr: Math.min(30, cdr), spell: h.spell, hero: h};
   },
   addExp(n){
     if(this.d.lv >= MAX_LV){ this.d.exp = 0; this.put(); return 0; }
@@ -207,6 +208,7 @@ const RARITY = [
 const GEAR_KINDS = [
   {slot:'weapon', icon:'🗡️', names:['虎牙法杖','烈焰長杖','碎星錘','風之短刃','雷紋權杖'], main:'atk'},
   {slot:'armor',  icon:'🛡️', names:['虎紋護甲','石心胸鎧','花繡披風','鱗光戰袍','守心軟甲'], main:'hp'},
+  {slot:'boots',  icon:'👢', names:['疾風戰靴','貓步軟鞋','追風長靴','輕羽踏靴','迅雷戰靴'], main:'cdr'},
   {slot:'charm',  icon:'📿', names:['幸運鈴鐺','貓瞳墜飾','金幣護符','疾風羽飾','虎魂符'],  main:'crit'}
 ];
 function rollRarity(bonus){
@@ -225,11 +227,14 @@ function rollGear(level, bonus){
     slot: kind.slot, icon: kind.icon,
     name: kind.names[(Math.random()*kind.names.length)|0],
     rarity: r.k, color: r.c,
-    atk:0, hp:0, crit:0, ult:0
+    atk:0, hp:0, crit:0, ult:0, cdr:0
   };
   if(kind.main === 'atk') it.atk = Math.max(1, Math.round(base*2.2*r.mul));
   if(kind.main === 'hp')  it.hp  = Math.max(3, Math.round(base*9*r.mul));
   if(kind.main === 'crit'){ it.crit = Math.max(1, Math.round(base*1.6*r.mul)); }
+  /* 鞋子：技能冷卻縮短，上限 30%（避免疊到冷卻歸零）。跟等級關係壓得比較平，
+     不然後期隨便一雙鞋就把冷卻砍光，技能連段的節奏感會被削光 */
+  if(kind.main === 'cdr') it.cdr = Math.min(30, Math.max(2, Math.round((3 + level*0.05) * r.mul)));
   // 稀有度高的多帶一條副屬性
   if(r.mul >= 1.45){
     const sub = ['atk','hp','ult'][(Math.random()*3)|0];
@@ -237,7 +242,7 @@ function rollGear(level, bonus){
     if(sub === 'hp')  it.hp  += Math.max(2, Math.round(base*4*r.mul));
     if(sub === 'ult') it.ult += Math.max(1, Math.round(base*1.2*r.mul));
   }
-  it.score = it.atk*3 + it.hp*0.6 + it.crit*2 + it.ult*1.5;
+  it.score = it.atk*3 + it.hp*0.6 + it.crit*2 + it.ult*1.5 + it.cdr*4;   // cdr 沒強化加成也珍貴，權重給高一點
   return it;
 }
 /* ---------- 裝備強化（2026-08-23，天堂式的高風險高報酬） ----------
@@ -277,7 +282,8 @@ function gearStat(it, key){
   return Math.round(base * enhMult(enhLv(it)));
 }
 function gearScore(it){
-  return gearStat(it,'atk')*3 + gearStat(it,'hp')*0.6 + gearStat(it,'crit')*2 + gearStat(it,'ult')*1.5;
+  return gearStat(it,'atk')*3 + gearStat(it,'hp')*0.6 + gearStat(it,'crit')*2 + gearStat(it,'ult')*1.5
+       + gearStat(it,'cdr')*4;
 }
 function enhTag(it){ return enhLv(it) ? ' <span class="enh">+' + enhLv(it) + '</span>' : ''; }
 function gearLine(it){
@@ -286,6 +292,7 @@ function gearLine(it){
   if(it.hp)  bits.push('血量 +' + gearStat(it,'hp'));
   if(it.crit)bits.push('爆擊 +' + gearStat(it,'crit') + '%');
   if(it.ult) bits.push('必殺充能 +' + gearStat(it,'ult'));
+  if(it.cdr) bits.push('技能冷卻 -' + Math.min(30, gearStat(it,'cdr')) + '%');
   return bits.join('　');
 }
 
