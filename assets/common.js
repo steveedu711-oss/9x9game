@@ -171,7 +171,7 @@ const Save = {
 const HEROES = [
   {key:'royal',  name:'王者',      icon:'👑', img:'assets/fx_hero_ready.webp', frames:true,
    desc:'帶頭的那一個', buff:'金幣 +35%、卷軸更常掉',
-   atk:2, hp:10, crit:2, ult:2, spell:1.1, gold:0.35, scrollLuck:0.12},
+   atk:2, hp:10, crit:2, ult:2, spell:1.1, gold:0.35, scrollLuck:1},   // scrollLuck 1＝掉落率翻倍
   {key:'knight', name:'鐵壁衛士',  icon:'🛡️', img:'assets/char_knight.webp',
    desc:'站在最前面的那個', buff:'受到傷害 -20%，被打會回必殺',
    atk:-1, hp:36, crit:0, ult:0, spell:1, reduce:0.20, hitUlt:10},

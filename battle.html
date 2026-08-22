@@ -1542,7 +1542,7 @@ function enhPreview(it){
   const next = Math.round((it[key] || 0) * enhMult(enhLv(it) + 1));
   return name + ' ' + now + ' → ' + next + '（+' + (next - now) + '）';
 }
-const SCROLL_PRICE = 160;
+const SCROLL_PRICE = 200;      // 掉落變稀有後商店是主要來源，價格要有感但打幾隻怪就買得起
 $('scrollBar').addEventListener('click', e => {
   if(!e.target.closest('#buyScroll')) return;
   if(Save.d.gold < SCROLL_PRICE){ enhShout('金幣不夠', '#f87171'); return; }
@@ -2017,8 +2017,10 @@ function killMob(){
   Char.cat(true);
   dmgText('+' + fmtN(gold) + ' 金幣', true);
 
-  // 掉卷軸：小怪三成、Boss 必掉兩張。強化的入口要靠打怪，不是只靠買
-  const scrolls = mob.boss ? 2 : (Math.random() < (0.3 + (HERO.scrollLuck || 0)) ? 1 : 0);
+  // 掉卷軸照天堂的精神：**稀有**（Steve 2026-08-23：原本三成太高）。
+  // 小怪 2%、Boss 25% 掉 1 張。打到才會開心，日常補給靠商店買（金幣的用途）
+  const rate = mob.boss ? 0.25 : 0.02;
+  const scrolls = Math.random() < rate * (1 + (HERO.scrollLuck || 0)) ? 1 : 0;
   if(scrolls){
     Save.d.scroll = (Save.d.scroll || 0) + scrolls;
     dmgText('📜 卷軸 +' + scrolls, true);
