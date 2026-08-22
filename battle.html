@@ -1485,7 +1485,8 @@ $('resetSave').onclick = () => {
 
 function paintHeroBar(){
   setHp('heroHp', heroHp / maxHp);
-  $('heroHpText').textContent = playerName() + ' Lv' + Save.d.lv + '　' + heroHp + ' / ' + maxHp;
+  $('heroHpText').textContent = playerName() + ' Lv' + Save.d.lv +
+    (Save.d.lv >= MAX_LV ? '（滿等）' : '') + '　' + heroHp + ' / ' + maxHp;
 }
 
 /* ---------- 魔法：連續答對到門檻自動施放，越連越強 ---------- */

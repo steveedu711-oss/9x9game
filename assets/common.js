@@ -60,6 +60,24 @@ const Best = {
 };
 
 /* ---------- 存檔：關掉瀏覽器再打開也接得回來 ---------- */
+/* ---------- 升級曲線（2026-08-23 改，參考放置天堂的做法） ----------
+   原本是 `40 + 等級×35` 的直線，後期升級快得沒有成就感。改成三段：
+   1. 前四級幾乎是秒升——新玩家頭幾分鐘一定要看到等級一直跳
+   2. Lv5～34 固定 1.26 倍成長，穩定往上爬
+   3. Lv35 之後改線性，才不會變成天文數字（參考站也是在 Lv70 改線性化）
+   ⚠ 後期變慢一律靠「需求變高」，**不要調低打怪拿到的經驗**：
+      拿到的變少玩家會覺得被扣，需求變高則是自然的難度曲線。 */
+const MAX_LV = 60;
+const EXP_EARLY = [8, 22, 45, 80];      // Lv1→2、2→3、3→4、4→5
+const EXP_MID_BASE = 80, EXP_MID_RATE = 1.26, EXP_LINEAR_AT = 35;
+function expReq(lv){                    // 從 lv 升到 lv+1 需要多少經驗
+  if(lv >= MAX_LV) return Infinity;
+  if(lv <= EXP_EARLY.length) return EXP_EARLY[lv - 1];
+  if(lv < EXP_LINEAR_AT) return Math.round(EXP_MID_BASE * Math.pow(EXP_MID_RATE, lv - EXP_EARLY.length));
+  const at = Math.round(EXP_MID_BASE * Math.pow(EXP_MID_RATE, EXP_LINEAR_AT - EXP_EARLY.length));
+  return Math.round(at * (1 + (lv - EXP_LINEAR_AT + 1) * 0.5));
+}
+
 const SAVE_KEY = 'mul99_save';
 const DEFAULT_SAVE = {
   lv:1, exp:0, gold:0, hero:'tiger', pname:'',   // pname＝玩家自己取的名字，空的就用角色本名
@@ -98,7 +116,7 @@ const Save = {
     this.d = Object.assign({}, DEFAULT_SAVE, {gear:{weapon:null,armor:null,charm:null}, bag:[]});
     this.put();
   },
-  needExp(){ return 40 + this.d.lv * 35; },
+  needExp(){ return expReq(this.d.lv); },
   /* 基礎能力＋裝備加成 */
   power(){
     const g = this.d.gear, h = heroOf(this.d.hero);
@@ -113,9 +131,13 @@ const Save = {
     return {atk, hp: Math.max(40, hp), crit, ult, spell: h.spell, hero: h};
   },
   addExp(n){
+    if(this.d.lv >= MAX_LV){ this.d.exp = 0; this.put(); return 0; }
     this.d.exp += n;
     let ups = 0;
-    while(this.d.exp >= this.needExp()){ this.d.exp -= this.needExp(); this.d.lv++; ups++; }
+    while(this.d.lv < MAX_LV && this.d.exp >= this.needExp()){
+      this.d.exp -= this.needExp(); this.d.lv++; ups++;
+    }
+    if(this.d.lv >= MAX_LV) this.d.exp = 0;
     this.put();
     return ups;
   }

@@ -438,8 +438,11 @@ function paintPlayer(){
   $('pname').textContent = playerName();
   $('renameBtn').textContent = Save.d.pname ? '✏️ 改名字' : '✏️ 取名字';
   $('pgold').textContent = d.gold;
-  $('pexp').style.width = (d.exp / Save.needExp() * 100) + '%';
-  $('pexpText').textContent = '經驗 ' + d.exp + ' / ' + Save.needExp();
+  const full = d.lv >= MAX_LV;
+  $('pexp').style.width = full ? '100%' : (d.exp / Save.needExp() * 100) + '%';
+  $('pexpText').textContent = full
+    ? '已經滿等 Lv ' + MAX_LV
+    : '經驗 ' + d.exp + ' / ' + Save.needExp();
   const g = d.gear, names = {weapon:'武器', armor:'防具', charm:'飾品'};
   $('pgear').innerHTML = ['weapon','armor','charm'].map(k => {
     const it = g[k];
