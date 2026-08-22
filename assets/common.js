@@ -160,29 +160,31 @@ const Save = {
 
 /* ---------- 可選角色 ----------
    小虎姬有四格分解動作；其他三個是單張圖，攻擊動作用變形做 */
-/* ---------- 職業（2026-08-23 照《天堂》那套分類，每個都要有自己的特色） ----------
+/* ---------- 職業（2026-08-23）----------
+   分類**架構**參考線上遊戲的職業設計（前排耐打／遠程爆擊／法系爆發／技能流），
+   但**名字全部自己取，不跟任何現有遊戲一樣**（Steve 2026-08-23 指定）。
    數值差異只是底，真正的特色在 trait：每個職業有一條**別人沒有的機制**。
    欄位說明：
      atk/hp/crit/ult 基礎數值差；spell＝魔法倍率
      gold＝金幣加成｜reduce＝受到傷害減免｜critBack＝爆擊回多少必殺
      spellEarly＝連擊魔法提早幾連觸發｜cdMul＝技能冷卻倍率｜scrollLuck＝卷軸多掉的機率 */
 const HEROES = [
-  {key:'royal',  name:'王族',    icon:'👑', img:'assets/fx_hero_ready.webp', frames:true,
-   desc:'天生的領袖', buff:'金幣 +35%、卷軸更常掉',
+  {key:'royal',  name:'虎王',      icon:'👑', img:'assets/fx_hero_ready.webp', frames:true,
+   desc:'帶頭的那一個', buff:'金幣 +35%、卷軸更常掉',
    atk:2, hp:10, crit:2, ult:2, spell:1.1, gold:0.35, scrollLuck:0.12},
-  {key:'knight', name:'騎士',    icon:'🛡️', img:'assets/char_knight.webp',
+  {key:'knight', name:'鐵壁衛士',  icon:'🛡️', img:'assets/char_knight.webp',
    desc:'站在最前面的那個', buff:'受到傷害 -20%，被打會回必殺',
    atk:-1, hp:36, crit:0, ult:0, spell:1, reduce:0.20, hitUlt:10},
-  {key:'elf',    name:'妖精',    icon:'🏹', img:'assets/char_archer.webp',
+  {key:'elf',    name:'疾風獵手',  icon:'🏹', img:'assets/char_archer.webp',
    desc:'箭無虛發', buff:'爆擊 +15%，爆擊回必殺',
    atk:1, hp:-8, crit:15, ult:2, spell:1, critBack:8},
-  {key:'mage',   name:'法師',    icon:'🔮', img:'assets/char_mage.webp',
+  {key:'mage',   name:'星辰術士',  icon:'🔮', img:'assets/char_mage.webp',
    desc:'魔法就是暴力', buff:'魔法 ×1.7，連擊魔法提早兩連',
    atk:-2, hp:-12, crit:0, ult:4, spell:1.7, spellEarly:2},
-  {key:'dragon', name:'龍騎士',  icon:'🐉', img:'assets/char_berserk.webp',
+  {key:'dragon', name:'巨劍鬥士',  icon:'🐉', img:'assets/char_berserk.webp',
    desc:'又硬又痛', buff:'攻擊 +8、血量 +60，但技能比較慢',
    atk:8, hp:60, crit:0, ult:-2, spell:0.9, cdMul:1.3},
-  {key:'sage',   name:'幻術師',  icon:'✨', img:'assets/char_sage.webp',
+  {key:'sage',   name:'光影使者',  icon:'✨', img:'assets/char_sage.webp',
    desc:'技能不用等', buff:'技能冷卻 -35%，必殺充得快',
    atk:-2, hp:-4, crit:2, ult:8, spell:1.35, cdMul:0.65}
 ];

@@ -1761,7 +1761,7 @@ function applyHit(dmg, isCrit, isWeak){
   dmgText((isCrit ? '爆擊 ' : '') + '-' + dmg, isWeak || isCrit);
   setHp('mobHp', mobHp / mob.hp);
   $('mobHpText').textContent = mobLabel() + '　' + fmtN(mobHp) + ' / ' + fmtN(mob.hp);
-  ult = Math.min(100, ult + P.ult + (isCrit ? (HERO.critBack || 0) : 0));   // 妖精爆擊多回一點
+  ult = Math.min(100, ult + P.ult + (isCrit ? (HERO.critBack || 0) : 0));   // 疾風獵手爆擊多回一點
   paintUlt();
   return mobHp <= 0;
 }
@@ -1948,7 +1948,7 @@ function mobAttack(){
     heroHurtAnim();
     const raw = mob.atk * (arcade ? D().dmg : 1) * (1 - (HERO.reduce || 0));
     heroHp = Math.max(0, heroHp - Math.max(1, Math.round(raw)));
-    if(HERO.hitUlt){ ult = Math.min(100, ult + HERO.hitUlt); paintUlt(); }   // 騎士被打會回必殺
+    if(HERO.hitUlt){ ult = Math.min(100, ult + HERO.hitUlt); paintUlt(); }   // 鐵壁衛士被打會回必殺
     if(arcade) { combo = 0; comboAura(0); }
     paintHeroBar();
     Sfx.hurt();
