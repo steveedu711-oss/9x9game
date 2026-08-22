@@ -146,7 +146,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;z-index:3}
 <script src="assets/common.js"></script>
 <script>
 Topic.bar($('topicbar'));
-Mode.bar($('modebar'), () => { document.body.classList.toggle('arcade', Mode.isArcade()); modeBadge(); });
+Mode.readonly($('modebar'));
 document.body.classList.toggle('arcade', Mode.isArcade());
 modeBadge();
 versionBar('bubble.html');
@@ -246,7 +246,7 @@ function newQuestion(){
   lockShot = false;
 }
 
-/* 純玩模式：不算數學，改成「射破指定顏色的泡泡」，靠眼力與手速 */
+/* 娛樂模式：不算數學，改成「射破指定顏色的泡泡」，靠眼力與手速 */
 const COLOR_NAMES = ['水藍','橘黃','紫色','薄荷綠','粉紅','鵝黃'];
 function newQuestionArcade(){
   const L = LEVELS[lvIdx];
@@ -385,7 +385,7 @@ function fire(target){
 function hitCheck(b){
   if(!running) return;
   const ok = cur.arcade ? (b.ci === cur.target) : (b.v === cur.ans);
-  if(!cur.arcade) Stats.mark(cur.key, ok);        // 純玩模式不寫進答題統計
+  if(!cur.arcade) Stats.mark(cur.key, ok);        // 娛樂模式不寫進答題統計
   const fl = $('flash');
   const rectOf = (bb) => ({left: tank.getBoundingClientRect().left + bb.x - bb.r,
     top: tank.getBoundingClientRect().top + bb.y - bb.r, width: bb.r*2, height: bb.r*2});

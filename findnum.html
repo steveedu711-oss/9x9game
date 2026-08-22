@@ -294,7 +294,11 @@ h1{
 .vers a.on{background:linear-gradient(180deg,var(--gold2),var(--gold));color:#3a2400;font-weight:700}
 .note{font-size:11px;color:var(--dim);text-align:center;max-width:560px;line-height:1.7}
 
-/* 這頁沒吃 assets/common.css，題型選單的樣式也要自己寫一份 */
+/* 這頁沒吃 assets/common.css，題型選單與模式顯示的樣式也要自己寫一份 */
+.modeshow{display:flex;align-items:center;justify-content:center;gap:10px;
+  width:min(96vw,560px);padding:9px 12px;border-radius:12px;background:#251739;border:1px solid #573a7d}
+.modeshow b{font-size:14px;color:#ffe9a8;letter-spacing:1px}
+.modeshow span{font-size:11px;color:#a894c4}
 .setlab2{font-size:12px;color:#a894c4;letter-spacing:1px;width:min(96vw,560px);margin-bottom:-4px}
 .topicbar{display:flex;gap:6px;width:min(96vw,560px);flex-wrap:wrap}
 .topicbar button{
@@ -483,7 +487,7 @@ function arcadeNow(){
 function newQuestion(){
   const L = LEVELS[lv];
   if(arcadeNow()){
-    /* 純玩模式：不算數學，直接把畫面上所有的目標數字點掉，比眼力與速度 */
+    /* 娛樂模式：不算數學，直接把畫面上所有的目標數字點掉，比眼力與速度 */
     const p2 = pool();
     ans = p2[(Math.random()*p2.length)|0];
     qa = ans; qb = 0; qop = '找';
@@ -787,7 +791,7 @@ function end(){
     ? weak.map(([k,v]) => '<li>' + k + ' <i>錯 ' + v.bad + '</i></li>').join('')
     : '<li>目前沒有答錯紀錄，很厲害</li>';
   try{
-    /* 純玩模式的紀錄分開存，不然練習模式的最高分會被蓋掉 */
+    /* 娛樂模式的紀錄分開存，不然練習模式的最高分會被蓋掉 */
     const bk = 'mul99_best_' + (arcadeNow() ? 'a_' : '') + 'v1_score';
     const b = +localStorage.getItem(bk) || 0;
     if(score > b) localStorage.setItem(bk, score);
@@ -813,17 +817,10 @@ function end(){
 })();
 
 (function(){
+  /* 模式只在大廳選（Steve 2026-08-23：不能在遊戲中隨意切換），這裡只顯示現在是哪個 */
   const el = $('modebar');
-  el.innerHTML = '<button data-m="practice">練習模式<b>會出算術題</b></button>' +
-                 '<button data-m="arcade">純玩模式<b>直接找數字</b></button>';
-  const paint = () => [...el.children].forEach(b => b.classList.toggle('on', b.dataset.m === (arcadeNow() ? 'arcade' : 'practice')));
-  el.onclick = (e) => {
-    const b = e.target.closest('button'); if(!b) return;
-    try{ localStorage.setItem('mul99_mode', b.dataset.m); }catch(err){}
-    paint();
-    document.getElementById('topicwrap').style.display = arcadeNow() ? 'none' : '';
-  };
-  paint();
+  el.className = 'modeshow';
+  el.innerHTML = '<b>' + (arcadeNow() ? '娛樂模式' : '練習模式') + '</b><span>要換模式請回大廳</span>';
   document.getElementById('topicwrap').style.display = arcadeNow() ? 'none' : '';
 })();
 

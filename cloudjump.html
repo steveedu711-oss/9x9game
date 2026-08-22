@@ -208,7 +208,7 @@ body{gap:8px}
 <script src="assets/common.js"></script>
 <script>
 Topic.bar($('topicbar'));
-Mode.bar($('modebar'), () => { document.body.classList.toggle('arcade', Mode.isArcade()); modeBadge(); });
+Mode.readonly($('modebar'));
 document.body.classList.toggle('arcade', Mode.isArcade());
 modeBadge();
 versionBar('cloudjump.html');
@@ -291,7 +291,7 @@ function nextFloor(){
   lock = false;
 }
 
-/* 純玩模式：不出題，三朵雲只有一朵踩得住（有星星），其他一踩就碎。
+/* 娛樂模式：不出題，三朵雲只有一朵踩得住（有星星），其他一踩就碎。
    樓層越高，正解那朵停留的時間越短，靠眼力與反應。 */
 function nextFloorArcade(){
   const okIdx = (Math.random()*3)|0;
@@ -344,7 +344,7 @@ function pick(i){
   target.classList.add('press');
 
   const ok = cur.arcade ? (i === cur.okIdx) : (cur.opts[i] === cur.ans);
-  if(!cur.arcade) Stats.mark(cur.key, ok);       // 純玩模式不寫進答題統計
+  if(!cur.arcade) Stats.mark(cur.key, ok);       // 娛樂模式不寫進答題統計
 
   // 算跳躍位移
   const pr = pl.getBoundingClientRect(), tr = target.getBoundingClientRect();

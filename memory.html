@@ -147,7 +147,7 @@ body{gap:8px}
 <script src="assets/common.js"></script>
 <script>
 Topic.bar($('topicbar'));
-Mode.bar($('modebar'), () => { document.body.classList.toggle('arcade', Mode.isArcade()); modeBadge(); });
+Mode.readonly($('modebar'));
 document.body.classList.toggle('arcade', Mode.isArcade());
 modeBadge();
 versionBar('memory.html');
@@ -175,7 +175,7 @@ let running = false, first = null, lock = false;
 let flips = 0, pairs = 0, needPairs = 0, combo = 0, bestCombo = 0;
 let t0 = 0, timer = 0, elapsed = 0;
 
-/* 純玩模式：不配算式，改成配同一張圖（純記憶，不用算） */
+/* 娛樂模式：不配算式，改成配同一張圖（純記憶，不用算） */
 const FACE_IMGS = ['sym_amber','sym_amethyst','sym_beer','sym_bell','sym_gem','sym_ruby','sym_tiger','sym_bag','sym_free'];
 function buildCards(){
   const L = LEVELS[lvIdx];
@@ -286,7 +286,7 @@ board.addEventListener('click', e => {
   const key = first.dataset.key;
 
   if(match){
-    if(!Mode.isArcade()) Stats.mark(key, true);     // 純玩模式不寫進答題統計
+    if(!Mode.isArcade()) Stats.mark(key, true);     // 娛樂模式不寫進答題統計
     pairs++; combo++; bestCombo = Math.max(bestCombo, combo);
     $('sPair').textContent = pairs;
     setTimeout(() => {

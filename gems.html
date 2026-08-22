@@ -170,7 +170,7 @@ body{padding-bottom:20px}
   <p class="note">
   轉出 <b>4 顆以上連在一起</b>的同款寶石就會消除，接著問你一題：<br>
   <b>消掉幾顆 × 每顆幾分 = ?</b>　算對才拿得到那些分數，算錯只拿一半。<br>
-  <span id="noteArcade" style="display:none">（<b>純玩模式</b>不出題，消到就直接全額給分。）<br></span>
+  <span id="noteArcade" style="display:none">（<b>娛樂模式</b>不出題，消到就直接全額給分。）<br></span>
   消完的位置由上方掉落遞補，連續消除有倍數 ×1 ×2 ×3 ×5 ×8。
   </p>
 </div>
@@ -261,7 +261,7 @@ const sleep = ms => new Promise(r=>setTimeout(r,ms));
 
 /* ---------- 乘法結算 ---------- */
 function askQuiz(count, value){
-  /* 純玩模式：不問算式，消到就直接全額給分（大人只想轉盤看爆分） */
+  /* 娛樂模式：不問算式，消到就直接全額給分（大人只想轉盤看爆分） */
   if(Mode.isArcade()) return Promise.resolve(true);
   return new Promise(resolve => {
     const ans = count * value;
@@ -402,7 +402,7 @@ function paintMode(){
   document.body.classList.toggle('arcade', Mode.isArcade());
   $('noteArcade').style.display = Mode.isArcade() ? '' : 'none';
 }
-Mode.bar($('modebar'), () => { paintMode(); modeBadge(); });
+Mode.readonly($('modebar'));
 paintMode();
 modeBadge();
 versionBar('gems.html');

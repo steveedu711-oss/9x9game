@@ -211,7 +211,7 @@ h1{
 .topicbar button.on b{color:#6b4a00}
 .setlab2{font-size:12px;color:var(--dim);letter-spacing:1px;width:min(96vw,560px);margin-bottom:-4px}
 #topicbar{width:min(96vw,560px)}
-/* 純玩模式不出題，題型選單就沒有意義，收起來 */
+/* 娛樂模式不出題，題型選單就沒有意義，收起來 */
 body.arcade #topicwrap{display:none}
 #modebar{width:min(96vw,560px)}
 .setlab{font-size:12px;color:var(--dim);letter-spacing:1px;margin-bottom:6px;display:block}
@@ -221,3 +221,41 @@ body.arcade #topicwrap{display:none}
   letter-spacing:2px;color:#0b1220;background:linear-gradient(180deg,#8affc4,#2fd48a);
   box-shadow:0 3px 10px #0007;
 }
+
+/* ---------- 精簡特效模式（低效能裝置自動開，或使用者手動選） ---------- */
+body.lowfx::before{animation:none}
+body.lowfx .coin{display:none}
+body.lowfx .spark,body.lowfx .dust{display:none}
+
+/* ---------- 模式唯讀顯示（遊戲頁）與密碼視窗 ---------- */
+.modeshow{
+  display:flex;align-items:center;justify-content:center;gap:10px;width:100%;
+  padding:9px 12px;border-radius:12px;background:#251739;border:1px solid var(--line);
+}
+.modeshow b{font-size:14px;color:var(--gold2);letter-spacing:1px}
+.modeshow span{font-size:11px;color:var(--dim)}
+.pwwrap{
+  position:fixed;inset:0;z-index:80;display:flex;align-items:center;justify-content:center;
+  background:#0b0714dd;backdrop-filter:blur(6px);padding:16px;
+}
+.pwbox{
+  width:min(92vw,340px);padding:22px 20px;border-radius:20px;text-align:center;
+  background:linear-gradient(180deg,#2f1d48,#1a1028);border:1px solid var(--line);
+  box-shadow:0 20px 60px #000b;
+}
+.pwbox h3{font-size:19px;color:var(--gold);letter-spacing:1px}
+.pwbox p{font-size:12px;color:var(--dim);margin:6px 0 14px}
+.pwbox input{
+  width:100%;height:52px;border-radius:12px;border:1px solid var(--line);background:#1b1029;
+  color:var(--text);font-size:24px;text-align:center;letter-spacing:8px;font-family:inherit;
+}
+.pwmsg{min-height:18px;font-size:12px;color:var(--bad);margin-top:8px}
+.pwbtns{display:flex;gap:8px;margin-top:6px}
+.pwbtns .btn{flex:1;height:46px;font-size:16px;letter-spacing:2px}
+.pwbox.shake{animation:pwShake .38s}
+@keyframes pwShake{20%{transform:translateX(-9px)}45%{transform:translateX(8px)}70%{transform:translateX(-5px)}100%{transform:none}}
+.rename{
+  margin-top:5px;font-size:11px;padding:4px 10px;border-radius:99px;cursor:pointer;
+  background:#1f1330;border:1px solid var(--line);color:var(--gold2);font-family:inherit;
+}
+.rename:hover{border-color:var(--gold)}

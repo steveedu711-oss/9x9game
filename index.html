@@ -267,6 +267,7 @@ body{gap:14px;padding-bottom:90px}
     </div>
     <div class="pinfo">
       <div class="nm" id="pname">小虎姬</div>
+      <button class="rename" id="renameBtn" title="改名字">✏️ 取名字</button>
       <div class="expbar"><i id="pexp"></i></div>
       <small id="pexpText">經驗 0 / 75</small>
       <div class="gearrow" id="pgear"></div>
@@ -375,7 +376,7 @@ function gameCard(g){
   txt.className = 'txt';
   const b = document.createElement('b');      b.textContent = g.n;
   const sm = document.createElement('small');
-  sm.textContent = (Mode.isArcade() && g.da) ? g.da : g.d;   // 純玩模式講的是純玩的玩法
+  sm.textContent = (Mode.isArcade() && g.da) ? g.da : g.d;   // 娛樂模式講的是純玩的玩法
   txt.append(b, sm);
   const r = g.rec();
   if(r){
@@ -388,6 +389,7 @@ function gameCard(g){
   a.append(ic, txt, go);
   return a;
 }
+$('renameBtn').onclick = askName;
 Mode.bar($('modebar'), () => { document.body.classList.toggle('arcade', Mode.isArcade()); paintGames(); modeBadge(); });
 Topic.bar($('topicbar'));
 document.body.classList.toggle('arcade', Mode.isArcade());
@@ -405,7 +407,8 @@ function paintPlayer(){
   const face = $('pface');
   face.onerror = () => { face.src = 'assets/hero_cheer.webp'; };
   face.src = h.frames ? 'assets/hero_cheer.webp' : h.img;
-  $('pname').textContent = h.name;
+  $('pname').textContent = playerName();
+  $('renameBtn').textContent = Save.d.pname ? '✏️ 改名字' : '✏️ 取名字';
   $('pgold').textContent = d.gold;
   $('pexp').style.width = (d.exp / Save.needExp() * 100) + '%';
   $('pexpText').textContent = '經驗 ' + d.exp + ' / ' + Save.needExp();
@@ -416,6 +419,36 @@ function paintPlayer(){
               : '<span style="color:#6b578a">' + names[k] + '：無</span>';
   }).join('');
 }
+/* 自己取名字：存進 Save.d.pname，八頁都吃這個名字 */
+function askName(){
+  const box = document.createElement('div');
+  box.className = 'pwwrap';
+  box.innerHTML =
+    '<div class="pwbox">' +
+      '<h3>幫你的角色取名字</h3>' +
+      '<p>最多 8 個字，留白就用角色本來的名字</p>' +
+      '<input id="nmInput" maxlength="8" autocomplete="off" style="letter-spacing:2px;font-size:20px">' +
+      '<div class="pwmsg" id="nmMsg"></div>' +
+      '<div class="pwbtns"><button class="btn ghost" id="nmCancel">取 消</button>' +
+      '<button class="btn" id="nmOk">確 定</button></div>' +
+    '</div>';
+  document.body.appendChild(box);
+  const inp = box.querySelector('#nmInput');
+  inp.value = Save.d.pname || '';
+  setTimeout(() => { inp.focus(); inp.select(); }, 60);
+  const close = () => box.remove();
+  const ok = () => {
+    Save.d.pname = inp.value.trim().slice(0, 8);
+    Save.put();
+    close();
+    paintPlayer();
+  };
+  box.querySelector('#nmOk').onclick = ok;
+  box.querySelector('#nmCancel').onclick = close;
+  inp.onkeydown = (e) => { if(e.key === 'Enter') ok(); };
+  box.onclick = (e) => { if(e.target === box) close(); };
+}
+
 function paintHeroes(){
   const box = $('heroes');
   box.innerHTML = '';

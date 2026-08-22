@@ -258,7 +258,7 @@ body{gap:8px}
 <script src="assets/common.js"></script>
 <script>
 Topic.bar($('topicbar'));
-Mode.bar($('modebar'), () => { document.body.classList.toggle('arcade', Mode.isArcade()); modeBadge(); });
+Mode.readonly($('modebar'));
 document.body.classList.toggle('arcade', Mode.isArcade());
 modeBadge();
 versionBar('racing.html');
@@ -365,7 +365,7 @@ function nextQuestion(){
   cur = {a:a, b:b, ans:ans, key:q.key, opts:opts, p:0, ms:L.ms, done:false, els:gates};
 }
 
-/* 純玩模式：不算數學，三個閘門只有一個開著，其他是路障，看到就要換道 */
+/* 娛樂模式：不算數學，三個閘門只有一個開著，其他是路障，看到就要換道 */
 function nextQuestionArcade(){
   const okIdx = (Math.random()*3)|0;
   qno++; $('qno').textContent = qno;
@@ -410,7 +410,7 @@ function frame(t){
 
 function judge(){
   const ok = cur.arcade ? (lane === cur.okIdx) : (cur.opts[lane] === cur.ans);
-  if(!cur.arcade) Stats.mark(cur.key, ok);       // 純玩模式不寫進答題統計
+  if(!cur.arcade) Stats.mark(cur.key, ok);       // 娛樂模式不寫進答題統計
   cur.els[cur.arcade ? cur.okIdx : cur.opts.indexOf(cur.ans)].classList.add('good','pop');
   if(!ok) cur.els[lane].classList.add('bad','pop');
 

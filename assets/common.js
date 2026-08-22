@@ -24,7 +24,7 @@ const Stats = {
 };
 /* 最佳成績（每個版本各自一筆） */
 const Best = {
-  /* 兩種模式的紀錄要分開存：純玩模式不用算數學，分數本來就衝得比較高，
+  /* 兩種模式的紀錄要分開存：娛樂模式不用算數學，分數本來就衝得比較高，
      混在一起的話練習模式的紀錄永遠被蓋掉（Mode 定義在這支檔案後面，用的時候才會取到） */
   k(k){ return 'mul99_best_' + ((typeof Mode !== 'undefined' && Mode.isArcade()) ? 'a_' : '') + k; },
   get(k){ try{ return +localStorage.getItem(this.k(k)) || 0; }catch(e){ return 0; } },
@@ -34,7 +34,7 @@ const Best = {
 /* ---------- 存檔：關掉瀏覽器再打開也接得回來 ---------- */
 const SAVE_KEY = 'mul99_save';
 const DEFAULT_SAVE = {
-  lv:1, exp:0, gold:0, hero:'tiger',
+  lv:1, exp:0, gold:0, hero:'tiger', pname:'',   // pname＝玩家自己取的名字，空的就用角色本名
   gear:{weapon:null, armor:null, charm:null},
   bag:[],
   round:1, wave:0,
@@ -92,6 +92,11 @@ const HEROES = [
    desc:'魔法連發',     atk:-3, hp:-4,  crit:0,  ult:7, spell:1.7}
 ];
 const heroOf = k => HEROES.find(h => h.key === k) || HEROES[0];
+/* 畫面上要顯示的名字：玩家取過名字就用他的，沒取就用角色本名 */
+function playerName(){
+  const n = (Save.d.pname || '').trim();
+  return n || heroOf(Save.d.hero).name;
+}
 
 /* ---------- 裝備 ---------- */
 const RARITY = [
@@ -320,7 +325,7 @@ const VERSIONS = [
   {f:'cloudjump.html', n:'☁️ 跳跳'},
   {f:'bubble.html', n:'🐠 泡泡'}
 ];
-/* 純玩模式在標題後面掛一顆徽章，換頁也看得出現在在哪個模式 */
+/* 娛樂模式在標題後面掛一顆徽章，換頁也看得出現在在哪個模式 */
 function modeBadge(){
   const h1 = document.querySelector('h1');
   if(!h1) return;
@@ -328,7 +333,7 @@ function modeBadge(){
   if(!Mode.isArcade()){ b && b.remove(); return; }
   if(!b){
     b = document.createElement('span');
-    b.id = 'modeBadge'; b.className = 'modebadge'; b.textContent = '純玩模式';
+    b.id = 'modeBadge'; b.className = 'modebadge'; b.textContent = '娛樂模式';
     h1.after(b);
   }
 }
@@ -341,28 +346,70 @@ function versionBar(current){
 
 /* ---------- 兩種模式（2026-08-22 Steve：大人玩不想在那邊答題） ----------
    practice＝練習模式（原本的，會出乘法題、答題紀錄進統計）
-   arcade  ＝純玩模式（不出題，改成純操作，不寫入答題統計）
+   arcade  ＝娛樂模式（不出題，改成純操作，不寫入答題統計）
    選擇存在 localStorage，八頁共用，換頁也記得。 */
 const MODE_KEY = 'mul99_mode';
+const MODE_PASSWORD = '5407';        // 娛樂模式的密碼（Steve 2026-08-23 指定）
 const Mode = {
   get(){ try{ return localStorage.getItem(MODE_KEY) === 'arcade' ? 'arcade' : 'practice'; }catch(e){ return 'practice'; } },
   set(m){ try{ localStorage.setItem(MODE_KEY, m); }catch(e){} },
   isArcade(){ return this.get() === 'arcade'; },
-  /* 在指定容器畫出「練習模式／純玩模式」切換；onChange 回傳新模式 */
+  /* 在指定容器畫出「練習模式／娛樂模式」切換；onChange 回傳新模式。
+     只放在大廳：Steve 2026-08-23 指定「一開始就要選好，不能在遊戲中隨意切換」 */
   bar(el, onChange){
     if(!el) return;
     el.className = 'modebar';
     el.innerHTML =
       '<button data-m="practice"><b>練習模式</b><small>會出算術題</small></button>' +
-      '<button data-m="arcade"><b>純玩模式</b><small>不出題，純操作</small></button>';
+      '<button data-m="arcade"><b>娛樂模式</b><small>不出題，需要密碼</small></button>';
     const paint = () => [...el.children].forEach(b =>
       b.classList.toggle('on', b.dataset.m === Mode.get()));
     el.onclick = (e) => {
       const b = e.target.closest('button'); if(!b) return;
-      Mode.set(b.dataset.m); paint();
-      onChange && onChange(Mode.get());
+      const go = () => { Mode.set(b.dataset.m); paint(); onChange && onChange(Mode.get()); };
+      if(b.dataset.m === 'arcade' && Mode.get() !== 'arcade') this.ask(go);   // 娛樂模式要密碼
+      else go();
     };
     paint();
+  },
+  /* 遊戲頁只顯示現在是哪個模式，不給改（要改回大廳） */
+  readonly(el){
+    if(!el) return;
+    el.className = 'modeshow';
+    el.innerHTML = '<b>' + (Mode.isArcade() ? '娛樂模式' : '練習模式') + '</b>' +
+                   '<span>要換模式請回大廳</span>';
+  },
+  /* 娛樂模式的密碼閘：小朋友該練習的時候不要自己切過去 */
+  ask(onOk){
+    const box = document.createElement('div');
+    box.className = 'pwwrap';
+    box.innerHTML =
+      '<div class="pwbox">' +
+        '<h3>娛樂模式需要密碼</h3>' +
+        '<p>請家長或老師輸入密碼</p>' +
+        '<input id="pwInput" type="password" inputmode="numeric" maxlength="8" autocomplete="off">' +
+        '<div class="pwmsg" id="pwMsg"></div>' +
+        '<div class="pwbtns"><button class="btn ghost" id="pwCancel">取 消</button>' +
+        '<button class="btn" id="pwOk">確 定</button></div>' +
+      '</div>';
+    document.body.appendChild(box);
+    const inp = box.querySelector('#pwInput');
+    setTimeout(() => inp.focus(), 60);
+    const close = () => box.remove();
+    const check = () => {
+      if(inp.value.trim() === MODE_PASSWORD){ close(); onOk(); }
+      else{
+        box.querySelector('#pwMsg').textContent = '密碼不對';
+        inp.value = ''; inp.focus();
+        box.querySelector('.pwbox').classList.remove('shake');
+        void box.offsetWidth;
+        box.querySelector('.pwbox').classList.add('shake');
+      }
+    };
+    box.querySelector('#pwOk').onclick = check;
+    box.querySelector('#pwCancel').onclick = close;
+    inp.onkeydown = (e) => { if(e.key === 'Enter') check(); };
+    box.onclick = (e) => { if(e.target === box) close(); };
   }
 };
 
@@ -435,3 +482,41 @@ function makeOptions(q, n){
   while(cand.size < n){ if(!cand.has(q.ans + extra)) cand.add(q.ans + extra); extra++; }
   return [...cand].slice(0, n).sort(()=>Math.random()-.5);
 }
+
+/* ---------- 效能自動降級（2026-08-23 Steve：手機跟電腦玩起來都很卡） ----------
+   每台機器的體質差很多，與其猜，不如量：連續掉幀就自己把吃效能的東西關掉。
+   模式存 localStorage：auto（預設，會自己判斷）／high（全開）／low（一律精簡）。 */
+const FX_KEY = 'mul99_fx';
+const Fx = {
+  get(){ try{ const v = localStorage.getItem(FX_KEY); return ['auto','high','low'].includes(v) ? v : 'auto'; }catch(e){ return 'auto'; } },
+  set(v){ try{ localStorage.setItem(FX_KEY, v); }catch(e){} this.apply(); },
+  low(){ return document.body.classList.contains('lowfx'); },
+  apply(){
+    const m = this.get();
+    if(m === 'low')  document.body.classList.add('lowfx');
+    if(m === 'high') document.body.classList.remove('lowfx');
+    if(m === 'auto') this.watch();
+  },
+  /* 量測：連續 24 幀裡有一半以上超過 32ms（＝低於 30fps）就降級，只降不升，
+     免得在邊界上一直來回切、畫面忽好忽壞更難看 */
+  watch(){
+    if(this._watching) return;
+    this._watching = true;
+    let last = performance.now(), bad = 0, n = 0;
+    const step = (t) => {
+      const dt = t - last; last = t;
+      if(dt > 32) bad++;
+      if(++n >= 24){
+        if(bad >= 12 && !this.low()){
+          document.body.classList.add('lowfx');
+          this._watching = false;                 // 降過就不用再量了
+          return;
+        }
+        n = 0; bad = 0;
+      }
+      if(this._watching) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }
+};
+addEventListener('DOMContentLoaded', () => Fx.apply());

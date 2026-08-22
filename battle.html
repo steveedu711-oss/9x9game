@@ -254,6 +254,32 @@ body{padding-bottom:16px}
 .bagbtn.gotloot{animation:bagPop .5s cubic-bezier(.2,1.6,.4,1)}
 @keyframes bagPop{40%{transform:scale(1.22);box-shadow:0 0 0 4px #f6c45355}}
 
+/* 精簡特效模式：把量測到會掉幀的那幾層關掉（星星、光點、影子、殘影、外框光暈） */
+body.lowfx .scene .stars,
+body.lowfx .scene .motes,
+body.lowfx .afterimg,
+body.lowfx .speedlines{display:none}
+body.lowfx #hero2,body.lowfx #mob,body.lowfx #cat2{filter:none}
+body.lowfx .field{box-shadow:none}
+body.lowfx .shard{animation-duration:.35s}
+
+/* 怪物打中角色的爪痕 */
+.claw{
+  position:absolute;z-index:9;pointer-events:none;width:130px;height:110px;
+  transform:translate(-50%,-50%) rotate(-14deg);
+  background:
+    linear-gradient(105deg,transparent 46%,#fff 47%,#ffd9d9 50%,transparent 53%),
+    linear-gradient(105deg,transparent 60%,#fff 61%,#ffd9d9 64%,transparent 67%),
+    linear-gradient(105deg,transparent 32%,#fff 33%,#ffd9d9 36%,transparent 39%);
+  filter:drop-shadow(0 0 10px #ff8a8a);
+  animation:clawCut .4s ease-out forwards;
+}
+@keyframes clawCut{
+  0%{opacity:0;transform:translate(-50%,-50%) rotate(-14deg) scale(.5,1.25)}
+  22%{opacity:1}
+  100%{opacity:0;transform:translate(-50%,-50%) rotate(-14deg) scale(1.35,.9)}
+}
+
 /* 遠程怪的投射物 */
 .mobshot{
   position:absolute;z-index:7;pointer-events:none;width:26px;height:26px;border-radius:50%;
@@ -340,12 +366,16 @@ body{padding-bottom:16px}
   38%{transform:translateY(-26px) rotate(-12deg) scale(1.02);filter:brightness(3) drop-shadow(0 0 22px #ffd066)}
   100%{transform:translateY(30px) rotate(60deg) scale(.15);opacity:0;filter:brightness(2) blur(6px)}
 }
-#mob.attack{animation:mobAtk .5s ease-in-out}
+#mob.attack{animation:mobAtk .62s cubic-bezier(.3,.9,.4,1)}
+/* 幅度要夠大才看得出「牠在攻擊」：原本只有 -96px 又沒變形，玩起來像滑過來。
+   蓄力壓扁往後 → 拉長撲過來 → 過頭回彈 → 晃回原位 */
 @keyframes mobAtk{
   0%{transform:none}
-  26%{transform:translateX(46px) scale(.94,1.08)}     /* 蓄力：先往後縮 */
-  46%{transform:translateX(-96px) scale(1.12,.92)}    /* 撲過來 */
-  62%{transform:translateX(-70px) scale(1.04,.98)}
+  22%{transform:translateX(64px) scale(.86,1.16) rotate(7deg)}      /* 蓄力：縮起來往後 */
+  30%{transform:translateX(76px) scale(.84,1.18) rotate(9deg)}
+  48%{transform:translateX(-140px) scale(1.22,.84) rotate(-13deg)}  /* 撲：拉長衝過來 */
+  60%{transform:translateX(-104px) scale(1.06,.96) rotate(-7deg)}
+  78%{transform:translateX(-34px) scale(.98,1.02) rotate(4deg)}
   100%{transform:none}
 }
 
@@ -519,7 +549,10 @@ body{padding-bottom:16px}
 .spell{
   position:absolute;z-index:7;pointer-events:none;height:38%;left:16%;bottom:22%;
   mix-blend-mode:screen;
-  filter:drop-shadow(0 0 22px var(--sc,#ffd06688)) drop-shadow(0 0 44px var(--sc,#ff8a3d66));
+  /* ⚠ 不要在這裡加 drop-shadow：這張圖是**不透明的黑底**素材，
+     drop-shadow 是照 alpha 描邊的，整張圖不透明 → 描出來就是一個矩形光暈，
+     疊上 screen 後看起來就是「火球變成方形」（Steve 2026-08-23 回報）。
+     光暈本來素材裡就有，不需要再補。 */
   opacity:0;
 }
 .spell.fly{animation:spellFly .5s cubic-bezier(.35,0,.7,.6) forwards}
@@ -541,7 +574,7 @@ body{padding-bottom:16px}
   position:absolute;z-index:2;pointer-events:none;left:2%;bottom:2%;width:26%;
   mix-blend-mode:screen;
   opacity:0;transform:scaleY(.35);
-  filter:drop-shadow(0 0 20px var(--sc,#ffd06688));
+  /* 同上：黑底不透明素材不能用 drop-shadow，會描出方框 */
 }
 .circle.on{animation:circleUp .8s ease-out forwards}
 @keyframes circleUp{
@@ -580,7 +613,7 @@ body{padding-bottom:16px}
 .tip b{color:var(--gold2)}
 
 /* ---------- 手機：小螢幕上角色跟怪物會疊在一起，戰場拉高、兩邊各自縮一點 ---------- */
-/* ---------- 純玩模式的操作面板 ---------- */
+/* ---------- 娛樂模式的操作面板 ---------- */
 .acts{display:none;gap:10px;width:min(96vw,560px)}
 body.arcade .acts{display:flex}
 body.arcade .qbox,body.arcade #ans{display:none}
@@ -683,7 +716,7 @@ body.playing .setup{display:none}
 
   <div class="ans" id="ans"></div>
 
-  <!-- 純玩模式的操作區（不出題時才顯示） -->
+  <!-- 娛樂模式的操作區（不出題時才顯示） -->
   <div class="acts" id="acts">
     <button class="act atk" id="actAtk"><b>攻　擊</b><small id="atkCd">點一下打一次</small></button>
     <button class="act dodge" id="actDodge"><b>閃　避</b><small id="dodgeCd">敵人出手前按</small></button>
@@ -702,7 +735,7 @@ body.playing .setup{display:none}
       <div id="topicbar"></div>
     </div>
     <div id="diffwrap">
-      <div class="setlab">純玩模式的難度</div>
+      <div class="setlab">娛樂模式的難度</div>
       <div class="levels" id="difbar">
         <div class="lv" data-d="easy">悠閒<b>敵人慢、傷害低</b></div>
         <div class="lv on" data-d="normal">普通<b>標準速度</b></div>
@@ -789,7 +822,7 @@ let earnGold = 0, earnExp = 0, drops = [];
 let mobTimer = ANSWER_TIME, loop = null;
 /* ── 兩種模式（Steve 2026-08-22）──
    練習模式：出題，答對出手（原本的玩法）
-   純玩模式：不出題，自己按攻擊與閃避，敵人倒數完就撲上來 */
+   娛樂模式：不出題，自己按攻擊與閃避，敵人倒數完就撲上來 */
 let arcade = false, QQ = null;
 const DIFF_KEY = 'mul99_diff';
 const DIFFS = {
@@ -981,7 +1014,7 @@ function impactAt(pt){
 }
 const SMALL_SCREEN = matchMedia('(max-width:520px)').matches;
 function shards(pt, n, crit, dir){
-  n = Math.max(4, Math.round(n * (SMALL_SCREEN ? .6 : 1)));   // 手機少噴一點，才不會掉幀
+  n = Math.max(3, Math.round(n * (SMALL_SCREEN ? .6 : 1) * (Fx.low() ? .5 : 1)));   // 手機與精簡模式少噴一點
   for(let i=0;i<n;i++){
     const d = document.createElement('div');
     d.className = 'shard';
@@ -1072,7 +1105,10 @@ const Spr = {
     const d = SPR[key];
     this.stop(el);
     const from = opt.from || 0, to = Math.min(opt.to || d.n, d.n);
-    const fps = opt.fps || d.fps;
+    /* 逐幀每換一格就重畫一次整個元素，是低效能裝置最重的一項；
+       精簡模式壓到 12fps，動作還看得出來但重繪次數少一半以上 */
+    let fps = opt.fps || d.fps;
+    if(Fx.low()) fps = Math.min(fps, 12);
     let i = from, last = 0;
     this.frame(el, d, i);
     const step = (t) => {
@@ -1339,7 +1375,7 @@ $('resetSave').onclick = () => {
 
 function paintHeroBar(){
   setHp('heroHp', heroHp / maxHp);
-  $('heroHpText').textContent = HERO.name + ' Lv' + Save.d.lv + '　' + heroHp + ' / ' + maxHp;
+  $('heroHpText').textContent = playerName() + ' Lv' + Save.d.lv + '　' + heroHp + ' / ' + maxHp;
 }
 
 /* ---------- 魔法：連續答對到門檻自動施放，越連越強 ---------- */
@@ -1468,7 +1504,7 @@ function applyHit(dmg, isCrit, isWeak){
   return mobHp <= 0;
 }
 
-/* ── 純玩模式：不出題，自己按攻擊與閃避 ──
+/* ── 娛樂模式：不出題，自己按攻擊與閃避 ──
    樂趣來源換成「在敵人出手前塞進幾下、抓準時機閃掉那一擊」，
    連續命中不被打到一樣會累積連擊、照樣自動放魔法。 */
 function newTurn(){
@@ -1562,8 +1598,17 @@ function heroCenter(){
   const sc = f.width / W().offsetWidth || 1;
   return {x: (h.left - f.left + h.width*0.62) / sc, y: (h.top - f.top + h.height*0.46) / sc};
 }
+/* 三道爪痕劃過角色：怪物出手要有「打到什麼」的痕跡，不能只有紅閃 */
+function clawFx(pt){
+  const c = document.createElement('div');
+  c.className = 'claw';
+  c.style.left = pt.x + 'px'; c.style.top = pt.y + 'px';
+  W().appendChild(c);
+  setTimeout(() => c.remove(), 420);
+}
 function mobHitFx(){
   const pt = heroCenter();
+  clawFx(pt);
   playFx('fire', pt, {size:190, fps:30, hue:-28, sat:1.5});   // 轉紅＝被打，跟自己放火球分得開
   ring(pt, 'dring', 110);
   shards(pt, 10, false, -1);
@@ -1892,10 +1937,7 @@ function paintTip(){
   $('tipPractice').style.display = Mode.isArcade() ? 'none' : '';
   $('tipArcade').style.display   = Mode.isArcade() ? '' : 'none';
 }
-Mode.bar($('modebar'), () => {
-  document.body.classList.toggle('arcade', Mode.isArcade());
-  paintTip(); modeBadge();
-});
+Mode.readonly($('modebar'));
 Topic.bar($('topicbar'));
 $('difbar').onclick = (e) => {
   const d = e.target.closest('.lv'); if(!d) return;
