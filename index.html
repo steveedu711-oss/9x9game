@@ -20,33 +20,70 @@
 body{gap:12px;padding-bottom:calc(var(--tabh) + 26px + env(safe-area-inset-bottom,0px))}
 .wrap{width:min(96vw,620px);display:flex;flex-direction:column;gap:14px}
 
-/* 分頁：一次只顯示一頁 */
-.tabpage{display:none;flex-direction:column;gap:14px;animation:pgIn .22s ease-out}
-.tabpage.on{display:flex}
+/* 一步一頁：一次只顯示一步，不要全部擠在同一頁 */
+.step{display:none;flex-direction:column;gap:14px;animation:pgIn .22s ease-out}
+.step.on{display:flex}
 @keyframes pgIn{from{opacity:0;transform:translateY(8px)}}
 
-/* 底部分頁列 */
-.tabbar{
-  position:fixed;left:0;right:0;bottom:0;z-index:50;display:flex;
-  padding:6px 6px calc(6px + env(safe-area-inset-bottom,0px));
-  /* ⚠ 不要用 backdrop-filter：那是每一幀的 GPU 模糊，底下金幣一直在動就一直重算。
-     分頁列本來就幾乎不透明，直接給不透明底色，視覺沒差、成本歸零。 */
-  background:#160d24;border-top:1px solid var(--line);
-  box-shadow:0 -8px 26px #0009;
+/* 上面的進度：現在走到第幾步、還有幾步 */
+.stepbar{display:flex;align-items:center;gap:6px;justify-content:center;margin:2px 0 2px}
+.stepbar b{
+  width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:900;background:#251739;border:1px solid var(--line);color:#6b578a;
+  transition:background .2s,color .2s,transform .2s;flex:none;
 }
-.tabbar button{
-  flex:1;min-width:0;height:52px;border:none;background:none;cursor:pointer;border-radius:14px;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
-  color:#8a76ad;font-family:inherit;transition:color .18s,background .18s;
+.stepbar b.on{background:linear-gradient(180deg,var(--gold2),var(--gold));color:#3a2400;
+  border-color:var(--gold);transform:scale(1.12);box-shadow:0 0 12px #f6c45355}
+.stepbar b.done{background:#3a2456;color:var(--gold2);border-color:#8a63c9}
+.stepbar i{flex:0 1 34px;height:2px;background:#2e1c47;border-radius:2px}
+.stepbar i.done{background:#8a63c9}
+.stepbar span{font-size:12px;color:var(--dim);letter-spacing:1px;margin-left:6px}
+
+/* 底下的上一步／下一步 */
+.navbar{
+  position:fixed;left:0;right:0;bottom:0;z-index:50;display:flex;gap:10px;
+  padding:10px 12px calc(10px + env(safe-area-inset-bottom,0px));
+  background:#160d24;border-top:1px solid var(--line);box-shadow:0 -8px 26px #0009;
 }
-.tabbar button i{font-style:normal;font-size:20px;line-height:1}
-.tabbar button span{font-size:10.5px;font-weight:800;letter-spacing:.5px;white-space:nowrap}
-.tabbar button.on{color:var(--gold2);background:linear-gradient(180deg,#3a2456,#241638)}
-.tabbar button.on i{filter:drop-shadow(0 0 8px #f6c45399)}
-.tabbar button:active{transform:scale(.94)}
-/* 縮放鎖那顆鈕本來貼在右下角，會被分頁列蓋住，往上抬 */
-.zoomlock{bottom:calc(var(--tabh) + 16px + env(safe-area-inset-bottom,0px)) !important}
-.zoomtip{bottom:calc(var(--tabh) + 24px + env(safe-area-inset-bottom,0px)) !important}
+.navbar button{
+  min-height:52px;border-radius:16px;cursor:pointer;font-family:inherit;
+  font-size:16px;font-weight:900;letter-spacing:2px;border:1px solid var(--line);
+  background:#251739;color:var(--gold2);transition:transform .1s;
+}
+.navbar button:active{transform:translateY(3px)}
+.navbar .back{flex:0 0 96px}
+.navbar .next{flex:1;border:none;color:#3a2400;
+  background:linear-gradient(180deg,#fff0c4,var(--gold));box-shadow:0 4px 0 #a97a12}
+.navbar .next:disabled{filter:grayscale(.7) brightness(.7);cursor:default;box-shadow:none}
+.navbar .next small{display:block;font-size:11px;font-weight:700;letter-spacing:1px;opacity:.72;margin-top:2px}
+/* 縮放鎖那顆鈕本來貼在右下角，會被下面那條蓋住，往上抬 */
+.zoomlock{bottom:calc(var(--tabh) + 20px + env(safe-area-inset-bottom,0px)) !important}
+.zoomtip{bottom:calc(var(--tabh) + 28px + env(safe-area-inset-bottom,0px)) !important}
+
+/* ---------- 第一步：歡迎畫面 ---------- */
+.welcome{text-align:center;padding:6px 0 2px}
+.welcome .big{
+  font-size:clamp(26px,7vw,40px);font-weight:900;letter-spacing:6px;color:var(--gold2);
+  text-shadow:0 3px 0 #7a4a00,0 8px 26px #000a;
+}
+.welcome .sub{font-size:13px;color:var(--dim);letter-spacing:2px;margin-top:6px}
+.welcome img{
+  width:min(52vw,190px);height:auto;margin:10px auto 2px;display:block;
+  filter:drop-shadow(0 10px 22px #000a);animation:wfloat 3.4s ease-in-out infinite alternate;
+}
+@keyframes wfloat{to{transform:translateY(-8px)}}
+.quickbtn{
+  width:100%;min-height:56px;border-radius:16px;cursor:pointer;font-family:inherit;
+  font-size:15px;font-weight:800;letter-spacing:2px;color:var(--gold2);
+  background:linear-gradient(180deg,#3a2456,#241638);border:1px solid var(--gold);
+}
+.quickbtn small{display:block;font-size:11px;font-weight:700;color:var(--dim);letter-spacing:1px;margin-top:3px}
+.quickbtn:active{transform:translateY(3px)}
+.statlink{
+  width:100%;height:44px;border-radius:12px;cursor:pointer;
+  background:#251739;border:1px solid var(--line);color:var(--dim);font-size:13px;font-weight:700;
+  font-family:inherit;
+}
 
 /* ---------- 標題 ---------- */
 .logo{text-align:center;margin-top:4px;position:relative}
@@ -323,8 +360,10 @@ body{gap:12px;padding-bottom:calc(var(--tabh) + 26px + env(safe-area-inset-botto
   #gamesMain .game::after{right:88px;width:112px;background-size:auto 92%;opacity:.4}
   .nums{gap:6px}
   .nums span{font-size:17px}
-  .tabbar button span{font-size:9.5px}
-  .tabbar button i{font-size:18px}
+  .stepbar b{width:24px;height:24px;font-size:11px}
+  .stepbar i{flex-basis:24px}
+  .navbar button{min-height:48px;font-size:15px}
+  .navbar .back{flex:0 0 84px}
 }
 
 /* ---------- 桌機 ---------- */
@@ -338,9 +377,9 @@ body{gap:12px;padding-bottom:calc(var(--tabh) + 26px + env(safe-area-inset-botto
   .hcard .ph{line-height:104px}
   .games.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
   .games.grid .game .txt small{-webkit-line-clamp:3}
-  .tabbar{
+  .navbar{
     left:50%;right:auto;transform:translateX(-50%);bottom:14px;width:min(96vw,700px);
-    border-radius:20px;border:1px solid var(--line);padding:6px;
+    border-radius:20px;border:1px solid var(--line);
   }
 }
 /* 左下那張大立繪在 1080～1400 會壓到內容，超寬螢幕才放出來 */
@@ -351,23 +390,37 @@ body{gap:12px;padding-bottom:calc(var(--tabh) + 26px + env(safe-area-inset-botto
 <img class="hero" id="hero" src="assets/princess.webp" alt="" loading="lazy" decoding="async" fetchpriority="low">
 
 <div class="wrap">
-  <div class="logo">
-    <h1>小虎乘法大冒險</h1>
-    <p>九九乘法闖關 ・ 邊玩邊變強</p>
-  </div>
+  <div class="stepbar" id="stepbar"></div>
 
-  <!-- ① 開始：選模式、登入帳號，然後出發 -->
-  <section class="tabpage" id="pg-start">
+  <!-- 第一步：歡迎 ＋ 選玩法 ＋ 帳號 -->
+  <section class="step" id="s1">
+    <div class="welcome">
+      <div class="big">小虎乘法大冒險</div>
+      <div class="sub">九九乘法闖關 ・ 邊玩邊變強</div>
+      <img id="wimg" src="assets/fx_hero_ready.webp" alt="">
+    </div>
+
+    <div class="sec"><h2>要怎麼玩</h2><i></i></div>
+    <div class="modepanel"><div id="modebar"></div></div>
+
     <div class="sec"><h2>帳號</h2><i></i></div>
     <div id="userbar" class="userbar"></div>
 
-    <div class="sec"><h2>玩法</h2><i></i></div>
-    <div class="modepanel">
-      <div id="modebar"></div>
+    <button class="quickbtn" id="quickBtn" style="display:none">⚡ 快 速 開 始<small></small></button>
+  </section>
+
+  <!-- 第二步：選角色 -->
+  <section class="step" id="s2">
+    <div class="sec"><h2>誰要出戰？（一個帳號最多 4 個）</h2><i></i></div>
+    <div class="slots" id="slots"></div>
+    <div class="slotacts">
+      <button id="renameBtn">改名字</button>
+      <button id="reclassBtn">換職業</button>
+      <button class="danger" id="delBtn">刪除角色</button>
     </div>
 
-    <div class="sec"><h2>出戰角色</h2><i></i></div>
-    <div class="player" id="playerCard" title="換角色">
+    <div class="sec"><h2>目前出戰</h2><i></i></div>
+    <div class="player" id="playerCard">
       <div class="face">
         <img id="pface" src="assets/hero_cheer.webp" alt="">
         <span class="lvbadge" id="plv">Lv 1</span>
@@ -381,14 +434,14 @@ body{gap:12px;padding-bottom:calc(var(--tabh) + 26px + env(safe-area-inset-botto
       </div>
       <div class="gold"><b>金幣</b><span id="pgold">0</span></div>
     </div>
-
-    <button class="gobtn" id="goBattle">開 始 冒 險<small id="goSub"></small></button>
   </section>
 
-  <!-- ② 玩什麼：練習模式選題型、娛樂模式看說明，主線出擊也在這一頁 -->
-  <section class="tabpage" id="pg-play">
-    <div class="sec"><h2 id="playSec">練習模式要出哪種題目</h2><i></i></div>
-    <div id="topicbar"></div>
+  <!-- 第三步：玩哪一個 -->
+  <section class="step" id="s3">
+    <div id="topicwrap">
+      <div class="sec"><h2>要練哪一種題目</h2><i></i></div>
+      <div id="topicbar"></div>
+    </div>
     <div class="panel" id="arcadeHint" style="display:none">
       <div class="hint">
         娛樂模式<b>不出題</b>，按攻擊與閃避自己打怪。<br>
@@ -398,53 +451,35 @@ body{gap:12px;padding-bottom:calc(var(--tabh) + 26px + env(safe-area-inset-botto
 
     <div class="sec"><h2>主線冒險</h2><i></i></div>
     <div class="games" id="gamesMain"></div>
-  </section>
 
-  <!-- ③ 角色：一個帳號最多四個，建好就留著 -->
-  <section class="tabpage" id="pg-hero">
-    <div class="sec"><h2>我的角色（最多 4 個）</h2><i></i></div>
-    <div class="slots" id="slots"></div>
-    <div class="slotacts">
-      <button id="renameBtn">✏️ 改名字</button>
-      <button id="reclassBtn">換職業</button>
-      <button class="danger" id="delBtn">刪除角色</button>
-    </div>
-    <div class="hint">
-      點一下卡片就換誰出戰。每個角色的<b>等級、裝備、金幣、答題紀錄都分開記</b>。<br>
-      建立過就一直留著，不用每次重做。
-    </div>
-  </section>
-
-  <!-- ④ 練習小遊戲 -->
-  <section class="tabpage" id="pg-mini">
     <div class="sec"><h2>練習小遊戲</h2><i></i></div>
     <div class="games grid" id="gamesSub"></div>
-  </section>
 
-  <!-- ⑤ 數據統計 -->
-  <section class="tabpage" id="pg-stat">
-    <div class="sec"><h2>練習狀況</h2><i></i></div>
-    <div class="panel">
-      <div class="nums">
-        <div><b>答對</b><span id="sOk">0</span></div>
-        <div><b>答錯</b><span id="sBad">0</span></div>
-        <div><b>正確率</b><span id="sRate">—</span></div>
-        <div><b>打倒敵人</b><span id="sKill">0</span></div>
-      </div>
-      <h3>最該再練的乘法</h3>
-      <ul id="sWeak"></ul>
-      <button class="clearbtn" id="clearAll">清除這個角色的紀錄（等級、裝備、答題紀錄）</button>
-    </div>
+    <button class="statlink" id="statBtn">📊 看練習狀況</button>
   </section>
 </div>
 
-<nav class="tabbar" id="tabbar">
-  <button data-p="start"><i>▶️</i><span>開始</span></button>
-  <button data-p="play"><i>🎮</i><span>玩什麼</span></button>
-  <button data-p="hero"><i>🐯</i><span>角色</span></button>
-  <button data-p="mini"><i>🎲</i><span>小遊戲</span></button>
-  <button data-p="stat"><i>📊</i><span>數據</span></button>
+<nav class="navbar" id="navbar">
+  <button class="back" id="navBack">← 上一步</button>
+  <button class="next" id="navNext">下 一 步<small></small></button>
 </nav>
+
+<!-- 練習狀況（不放進主流程，要看才打開） -->
+<div class="modalwrap" id="statwin">
+  <div class="modalbox">
+    <button class="xbtn" id="statClose" aria-label="關閉">✕</button>
+    <h2>練 習 狀 況</h2>
+    <div class="nums">
+      <div><b>答對</b><span id="sOk">0</span></div>
+      <div><b>答錯</b><span id="sBad">0</span></div>
+      <div><b>正確率</b><span id="sRate">—</span></div>
+      <div><b>打倒敵人</b><span id="sKill">0</span></div>
+    </div>
+    <h3 style="text-align:left">最該再練的乘法</h3>
+    <ul id="sWeak"></ul>
+    <button class="clearbtn" id="clearAll">清除這個角色的紀錄（等級、裝備、答題紀錄）</button>
+  </div>
+</div>
 
 <!-- 建立角色／換職業 -->
 <div class="modalwrap" id="heropick">
@@ -541,22 +576,59 @@ function gameCard(g){
   return a;
 }
 
-/* ---------- 分頁切換 ----------
-   五頁各做一件事，一次只顯示一頁；離開再回來記得停在哪一頁 */
-const TAB_KEY = 'mul99_tab';
-const PAGES = ['start','play','hero','mini','stat'];
-function goTab(p){
-  if(!PAGES.includes(p)) p = 'start';
-  PAGES.forEach(k => $('pg-' + k).classList.toggle('on', k === p));
-  [...$('tabbar').children].forEach(b => b.classList.toggle('on', b.dataset.p === p));
-  try{ sessionStorage.setItem(TAB_KEY, p); }catch(e){}
+/* ---------- 一步一頁的流程（2026-08-24 Steve：不要全部擠在一頁） ----------
+   ① 歡迎＋選玩法＋帳號 → ② 選角色 → ③ 選主線或小遊戲 → 進戰鬥（battle.html）
+   跟原本的底部分頁不一樣：分頁是「隨時亂跳」，流程是「一步一步走」，
+   對小學生直觀得多。代價是熟練的玩家每次都要走三步——所以第一步給老玩家「快速開始」。 */
+const STEPS = ['s1','s2','s3'];
+const STEP_NAME = ['開始', '角色', '玩什麼'];
+let step = 0;
+
+function paintStepBar(){
+  $('stepbar').innerHTML = STEPS.map((_, k) =>
+    '<b class="' + (k === step ? 'on' : (k < step ? 'done' : '')) + '">' + (k+1) + '</b>' +
+    (k < STEPS.length - 1 ? '<i class="' + (k < step ? 'done' : '') + '"></i>' : '')
+  ).join('') + '<span>' + STEP_NAME[step] + '</span>';
+}
+function paintNav(){
+  $('navBack').style.visibility = step === 0 ? 'hidden' : '';
+  const next = $('navNext');
+  if(step < STEPS.length - 1){
+    next.innerHTML = '下 一 步<small>' + STEP_NAME[step+1] + '</small>';
+    next.disabled = false;
+  }else{
+    // 最後一步：直接開打（上面那些卡片也點得進去，這顆是給只想打主線的人）
+    next.innerHTML = '開 始 冒 險<small>' +
+      (Mode.isArcade() ? '娛樂模式・不出題' : '練習模式・' + Topic.name()) + '</small>';
+    next.disabled = false;
+  }
+}
+function goStep(k){
+  step = Math.max(0, Math.min(STEPS.length - 1, k));
+  STEPS.forEach((id, n) => $(id).classList.toggle('on', n === step));
+  paintStepBar(); paintNav();
   window.scrollTo({top:0, behavior:'instant'});
 }
-$('tabbar').onclick = (e) => {
-  const b = e.target.closest('button'); if(!b) return;
-  goTab(b.dataset.p);
-  Sfx.ok(1);
+$('navBack').onclick = () => { goStep(step - 1); Sfx.ok(1); };
+$('navNext').onclick = () => {
+  if(step < STEPS.length - 1){ goStep(step + 1); Sfx.ok(2); }
+  else location.href = 'battle.html';
 };
+/* 老玩家不用每次都走三步 */
+$('quickBtn').onclick = () => { location.href = 'battle.html'; };
+function paintQuick(){
+  const d = Save.peek(curSlot());
+  const btn = $('quickBtn');
+  if(!d){ btn.style.display = 'none'; return; }
+  btn.style.display = '';
+  btn.querySelector('small').textContent =
+    (d.pname || heroOf(d.hero).name) + '　Lv ' + d.lv + '　直接進主線';
+}
+
+/* 練習狀況：不放進主流程（那是給大人看的），要看才打開 */
+$('statBtn').onclick = () => { paintStats(); $('statwin').classList.add('on'); };
+$('statClose').onclick = () => $('statwin').classList.remove('on');
+$('statwin').onclick = e => { if(e.target === $('statwin')) $('statwin').classList.remove('on'); };
 
 /* ---------- 帳號狀態列：沒登入就是一顆登入鈕，登入了顯示名字與登出 ---------- */
 function paintUser(){
@@ -639,8 +711,8 @@ async function createChar(n, heroKey, name){
   });
   try{ localStorage.setItem(SAVE_KEY + '_s' + n, JSON.stringify(d)); }catch(e){}
   setSlot(n);
-  /* 建好角色就直接帶去開始頁——角色頁只有要換人時才需要再進來 */
-  try{ sessionStorage.setItem(TAB_KEY, 'start'); }catch(e){}
+  /* 建好角色就直接帶到「玩什麼」——角色這一步已經完成了，不要再退回去 */
+  try{ sessionStorage.setItem('mul99_step', '2'); }catch(e){}
   if(Cloud.logged()){ try{ await Cloud.push(n); }catch(e){} }
   location.reload();
 }
@@ -743,6 +815,10 @@ function paintPlayer(){
   face.src = h.frames ? 'assets/hero_cheer.webp' : h.img;
   $('pname').textContent = playerName();
   $('pcls').textContent = h.name + '・' + h.buff;
+  /* 歡迎畫面那張大圖跟著目前出戰的角色走，不要一直是預設那隻 */
+  const wi = $('wimg');
+  wi.onerror = () => { wi.src = 'assets/fx_hero_ready.webp'; wi.onerror = null; };
+  wi.src = h.img;
   $('pgold').textContent = fmtN(d.gold);
   const full = d.lv >= MAX_LV;
   $('pexp').style.width = full ? '100%' : (d.exp / Save.needExp() * 100) + '%';
@@ -756,8 +832,7 @@ function paintPlayer(){
               : '<span style="color:#6b578a">' + names[k] + '：無</span>';
   }).join('');
 }
-$('playerCard').onclick = () => goTab('hero');
-$('goBattle').onclick = () => { location.href = 'battle.html'; };
+$('playerCard').onclick = () => openHeroPick('change');
 
 /* 自己取名字：存進 Save.d.pname，八頁都吃這個名字 */
 function askName(){
@@ -794,10 +869,9 @@ $('renameBtn').onclick = askName;
 function paintPlay(){
   const arc = Mode.isArcade();
   document.body.classList.toggle('arcade', arc);
-  $('topicbar').style.display  = arc ? 'none' : '';
+  $('topicwrap').style.display  = arc ? 'none' : '';   // 娛樂模式不出題，整段題型收起來
   $('arcadeHint').style.display = arc ? '' : 'none';
-  $('playSec').textContent = arc ? '娛樂模式' : '練習模式要出哪種題目';
-  $('goSub').textContent = arc ? '娛樂模式・不出題' : '練習模式・' + Topic.name();
+  if(typeof paintNav === 'function') paintNav();
 }
 Mode.bar($('modebar'), () => { paintPlay(); paintGames(); modeBadge(); });
 Topic.bar($('topicbar'), () => { paintPlay(); });
@@ -830,14 +904,18 @@ $('clearAll').onclick = () => {
 startCoins();
 paintUser();
 paintPlay(); modeBadge();
-paintPlayer(); paintSlots(); paintGames(); paintStats();
+paintPlayer(); paintSlots(); paintGames(); paintStats(); paintQuick();
 
-/* 一個角色都還沒建過就直接開在角色頁，不然照上次停的那一頁 */
-let firstTab = 'start';
-try{ firstTab = sessionStorage.getItem(TAB_KEY) || 'start'; }catch(e){}
+/* 一個角色都還沒建過就直接停在「選角色」那一步（不然按下一步也沒得選）；
+   其餘照上次停的地方，離開再回來不用重走 */
+let first = 0;
+try{ first = +(sessionStorage.getItem('mul99_step') || 0) || 0; }catch(e){}
 let anyChar = false;
 for(let i = 1; i <= SLOT_MAX; i++){ if(Save.peek(i)){ anyChar = true; break; } }
-goTab(anyChar ? firstTab : 'hero');
+goStep(anyChar ? first : 1);
+/* 每走一步就記起來 */
+const _goStep = goStep;
+goStep = function(k){ _goStep(k); try{ sessionStorage.setItem('mul99_step', String(step)); }catch(e){} };
 </script>
 <script src="assets/audio.js"></script>
 <script src="assets/lock.js"></script>
