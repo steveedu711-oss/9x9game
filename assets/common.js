@@ -798,6 +798,10 @@ function loginBox(onDone){
       '<p id="lgSub">跟「小綸出題小幫手」同一組帳號。登入後進度會存在雲端，換手機也接得回來</p>' +
       '<input id="lgName" maxlength="16" placeholder="帳號（英文或數字）" autocomplete="username">' +
       '<input id="lgPw" type="password" maxlength="32" placeholder="密碼" autocomplete="current-password">' +
+      // 註冊才出現：密碼要打兩次。打錯字自己看不出來（欄位是圓點），
+      // 一旦設錯就再也登不進去，這是最該防的一種呆
+      '<input id="lgPw2" type="password" maxlength="32" placeholder="再輸入一次密碼" ' +
+        'autocomplete="new-password" style="display:none">' +
       '<div class="pwmsg" id="lgMsg"></div>' +
       '<div class="pwbtns">' +
         '<button class="btn ghost" id="lgCancel">取 消</button>' +
@@ -819,11 +823,25 @@ function loginBox(onDone){
     $$('lgGo').textContent = mode === 'login' ? '登 入' : '註 冊';
     $$('lgSwap').textContent = mode === 'login' ? '還沒有帳號？註冊一個' : '已經有帳號了，改成登入';
     $$('lgPw').autocomplete = mode === 'login' ? 'current-password' : 'new-password';
+    $$('lgPw2').style.display = mode === 'login' ? 'none' : '';
+    $$('lgPw2').value = '';
     msg('');
   };
   $$('lgGo').onclick = async () => {
     const n = $$('lgName').value.trim(), p = $$('lgPw').value;
     if(!n || !p) return msg('帳號密碼都要填');
+    if(mode === 'reg'){
+      const p2 = $$('lgPw2').value;
+      if(!p2) return msg('請再輸入一次密碼');
+      if(p !== p2){
+        msg('兩次密碼不一樣，再試一次');
+        $$('lgPw2').value = '';
+        $$('lgPw2').focus();
+        const bx = box.querySelector('.pwbox');
+        bx.classList.remove('shake'); void bx.offsetWidth; bx.classList.add('shake');
+        return;
+      }
+    }
     $$('lgGo').disabled = true;
     msg('連線中…', true);
     try{
@@ -838,6 +856,7 @@ function loginBox(onDone){
   };
   $$('lgCancel').onclick = close;
   box.onclick = (e) => { if(e.target === box) close(); };
-  [$$('lgName'), $$('lgPw')].forEach(el => el.onkeydown = (e) => { if(e.key === 'Enter') $$('lgGo').click(); });
+  [$$('lgName'), $$('lgPw'), $$('lgPw2')].forEach(el =>
+    el.onkeydown = (e) => { if(e.key === 'Enter') $$('lgGo').click(); });
   setTimeout(() => $$('lgName').focus(), 60);
 }
