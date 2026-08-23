@@ -165,12 +165,19 @@ h1{
 .coin{
   position:fixed;top:-40px;z-index:-1;pointer-events:none;
   width:22px;height:22px;border-radius:50%;
-  background:radial-gradient(circle at 35% 30%,#fff3c4,#f6c453 45%,#b8860b 100%);
-  box-shadow:0 0 10px #f6c45366;
+  background:radial-gradient(circle at 35% 30%,#fff3c4,#f6c453 45%,#b8860b 78%,#f6c45300 100%);
+  will-change:transform,opacity;
   animation:fall linear forwards;
 }
+/* ⚠ 2026-08-23 效能量測：keyframes 裡的 scaleX 與 box-shadow 是這一項最貴的來源
+   （光背景金幣一項就吃掉主執行緒 110ms/秒）。縮放會逼瀏覽器每一幀重新光柵化整層，
+   陰影又讓那一層變大。改成只有位移＋旋轉，光暈烘進漸層裡，看起來一樣。 */
 @keyframes fall{
-  0%{transform:translateY(0) rotate(0) scaleX(1);opacity:0}
+  0%{transform:translate3d(0,0,0) rotate(0);opacity:0}
+  10%{opacity:.85}
+  90%{opacity:.5}
+  100%{transform:translate3d(0,105vh,0) rotate(720deg);opacity:0}
+}
   10%{opacity:.85}
   90%{opacity:.5}
   100%{transform:translateY(105vh) rotate(720deg) scaleX(.4);opacity:0}
@@ -836,7 +843,7 @@ $('levels').addEventListener('click', e => {
 
 /* 背景金幣：畫面隨時都有東西在動 */
 setInterval(()=>{
-  if(document.querySelectorAll('.coin').length > 14) return;
+  if(document.querySelectorAll('.coin').length > 8) return;
   const c = document.createElement('div');
   c.className = 'coin';
   c.style.left = (Math.random()*100) + 'vw';

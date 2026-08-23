@@ -206,7 +206,7 @@ function resize(){
 addEventListener('resize', resize);
 
 let running = false, score = 0, combo = 0, bestCombo = 0, okCount = 0;
-let timeLeft = 60, tTimer = 0, raf = 0, lastT = 0;
+let timeLeft = 60, tTimer = 0, raf = 0, idleT = 0, lastT = 0;
 let bubbles = [], parts = [], shots = [], cur = null, lockShot = false;
 
 const COLORS = [
@@ -285,11 +285,63 @@ function burst(x, y, n, color){
   }
 }
 
+/* 待機（還沒按開始）時泡泡也在浮，但沒必要跑滿 60fps——
+   量出來這一頁光靜置就吃掉主執行緒 900ms/秒（CPU 節流 6 倍），是全站最重的一頁。
+   沒在玩就降到 24fps，分頁切到背景就整個停，開打才回滿格。 */
+/* 一顆泡泡的長相（漸層、外框、高光、數字）從頭到尾都不會變，只有位置與被打到時的
+   彈一下會變。原本每一幀、每一顆都要重新 createRadialGradient ＋ 設字型 ＋ 描邊填字，
+   量出來這一頁是全站最重的（靜置 900ms/秒）。改成先畫在自己的小畫布上，
+   每一幀只 drawImage 一次，畫面完全一樣。 */
+function bubbleSprite(b){
+  if(b._spr) return b._spr;
+  const pad = GLOW ? GLOW + 4 : 4;
+  const half = b.r + pad;
+  const c = document.createElement('canvas');
+  c.width = c.height = Math.ceil(half * 2 * dpr);
+  const x = c.getContext('2d');
+  x.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const cx = half, cy = half, rr = b.r;
+  const g = x.createRadialGradient(cx - rr*0.34, cy - rr*0.4, rr*0.12, cx, cy, rr);
+  g.addColorStop(0, '#ffffffee');
+  g.addColorStop(0.32, b.c1);
+  g.addColorStop(1, b.c2);
+  x.save();
+  x.shadowColor = b.c1; x.shadowBlur = GLOW;
+  x.beginPath(); x.arc(cx, cy, rr, 0, 6.283); x.fillStyle = g; x.fill();
+  x.restore();
+  x.beginPath(); x.arc(cx, cy, rr, 0, 6.283);
+  x.strokeStyle = '#ffffff88'; x.lineWidth = 2; x.stroke();
+  x.beginPath();
+  x.ellipse(cx - rr*0.36, cy - rr*0.42, rr*0.24, rr*0.15, -0.6, 0, 6.283);
+  x.fillStyle = '#ffffffcc'; x.fill();
+  if(b.v !== undefined && b.v !== null && b.v !== ''){
+    x.font = '900 ' + Math.round(rr*0.86) + 'px "Noto Sans TC",sans-serif';
+    x.textAlign = 'center'; x.textBaseline = 'middle';
+    x.lineWidth = 4; x.strokeStyle = '#06263dbb';
+    x.strokeText(b.v, cx, cy + 1);
+    x.fillStyle = '#ffffff';
+    x.fillText(b.v, cx, cy + 1);
+  }
+  c._half = half;
+  b._spr = c;
+  return c;
+}
+/* 排下一幀。⚠ 關鍵：**還沒開打時不要掛 requestAnimationFrame**。
+   只要有 rAF 掛著，瀏覽器就得每秒跑滿 60 次完整的渲染流程，量出來光這件事
+   就吃掉主執行緒 430ms/秒（CPU 節流 6 倍），跟畫了什麼幾乎無關。
+   待機改用 timer 每 83ms 叫一次（12fps），泡泡飄很慢完全看不出差別；
+   分頁切到背景就更慢，真的開打才回到 rAF 的滿格。 */
+function schedule(){
+  clearTimeout(idleT); cancelAnimationFrame(raf);
+  if(document.hidden){ idleT = setTimeout(schedule, 400); return; }
+  if(running) raf = requestAnimationFrame(draw);
+  else idleT = setTimeout(() => draw(performance.now()), 83);
+}
 function draw(t){
-  const dt = Math.min(40, t - lastT) / 16.67; lastT = t;
+  const dt = Math.min(running ? 40 : 96, t - lastT) / 16.67; lastT = t;
   ctx.clearRect(0,0,W,H);
 
-  // 泡泡
+  // 泡泡（每一顆長什麼樣是固定的，先畫在自己的小畫布上，每一幀只貼一次圖）
   for(const b of bubbles){
     if(b.dead) continue;
     b.ph += 0.03*dt;
@@ -304,27 +356,8 @@ function draw(t){
     if(b.hitT > 0) b.hitT -= dt;
     const rr = b.r * wob;
 
-    const g = ctx.createRadialGradient(b.x - rr*0.34, b.y - rr*0.4, rr*0.12, b.x, b.y, rr);
-    g.addColorStop(0, '#ffffffee');
-    g.addColorStop(0.32, b.c1);
-    g.addColorStop(1, b.c2);
-    ctx.save();
-    ctx.shadowColor = b.c1; ctx.shadowBlur = GLOW;
-    ctx.beginPath(); ctx.arc(b.x, b.y, rr, 0, 6.283); ctx.fillStyle = g; ctx.fill();
-    ctx.restore();
-    // 外框與高光
-    ctx.beginPath(); ctx.arc(b.x, b.y, rr, 0, 6.283);
-    ctx.strokeStyle = '#ffffff88'; ctx.lineWidth = 2; ctx.stroke();
-    ctx.beginPath();
-    ctx.ellipse(b.x - rr*0.36, b.y - rr*0.42, rr*0.24, rr*0.15, -0.6, 0, 6.283);
-    ctx.fillStyle = '#ffffffcc'; ctx.fill();
-    // 數字
-    ctx.font = '900 ' + Math.round(rr*0.86) + 'px "Noto Sans TC",sans-serif';
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.lineWidth = 4; ctx.strokeStyle = '#06263dbb';
-    ctx.strokeText(b.v, b.x, b.y + 1);
-    ctx.fillStyle = '#ffffff';
-    ctx.fillText(b.v, b.x, b.y + 1);
+    const sp = bubbleSprite(b), half = sp._half;
+    ctx.drawImage(sp, b.x - half*wob, b.y - half*wob, half*2*wob, half*2*wob);
   }
 
   // 子彈
@@ -353,7 +386,7 @@ function draw(t){
   }
   parts = parts.filter(p => p.life > 0);
 
-  raf = requestAnimationFrame(draw);
+  schedule();
 }
 
 tank.addEventListener('pointerdown', e => {
@@ -452,7 +485,7 @@ function start(){
     if(timeLeft <= 0) finish();
   }, 1000);
   lastT = performance.now();
-  cancelAnimationFrame(raf); raf = requestAnimationFrame(draw);
+  schedule();
 }
 function finish(){
   running = false; lockShot = true;
@@ -484,7 +517,8 @@ paint();
 newQuestion();
 $('qbar').textContent = '按下面的按鈕開始';
 lastT = performance.now();
-raf = requestAnimationFrame(draw);
+schedule();
+document.addEventListener('visibilitychange', schedule);
 </script>
 <script src="assets/audio.js"></script>
 <script src="assets/lock.js"></script>

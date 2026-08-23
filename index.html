@@ -13,35 +13,70 @@
 <meta name="apple-mobile-web-app-title" content="小虎乘法">
 <link rel="stylesheet" href="assets/common.css">
 <style>
-body{gap:14px;padding-bottom:90px}
+/* ---------- 大廳改成底部五個分頁（2026-08-23 Steve：不要一頁滑到底，每一頁都要乾淨） ----------
+   ① 開始（選模式＋登入帳號）② 玩什麼（練習就選題型／娛樂就看難度，再從這裡出擊）
+   ③ 角色（一個帳號最多四個，建好就留著，隨時換誰出戰）④ 練習小遊戲 ⑤ 數據統計 */
+:root{--tabh:64px}
+body{gap:12px;padding-bottom:calc(var(--tabh) + 26px + env(safe-area-inset-bottom,0px))}
 .wrap{width:min(96vw,620px);display:flex;flex-direction:column;gap:14px}
 
-/* ---------- 桌機兩欄（手機不受影響，仍是單欄同順序） ---------- */
-.lobby{display:flex;flex-direction:column;gap:14px}
+/* 分頁：一次只顯示一頁 */
+.tabpage{display:none;flex-direction:column;gap:14px;animation:pgIn .22s ease-out}
+.tabpage.on{display:flex}
+@keyframes pgIn{from{opacity:0;transform:translateY(8px)}}
 
-/* ---------- 玩法選擇（進場第一個決定，獨立一整條、不跟別的東西擠） ---------- */
-.modesec, .herosec{width:100%}
-.modepanel{display:flex;flex-direction:column;gap:12px}
-.modepanel .modebar button{min-height:64px}
-.modepanel .modebar button b{font-size:17px}
-.modepanel .modebar button small{font-size:12px}
+/* 底部分頁列 */
+.tabbar{
+  position:fixed;left:0;right:0;bottom:0;z-index:50;display:flex;
+  padding:6px 6px calc(6px + env(safe-area-inset-bottom,0px));
+  /* ⚠ 不要用 backdrop-filter：那是每一幀的 GPU 模糊，底下金幣一直在動就一直重算。
+     分頁列本來就幾乎不透明，直接給不透明底色，視覺沒差、成本歸零。 */
+  background:#160d24;border-top:1px solid var(--line);
+  box-shadow:0 -8px 26px #0009;
+}
+.tabbar button{
+  flex:1;min-width:0;height:52px;border:none;background:none;cursor:pointer;border-radius:14px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+  color:#8a76ad;font-family:inherit;transition:color .18s,background .18s;
+}
+.tabbar button i{font-style:normal;font-size:20px;line-height:1}
+.tabbar button span{font-size:10.5px;font-weight:800;letter-spacing:.5px;white-space:nowrap}
+.tabbar button.on{color:var(--gold2);background:linear-gradient(180deg,#3a2456,#241638)}
+.tabbar button.on i{filter:drop-shadow(0 0 8px #f6c45399)}
+.tabbar button:active{transform:scale(.94)}
+/* 縮放鎖那顆鈕本來貼在右下角，會被分頁列蓋住，往上抬 */
+.zoomlock{bottom:calc(var(--tabh) + 16px + env(safe-area-inset-bottom,0px)) !important}
+.zoomtip{bottom:calc(var(--tabh) + 24px + env(safe-area-inset-bottom,0px)) !important}
 
 /* ---------- 標題 ---------- */
-.logo{text-align:center;margin-top:6px;position:relative}
-.logo h1{font-size:clamp(24px,6.4vw,36px);letter-spacing:6px}
-.logo p{font-size:12px;color:var(--dim);letter-spacing:3px;margin-top:4px}
+.logo{text-align:center;margin-top:4px;position:relative}
+.logo h1{font-size:clamp(21px,5.4vw,30px);letter-spacing:6px}
+.logo p{font-size:11px;color:var(--dim);letter-spacing:3px;margin-top:3px}
 .logo::after{
   content:"";position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
-  width:min(80%,340px);height:120px;border-radius:50%;z-index:-1;
+  width:min(80%,340px);height:110px;border-radius:50%;z-index:-1;
   background:radial-gradient(ellipse,#f6c45322,transparent 70%);
 }
 
+/* ---------- 區塊標題與面板 ---------- */
+.sec{display:flex;align-items:center;gap:10px;margin:2px 2px -4px}
+.sec h2{font-size:14px;color:var(--gold);letter-spacing:2px;font-weight:800;white-space:nowrap}
+.sec i{flex:1;height:1px;background:linear-gradient(90deg,#573a7d,transparent)}
+.panel{
+  padding:16px;border-radius:20px;background:linear-gradient(180deg,#2e1c47,#1a1029);
+  border:1px solid var(--line);box-shadow:0 10px 28px #0007;
+}
+.hint{font-size:12px;color:var(--dim);line-height:1.9;text-align:center}
+.hint b{color:var(--gold2)}
+
 /* ---------- 玩家卡 ---------- */
 .player{
-  display:flex;gap:14px;align-items:center;padding:16px;border-radius:20px;
+  display:flex;gap:14px;align-items:center;padding:16px;border-radius:20px;cursor:pointer;
   background:linear-gradient(135deg,#41285e,#20132f 70%);border:1px solid var(--line);
   box-shadow:0 14px 36px #0009,inset 0 1px 0 #ffffff1a;position:relative;overflow:hidden;
+  transition:border-color .2s;
 }
+.player:hover{border-color:#8a63c9}
 .player::before{
   content:"";position:absolute;right:-30px;top:-40px;width:170px;height:170px;border-radius:50%;
   background:radial-gradient(circle,#f6c45326,transparent 68%);pointer-events:none;
@@ -58,6 +93,7 @@ body{gap:14px;padding-bottom:90px}
 }
 .pinfo{flex:1;min-width:0}
 .pinfo .nm{font-size:19px;font-weight:800;color:var(--gold2);letter-spacing:1px}
+.pinfo .cls{font-size:11px;color:var(--dim);margin-top:1px}
 .expbar{height:10px;border-radius:99px;background:#1b0f2c;margin:8px 0 5px;overflow:hidden;
   box-shadow:inset 0 1px 3px #0009}
 .expbar i{display:block;height:100%;border-radius:99px;transition:width .6s cubic-bezier(.2,1,.3,1);
@@ -73,18 +109,55 @@ body{gap:14px;padding-bottom:90px}
 .gold b{display:block;font-size:10px;color:var(--dim);font-weight:500;letter-spacing:1px}
 .gold span{font-size:21px;font-weight:800;color:var(--gold2);font-variant-numeric:tabular-nums}
 
-/* ---------- 區塊標題 ---------- */
-.sec{display:flex;align-items:center;gap:10px;margin:2px 2px -4px}
-.sec h2{font-size:14px;color:var(--gold);letter-spacing:2px;font-weight:800;white-space:nowrap}
-.sec i{flex:1;height:1px;background:linear-gradient(90deg,#573a7d,transparent)}
-
-.panel{
-  padding:16px;border-radius:20px;background:linear-gradient(180deg,#2e1c47,#1a1029);
-  border:1px solid var(--line);box-shadow:0 10px 28px #0007;
+/* ---------- ① 開始頁 ---------- */
+.modepanel{display:flex;flex-direction:column;gap:12px}
+.modepanel .modebar button{min-height:64px}
+.modepanel .modebar button b{font-size:17px}
+.modepanel .modebar button small{font-size:12px}
+.gobtn{
+  width:100%;min-height:68px;border:none;border-radius:20px;cursor:pointer;font-family:inherit;
+  font-size:21px;font-weight:900;letter-spacing:6px;color:#3a2400;
+  background:linear-gradient(180deg,#fff0c4,var(--gold));box-shadow:0 6px 0 #a97a12,0 14px 30px #0009;
+  transition:transform .12s;
 }
+.gobtn:active{transform:translateY(5px);box-shadow:0 1px 0 #a97a12}
+.gobtn small{display:block;font-size:11px;font-weight:700;letter-spacing:1px;opacity:.72;margin-top:3px}
 
-/* ---------- 選角 ---------- */
-.heroes{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}
+/* ---------- ③ 角色頁：四個角色格 ---------- */
+.slots{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.slot{
+  position:relative;border-radius:18px;padding:12px 10px 11px;text-align:center;cursor:pointer;
+  background:linear-gradient(180deg,#2a1a3f,#1e1230);border:1px solid var(--line);
+  transition:transform .16s ease,border-color .2s,box-shadow .2s;
+}
+.slot:hover{transform:translateY(-3px);border-color:#8a63c9}
+.slot img{width:100%;height:92px;object-fit:contain;object-position:bottom center;
+  filter:drop-shadow(0 6px 10px #0009)}
+.slot .ph{font-size:40px;line-height:92px}
+.slot .nm{font-size:15px;font-weight:800;color:var(--gold2);letter-spacing:1px;margin-top:5px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.slot .meta{font-size:11px;color:var(--dim);margin-top:2px}
+.slot.on{
+  background:linear-gradient(180deg,#523775,#2c1b42);border-color:var(--gold);
+  box-shadow:0 0 0 2px #f6c45344,0 10px 24px #0009;
+}
+.slot.on::after{
+  content:"出戰中";position:absolute;top:7px;right:7px;font-size:9px;font-weight:800;
+  background:var(--gold);color:#3a2400;border-radius:99px;padding:2px 8px;box-shadow:0 2px 6px #0007;
+}
+.slot.empty{border-style:dashed;background:#1c1129}
+.slot.empty .plus{font-size:38px;line-height:92px;color:#6b578a}
+.slot.empty .nm{color:#8a76ad}
+.slotacts{display:flex;gap:8px}
+.slotacts button{
+  flex:1;height:46px;border-radius:13px;cursor:pointer;font-family:inherit;font-size:13px;
+  font-weight:700;background:#251739;border:1px solid var(--line);color:var(--gold2);
+}
+.slotacts button.danger{color:#f0a3a3}
+.slotacts button:active{transform:translateY(2px)}
+
+/* ---------- 選職業（建立角色與換職業共用同一個彈窗） ---------- */
+.heroes{display:grid;grid-template-columns:repeat(2,1fr);gap:9px}
 .hcard{
   background:linear-gradient(180deg,#2a1a3f,#1e1230);border:1px solid var(--line);border-radius:16px;
   padding:10px 6px 8px;text-align:center;cursor:pointer;position:relative;overflow:hidden;
@@ -96,16 +169,12 @@ body{gap:14px;padding-bottom:90px}
 .hcard .ph{font-size:36px;line-height:78px}
 .hcard b{display:block;font-size:13px;color:var(--gold2);margin-top:4px;letter-spacing:1px}
 .hcard small{display:block;font-size:10px;color:var(--dim);line-height:1.5;min-height:15px}
-.hcard .buff{font-size:10px;color:var(--ok);margin-top:3px;line-height:1.5;min-height:30px}
+.hcard .buff{font-size:10px;color:var(--ok);margin-top:3px;line-height:1.5}
 .hcard .trait{font-size:10px;color:var(--gold2);margin-top:4px;line-height:1.45;
   padding-top:4px;border-top:1px dashed #ffffff1f}
 .hcard.on{
   background:linear-gradient(180deg,#523775,#2c1b42);border-color:var(--gold);
   box-shadow:0 0 0 2px #f6c45344,0 10px 24px #0009;
-}
-.hcard.on::after{
-  content:"出戰中";position:absolute;top:6px;right:6px;font-size:9px;font-weight:800;
-  background:var(--gold);color:#3a2400;border-radius:99px;padding:2px 7px;box-shadow:0 2px 6px #0007;
 }
 
 /* ---------- 遊戲卡 ---------- */
@@ -146,8 +215,14 @@ body{gap:14px;padding-bottom:90px}
   display:inline-block;margin-top:6px;font-size:11px;font-weight:700;color:var(--ac);
   background:#1b1029;border:1px solid var(--line);border-radius:99px;padding:2px 9px;
 }
-.game .go{font-size:22px;color:var(--ac);flex:none;opacity:.8}
-/* 主線那張是「先玩這個」，份量要跟練習小遊戲拉開 */
+.game .go{
+  flex:none;display:flex;align-items:center;gap:4px;white-space:nowrap;
+  font-size:14px;font-weight:900;letter-spacing:2px;color:#1b1029;
+  background:var(--ac);border-radius:99px;padding:8px 14px;
+  box-shadow:0 3px 10px #0007,inset 0 1px 0 #ffffff55;
+}
+.game .go i{font-style:normal;font-size:15px;line-height:1;opacity:.7}
+.game:hover .go{filter:brightness(1.12)}
 #gamesMain .game{
   padding:18px 18px 18px 22px;gap:16px;border-radius:22px;
   background:linear-gradient(120deg,#4a2f6d,#2a1840 62%,#1d1230);
@@ -158,29 +233,25 @@ body{gap:14px;padding-bottom:90px}
 #gamesMain .game .ic,#gamesMain .game .txt,#gamesMain .game .go{position:relative;z-index:1}
 #gamesMain .game .txt b{font-size:22px}
 #gamesMain .game .txt small{-webkit-line-clamp:3;font-size:13px}
-#gamesMain .game .go{font-size:28px;opacity:1}
-/* 主線卡右下角壓一隻淡淡的 Boss，一眼看得出這張是去打怪的（原本這層是掃光，換掉） */
+#gamesMain .game .go{font-size:16px;padding:11px 20px;letter-spacing:3px}
+/* 主線卡右下角壓一隻淡淡的 Boss（這一層原本是掃光，換掉；left:auto 一定要留，
+   不然 left:0 會贏過 width，整張圖會貼到左邊壓住文字） */
 #gamesMain .game::after{
-  content:"";position:absolute;left:auto;right:26px;top:0;bottom:0;width:180px;transform:none;
+  content:"";position:absolute;left:auto;right:124px;top:0;bottom:0;width:170px;transform:none;
   background:url(assets/mob_dragon.webp) no-repeat right -18px center/auto 104%;
   opacity:.55;filter:saturate(1) brightness(1.05);
-  -webkit-mask-image:linear-gradient(90deg,transparent 2%,#000 52%);
-  mask-image:linear-gradient(90deg,transparent 2%,#000 52%);
   -webkit-mask-image:linear-gradient(100deg,transparent 18%,#000 62%);
   mask-image:linear-gradient(100deg,transparent 18%,#000 62%);
 }
 #gamesMain .game:hover::after{animation:none;opacity:.6}
-/* 練習小遊戲：說明壓成一行，卡片矮一點，一眼看得完 */
-.games.grid .game .txt small{-webkit-line-clamp:2}
 .games.grid .game{align-items:flex-start}
 .games.grid .game .ic{margin-top:2px}
-
 .game.new .ic::after{
   content:"新";position:absolute;top:-6px;right:-6px;background:var(--bad);color:#fff;
   font-size:9px;font-weight:800;padding:2px 7px;border-radius:99px;box-shadow:0 3px 8px #0009;
 }
 
-/* ---------- 練習狀況 ---------- */
+/* ---------- ⑤ 數據統計 ---------- */
 .nums{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}
 .nums div{background:#211434;border:1px solid var(--line);border-radius:12px;padding:9px 2px;text-align:center}
 .nums b{display:block;font-size:10px;color:var(--dim);font-weight:500;letter-spacing:1px}
@@ -195,9 +266,36 @@ body{gap:14px;padding-bottom:90px}
 }
 .clearbtn:active{transform:translateY(2px)}
 
+/* ---------- 彈窗（建立角色、換職業、取名字） ---------- */
+.modalwrap{
+  position:fixed;inset:0;z-index:70;background:#07040ce8;
+  display:none;align-items:center;justify-content:center;padding:14px;
+}
+.modalwrap.on{display:flex;animation:mwIn .18s ease-out}
+@keyframes mwIn{from{opacity:0}}
+.modalbox{
+  width:min(94vw,520px);max-height:88vh;overflow:auto;position:relative;
+  border-radius:20px;padding:20px 16px 16px;
+  background:linear-gradient(180deg,#33204d,#1a1029);border:2px solid var(--line);
+  box-shadow:0 22px 60px #000b;animation:mbIn .26s cubic-bezier(.2,1.5,.4,1);
+}
+@keyframes mbIn{from{transform:translateY(18px) scale(.92);opacity:0}}
+.modalbox h2{margin:0 0 4px;font-size:19px;color:var(--gold);letter-spacing:2px;text-align:center}
+.modalbox .sub{font-size:12px;color:var(--dim);text-align:center;margin-bottom:14px}
+.modalbox .xbtn{
+  position:absolute;right:10px;top:10px;width:32px;height:32px;border-radius:10px;cursor:pointer;
+  border:1px solid var(--line);background:#20132f;color:var(--dim);font-size:15px;line-height:1;
+}
+.namerow{margin-top:14px}
+.namerow label{display:block;font-size:12px;color:var(--dim);margin-bottom:6px;letter-spacing:1px}
+.namerow input{
+  width:100%;height:48px;border-radius:13px;border:1px solid var(--line);background:#1b0f2c;
+  color:#fff;font-family:inherit;font-size:18px;letter-spacing:2px;padding:0 14px;text-align:center;
+}
+.modalbox .btn{width:100%;margin-top:12px}
+
 /* ---------- 手機 ---------- */
 @media (max-width:520px){
-  body{gap:12px;padding-bottom:92px}
   .wrap{gap:12px}
   .logo h1{letter-spacing:4px}
   .player{padding:13px;gap:11px}
@@ -205,52 +303,47 @@ body{gap:14px;padding-bottom:90px}
   .gold{padding:7px 10px}
   .gold span{font-size:19px}
   .panel{padding:13px}
-  .heroes{grid-template-columns:repeat(2,1fr);gap:8px}
-  .hcard{padding:8px 5px 7px}
-  .hcard img{height:76px}
-  .hcard .ph{line-height:76px}
-  .hcard .buff{min-height:0}
+  .slot img{height:82px}
+  .slot .ph,.slot.empty .plus{line-height:82px}
   .game{padding:11px 12px 11px 14px;gap:11px}
   .game .ic{width:52px;height:52px;font-size:25px}
   .game .txt b{font-size:16px}
   .game .txt small{font-size:11.5px}
-  /* 手機一屏放得下的張數有限：練習小遊戲的說明壓成一行，整頁少滑一大截 */
   .games.grid{gap:8px}
   .games.grid .game{padding:10px 11px 10px 13px}
   .games.grid .game .ic{width:46px;height:46px;font-size:22px}
   .games.grid .game .txt small{-webkit-line-clamp:1;margin-top:2px}
   .games.grid .game .rec{margin-top:4px}
+  .game .go{font-size:12.5px;letter-spacing:1px;padding:7px 11px}
+  #gamesMain .game .go{font-size:14px;padding:9px 15px;letter-spacing:2px}
   #gamesMain .game{padding:15px 15px 15px 17px}
   #gamesMain .game .ic{width:64px;height:64px;font-size:32px}
   #gamesMain .game .txt b{font-size:19px}
   #gamesMain .game .txt small{-webkit-line-clamp:2}
-  /* 手機卡片高，同一隻龍會變超大又壓到字，縮小並再淡一點 */
-  #gamesMain .game::after{right:14px;width:124px;background-size:auto 92%;opacity:.4}
+  #gamesMain .game::after{right:88px;width:112px;background-size:auto 92%;opacity:.4}
   .nums{gap:6px}
   .nums span{font-size:17px}
+  .tabbar button span{font-size:9.5px}
+  .tabbar button i{font-size:18px}
 }
 
-/* ---------- 桌機兩欄（放最後，才蓋得過上面單欄的設定） ---------- */
+/* ---------- 桌機 ---------- */
 @media (min-width:900px){
-  .wrap{width:min(96vw,1080px)}
-  .lobby{display:grid;grid-template-columns:328px minmax(0,1fr);gap:20px;align-items:start}
-  .colL{position:sticky;top:14px;display:flex;flex-direction:column;gap:12px}
-  .colR{display:flex;flex-direction:column;gap:14px;min-width:0}
-  /* 選角現在是獨立滿版的一條，卡片給足空間：每張至少 150px，自動排幾欄都行 */
-  .heroes{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
-  .hcard img{height:112px}
-  .hcard .ph{line-height:112px}
-  /* 小遊戲排兩欄，不用一直往下滑 */
+  .wrap{width:min(96vw,900px)}
+  .slots{grid-template-columns:repeat(4,1fr);gap:12px}
+  .slot img{height:120px}
+  .slot .ph,.slot.empty .plus{line-height:120px}
+  .heroes{grid-template-columns:repeat(3,1fr);gap:12px}
+  .hcard img{height:104px}
+  .hcard .ph{line-height:104px}
   .games.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
   .games.grid .game .txt small{-webkit-line-clamp:3}
-  /* 玩家卡在窄欄裡改直式：頭像、名字、經驗、金幣由上而下 */
-  .player{flex-direction:column;align-items:center;text-align:center;gap:9px;padding:18px 16px 16px}
-  .player .pinfo{width:100%}
-  .player .gearrow{justify-content:center}
-  .player .gold{display:flex;align-items:baseline;justify-content:center;gap:9px;padding:7px 16px}
-  .player .gold b{display:inline;font-size:11px}
+  .tabbar{
+    left:50%;right:auto;transform:translateX(-50%);bottom:14px;width:min(96vw,700px);
+    border-radius:20px;border:1px solid var(--line);padding:6px;
+  }
 }
-/* 左下那張大立繪在 1080～1400 會壓到左欄，超寬螢幕才放出來 */
+/* 左下那張大立繪在 1080～1400 會壓到內容，超寬螢幕才放出來 */
 @media (max-width:1399px){ .hero{display:none} }
 </style>
 </head>
@@ -263,67 +356,108 @@ body{gap:14px;padding-bottom:90px}
     <p>九九乘法闖關 ・ 邊玩邊變強</p>
   </div>
 
-  <div id="userbar" class="userbar"></div>
+  <!-- ① 開始：選模式、登入帳號，然後出發 -->
+  <section class="tabpage" id="pg-start">
+    <div class="sec"><h2>帳號</h2><i></i></div>
+    <div id="userbar" class="userbar"></div>
 
-  <!-- 玩法選擇擺在最上面、獨立一整條——這是進場第一個要做的決定，
-       Steve 2026-08-23：不能跟角色卡片、玩家狀態擠在同一個窄欄裡 -->
-  <div class="modesec">
     <div class="sec"><h2>玩法</h2><i></i></div>
-    <div class="panel modepanel">
+    <div class="modepanel">
       <div id="modebar"></div>
-      <div id="topicwrap">
-        <div class="setlab">練習模式要出哪種題目</div>
-        <div id="topicbar"></div>
+    </div>
+
+    <div class="sec"><h2>出戰角色</h2><i></i></div>
+    <div class="player" id="playerCard" title="換角色">
+      <div class="face">
+        <img id="pface" src="assets/hero_cheer.webp" alt="">
+        <span class="lvbadge" id="plv">Lv 1</span>
+      </div>
+      <div class="pinfo">
+        <div class="nm" id="pname">小虎姬</div>
+        <div class="cls" id="pcls">王者</div>
+        <div class="expbar"><i id="pexp"></i></div>
+        <small id="pexpText">經驗 0 / 75</small>
+        <div class="gearrow" id="pgear"></div>
+      </div>
+      <div class="gold"><b>金幣</b><span id="pgold">0</span></div>
+    </div>
+
+    <button class="gobtn" id="goBattle">開 始 冒 險<small id="goSub"></small></button>
+  </section>
+
+  <!-- ② 玩什麼：練習模式選題型、娛樂模式看說明，主線出擊也在這一頁 -->
+  <section class="tabpage" id="pg-play">
+    <div class="sec"><h2 id="playSec">練習模式要出哪種題目</h2><i></i></div>
+    <div id="topicbar"></div>
+    <div class="panel" id="arcadeHint" style="display:none">
+      <div class="hint">
+        娛樂模式<b>不出題</b>，按攻擊與閃避自己打怪。<br>
+        難度（悠閒／普通／狠角色）在出擊畫面裡選。
       </div>
     </div>
-  </div>
 
-  <!-- 選角也是獨立一條、橫向滿版——原本擠在 328px 的窄側欄，卡片小到看不清楚 -->
-  <div class="herosec">
-    <div class="sec"><h2>選一個角色出戰</h2><i></i></div>
-    <div class="panel" style="padding:13px">
-      <div class="heroes" id="heroes"></div>
+    <div class="sec"><h2>主線冒險</h2><i></i></div>
+    <div class="games" id="gamesMain"></div>
+  </section>
+
+  <!-- ③ 角色：一個帳號最多四個，建好就留著 -->
+  <section class="tabpage" id="pg-hero">
+    <div class="sec"><h2>我的角色（最多 4 個）</h2><i></i></div>
+    <div class="slots" id="slots"></div>
+    <div class="slotacts">
+      <button id="renameBtn">✏️ 改名字</button>
+      <button id="reclassBtn">換職業</button>
+      <button class="danger" id="delBtn">刪除角色</button>
     </div>
-  </div>
-
-  <div class="lobby">
-  <aside class="colL">
-  <div class="player">
-    <div class="face">
-      <img id="pface" src="assets/hero_cheer.webp" alt="">
-      <span class="lvbadge" id="plv">Lv 1</span>
+    <div class="hint">
+      點一下卡片就換誰出戰。每個角色的<b>等級、裝備、金幣、答題紀錄都分開記</b>。<br>
+      建立過就一直留著，不用每次重做。
     </div>
-    <div class="pinfo">
-      <div class="nm" id="pname">小虎姬</div>
-      <button class="rename" id="renameBtn" title="改名字">✏️ 取名字</button>
-      <div class="expbar"><i id="pexp"></i></div>
-      <small id="pexpText">經驗 0 / 75</small>
-      <div class="gearrow" id="pgear"></div>
+  </section>
+
+  <!-- ④ 練習小遊戲 -->
+  <section class="tabpage" id="pg-mini">
+    <div class="sec"><h2>練習小遊戲</h2><i></i></div>
+    <div class="games grid" id="gamesSub"></div>
+  </section>
+
+  <!-- ⑤ 數據統計 -->
+  <section class="tabpage" id="pg-stat">
+    <div class="sec"><h2>練習狀況</h2><i></i></div>
+    <div class="panel">
+      <div class="nums">
+        <div><b>答對</b><span id="sOk">0</span></div>
+        <div><b>答錯</b><span id="sBad">0</span></div>
+        <div><b>正確率</b><span id="sRate">—</span></div>
+        <div><b>打倒敵人</b><span id="sKill">0</span></div>
+      </div>
+      <h3>最該再練的乘法</h3>
+      <ul id="sWeak"></ul>
+      <button class="clearbtn" id="clearAll">清除這個角色的紀錄（等級、裝備、答題紀錄）</button>
     </div>
-    <div class="gold"><b>金幣</b><span id="pgold">0</span></div>
-  </div>
-  </aside>
+  </section>
+</div>
 
-  <main class="colR">
-  <div class="sec"><h2>主線冒險</h2><i></i></div>
-  <div class="games" id="gamesMain"></div>
+<nav class="tabbar" id="tabbar">
+  <button data-p="start"><i>▶️</i><span>開始</span></button>
+  <button data-p="play"><i>🎮</i><span>玩什麼</span></button>
+  <button data-p="hero"><i>🐯</i><span>角色</span></button>
+  <button data-p="mini"><i>🎲</i><span>小遊戲</span></button>
+  <button data-p="stat"><i>📊</i><span>數據</span></button>
+</nav>
 
-  <div class="sec"><h2>練習小遊戲</h2><i></i></div>
-  <div class="games grid" id="gamesSub"></div>
-
-  <div class="sec"><h2>練習狀況</h2><i></i></div>
-  <div class="panel">
-    <div class="nums">
-      <div><b>答對</b><span id="sOk">0</span></div>
-      <div><b>答錯</b><span id="sBad">0</span></div>
-      <div><b>正確率</b><span id="sRate">—</span></div>
-      <div><b>打倒敵人</b><span id="sKill">0</span></div>
+<!-- 建立角色／換職業 -->
+<div class="modalwrap" id="heropick">
+  <div class="modalbox">
+    <button class="xbtn" id="hpClose" aria-label="關閉">✕</button>
+    <h2 id="hpTitle">建 立 角 色</h2>
+    <div class="sub" id="hpSub">先挑一個職業，再幫他取名字</div>
+    <div class="heroes" id="heroes"></div>
+    <div class="namerow" id="hpNameRow">
+      <label>角色名字（最多 8 個字，留白就用職業的名字）</label>
+      <input id="hpName" maxlength="8" autocomplete="off">
     </div>
-    <h3>最該再練的乘法</h3>
-    <ul id="sWeak"></ul>
-    <button class="clearbtn" id="clearAll">清除所有紀錄（等級、裝備、答題紀錄）</button>
-  </div>
-  </main>
+    <button class="btn" id="hpOk">確 定</button>
   </div>
 </div>
 
@@ -399,11 +533,32 @@ function gameCard(g){
     txt.appendChild(rec);
   }
 
-  const go = document.createElement('div'); go.className = 'go'; go.textContent = '›';
+  /* 右邊那顆從單純的箭頭改成「開始」，小朋友一眼知道點下去就開始玩 */
+  const go = document.createElement('div');
+  go.className = 'go';
+  go.innerHTML = '開 始<i>›</i>';
   a.append(ic, txt, go);
   return a;
 }
-/* 帳號狀態列：沒登入就是一顆登入鈕，登入了顯示名字與登出 */
+
+/* ---------- 分頁切換 ----------
+   五頁各做一件事，一次只顯示一頁；離開再回來記得停在哪一頁 */
+const TAB_KEY = 'mul99_tab';
+const PAGES = ['start','play','hero','mini','stat'];
+function goTab(p){
+  if(!PAGES.includes(p)) p = 'start';
+  PAGES.forEach(k => $('pg-' + k).classList.toggle('on', k === p));
+  [...$('tabbar').children].forEach(b => b.classList.toggle('on', b.dataset.p === p));
+  try{ sessionStorage.setItem(TAB_KEY, p); }catch(e){}
+  window.scrollTo({top:0, behavior:'instant'});
+}
+$('tabbar').onclick = (e) => {
+  const b = e.target.closest('button'); if(!b) return;
+  goTab(b.dataset.p);
+  Sfx.ok(1);
+};
+
+/* ---------- 帳號狀態列：沒登入就是一顆登入鈕，登入了顯示名字與登出 ---------- */
 function paintUser(){
   const el = $('userbar');
   if(Cloud.logged()){
@@ -427,71 +582,77 @@ function paintUser(){
     });
   }
 }
-paintUser();
 
-$('renameBtn').onclick = askName;
-Mode.bar($('modebar'), () => { document.body.classList.toggle('arcade', Mode.isArcade()); paintGames(); modeBadge(); });
-Topic.bar($('topicbar'));
-document.body.classList.toggle('arcade', Mode.isArcade());
-modeBadge();
+/* ---------- 角色格（一個帳號最多四個） ----------
+   每一格就是 common.js 的一個存檔位（_s1～_s4），資料各記各的。
+   Save.peek(n) 回 null 就代表這一格還沒有人，畫成「＋ 建立角色」。 */
+function slotCard(n){
+  const d = Save.peek(n), cur = curSlot();
+  const card = document.createElement('div');
+  card.className = 'slot' + (d ? '' : ' empty') + (n === cur && d ? ' on' : '');
+  card.dataset.n = n;
 
-function paintGames(){
-  const main = $('gamesMain'), sub = $('gamesSub');
-  main.innerHTML = ''; sub.innerHTML = '';
-  for(const g of GAMES) (g.main ? main : sub).appendChild(gameCard(g));
-}
+  if(!d){
+    const plus = document.createElement('div');
+    plus.className = 'plus'; plus.textContent = '＋';
+    const nm = document.createElement('div');
+    nm.className = 'nm'; nm.textContent = '建立角色';
+    const meta = document.createElement('div');
+    meta.className = 'meta'; meta.textContent = '第 ' + n + ' 位';
+    card.append(plus, nm, meta);
+    return card;
+  }
 
-function paintPlayer(){
-  const d = Save.d, h = heroOf(d.hero);
-  $('plv').textContent = 'Lv ' + d.lv;
-  const face = $('pface');
-  face.onerror = () => { face.src = 'assets/hero_cheer.webp'; };
-  face.src = h.frames ? 'assets/hero_cheer.webp' : h.img;
-  $('pname').textContent = playerName();
-  $('renameBtn').textContent = Save.d.pname ? '✏️ 改名字' : '✏️ 取名字';
-  $('pgold').textContent = fmtN(d.gold);
-  const full = d.lv >= MAX_LV;
-  $('pexp').style.width = full ? '100%' : (d.exp / Save.needExp() * 100) + '%';
-  $('pexpText').textContent = full
-    ? '已經滿等 Lv ' + MAX_LV
-    : '經驗 ' + d.exp + ' / ' + Save.needExp();
-  const g = d.gear, names = {weapon:'武器', armor:'防具', charm:'飾品'};
-  $('pgear').innerHTML = ['weapon','armor','charm'].map(k => {
-    const it = g[k];
-    return it ? '<span style="color:' + it.color + '">' + it.icon + ' ' + it.name + '</span>'
-              : '<span style="color:#6b578a">' + names[k] + '：無</span>';
-  }).join('');
-}
-/* 自己取名字：存進 Save.d.pname，八頁都吃這個名字 */
-function askName(){
-  const box = document.createElement('div');
-  box.className = 'pwwrap';
-  box.innerHTML =
-    '<div class="pwbox">' +
-      '<h3>幫你的角色取名字</h3>' +
-      '<p>最多 8 個字，留白就用角色本來的名字</p>' +
-      '<input id="nmInput" maxlength="8" autocomplete="off" style="letter-spacing:2px;font-size:20px">' +
-      '<div class="pwmsg" id="nmMsg"></div>' +
-      '<div class="pwbtns"><button class="btn ghost" id="nmCancel">取 消</button>' +
-      '<button class="btn" id="nmOk">確 定</button></div>' +
-    '</div>';
-  document.body.appendChild(box);
-  const inp = box.querySelector('#nmInput');
-  inp.value = Save.d.pname || '';
-  setTimeout(() => { inp.focus(); inp.select(); }, 60);
-  const close = () => box.remove();
-  const ok = () => {
-    Save.d.pname = inp.value.trim().slice(0, 8);
-    Save.put();
-    close();
-    paintPlayer();
+  const h = heroOf(d.hero);
+  const img = document.createElement('img');
+  img.src = h.img; img.alt = '';
+  img.onerror = () => {                      // 圖還沒生好就退回 emoji，不要破圖
+    const ph = document.createElement('div');
+    ph.className = 'ph'; ph.textContent = h.icon;
+    img.replaceWith(ph);
   };
-  box.querySelector('#nmOk').onclick = ok;
-  box.querySelector('#nmCancel').onclick = close;
-  inp.onkeydown = (e) => { if(e.key === 'Enter') ok(); };
-  box.onclick = (e) => { if(e.target === box) close(); };
+  const nm = document.createElement('div');
+  nm.className = 'nm'; nm.textContent = (d.pname || '').trim() || h.name;
+  const meta = document.createElement('div');
+  meta.className = 'meta'; meta.textContent = h.name + '　Lv ' + d.lv;
+  card.append(img, nm, meta);
+  return card;
 }
+function paintSlots(){
+  const box = $('slots');
+  box.innerHTML = '';
+  for(let n = 1; n <= SLOT_MAX; n++) box.appendChild(slotCard(n));
+  const has = !!Save.peek(curSlot());
+  ['renameBtn','reclassBtn','delBtn'].forEach(k => $(k).disabled = !has);
+}
+/* 換人出戰：存檔位換掉之後整頁重讀最單純——Save／Stats／Best 都是開頁時就讀好的 */
+async function switchSlot(n){
+  if(n === curSlot()) return;
+  setSlot(n);
+  if(Cloud.logged()){ try{ await Cloud.pull(n); }catch(e){} }
+  location.reload();
+}
+async function createChar(n, heroKey, name){
+  const d = Object.assign({}, DEFAULT_SAVE, {
+    gear:{weapon:null, armor:null, boots:null, charm:null}, bag:[],
+    hero: heroKey, pname: name
+  });
+  try{ localStorage.setItem(SAVE_KEY + '_s' + n, JSON.stringify(d)); }catch(e){}
+  setSlot(n);
+  /* 建好角色就直接帶去開始頁——角色頁只有要換人時才需要再進來 */
+  try{ sessionStorage.setItem(TAB_KEY, 'start'); }catch(e){}
+  if(Cloud.logged()){ try{ await Cloud.push(n); }catch(e){} }
+  location.reload();
+}
+$('slots').addEventListener('click', e => {
+  const c = e.target.closest('.slot'); if(!c) return;
+  const n = +c.dataset.n;
+  if(c.classList.contains('empty')) openHeroPick('create', n);
+  else switchSlot(n);
+});
 
+/* ---------- 選職業彈窗：建立角色與換職業共用 ---------- */
+let hpMode = 'create', hpSlot = 1, hpHero = HEROES[0].key;
 function paintHeroes(){
   const box = $('heroes');
   box.innerHTML = '';
@@ -504,12 +665,12 @@ function paintHeroes(){
     if(h.spell !== 1) buffs.push('魔法 ×' + h.spell);
 
     const card = document.createElement('div');
-    card.className = 'hcard' + (Save.d.hero === h.key ? ' on' : '');
+    card.className = 'hcard' + (hpHero === h.key ? ' on' : '');
     card.dataset.h = h.key;
 
     const img = document.createElement('img');
     img.src = h.img; img.alt = '';
-    img.onerror = () => {                    // 圖還沒生好就退回 emoji，不要破圖
+    img.onerror = () => {
       const ph = document.createElement('div');
       ph.className = 'ph'; ph.textContent = h.icon;
       img.replaceWith(ph);
@@ -526,13 +687,128 @@ function paintHeroes(){
   }
 }
 $('heroes').addEventListener('click', e => {
-  const c = e.target.closest('.hcard');
-  if(!c) return;
-  Save.d.hero = c.dataset.h;
-  Save.put();
-  paintHeroes(); paintPlayer();
+  const c = e.target.closest('.hcard'); if(!c) return;
+  hpHero = c.dataset.h;
+  paintHeroes();
   Sfx.ok(3);
 });
+function openHeroPick(mode, n){
+  hpMode = mode; hpSlot = n || curSlot();
+  const d = mode === 'create' ? null : Save.d;
+  hpHero = d ? d.hero : HEROES[0].key;
+  $('hpTitle').textContent = mode === 'create' ? '建 立 角 色' : '換 職 業';
+  $('hpSub').textContent = mode === 'create'
+    ? '第 ' + hpSlot + ' 位・先挑一個職業，再幫他取名字'
+    : '等級、裝備、金幣都會留著，只換職業';
+  $('hpNameRow').style.display = mode === 'create' ? '' : 'none';
+  $('hpName').value = '';
+  paintHeroes();
+  $('heropick').classList.add('on');
+  if(mode === 'create') setTimeout(() => $('hpName').focus(), 80);
+}
+const closeHeroPick = () => $('heropick').classList.remove('on');
+$('hpClose').onclick = closeHeroPick;
+$('heropick').onclick = e => { if(e.target === $('heropick')) closeHeroPick(); };
+$('hpOk').onclick = () => {
+  if(hpMode === 'create'){
+    createChar(hpSlot, hpHero, $('hpName').value.trim().slice(0, 8));
+  }else{
+    Save.d.hero = hpHero;
+    Save.put();
+    closeHeroPick();
+    paintPlayer(); paintSlots(); paintGames();
+    Sfx.ok(3);
+  }
+};
+$('reclassBtn').onclick = () => openHeroPick('change');
+$('delBtn').onclick = () => {
+  const n = curSlot(), d = Save.peek(n);
+  if(!d) return;
+  const nm = (d.pname || '').trim() || heroOf(d.hero).name;
+  if(!confirm('確定要刪除「' + nm + '」嗎？這個角色的等級、裝備、答題紀錄都會不見。')) return;
+  Save.wipe(n);
+  /* 刪掉的是正在用的那一格，就換到還有人的那一格；都沒有就留在第 1 格 */
+  let go = 1;
+  for(let i = 1; i <= SLOT_MAX; i++){ if(Save.peek(i)){ go = i; break; } }
+  setSlot(go);
+  location.reload();
+};
+
+/* ---------- 出戰角色卡 ---------- */
+function paintPlayer(){
+  const d = Save.d, h = heroOf(d.hero);
+  $('plv').textContent = 'Lv ' + d.lv;
+  const face = $('pface');
+  face.onerror = () => { face.src = 'assets/hero_cheer.webp'; };
+  face.src = h.frames ? 'assets/hero_cheer.webp' : h.img;
+  $('pname').textContent = playerName();
+  $('pcls').textContent = h.name + '・' + h.buff;
+  $('pgold').textContent = fmtN(d.gold);
+  const full = d.lv >= MAX_LV;
+  $('pexp').style.width = full ? '100%' : (d.exp / Save.needExp() * 100) + '%';
+  $('pexpText').textContent = full
+    ? '已經滿等 Lv ' + MAX_LV
+    : '經驗 ' + d.exp + ' / ' + Save.needExp();
+  const g = d.gear, names = {weapon:'武器', armor:'防具', charm:'飾品'};
+  $('pgear').innerHTML = ['weapon','armor','charm'].map(k => {
+    const it = g[k];
+    return it ? '<span style="color:' + it.color + '">' + it.icon + ' ' + it.name + '</span>'
+              : '<span style="color:#6b578a">' + names[k] + '：無</span>';
+  }).join('');
+}
+$('playerCard').onclick = () => goTab('hero');
+$('goBattle').onclick = () => { location.href = 'battle.html'; };
+
+/* 自己取名字：存進 Save.d.pname，八頁都吃這個名字 */
+function askName(){
+  const box = document.createElement('div');
+  box.className = 'pwwrap';
+  box.innerHTML =
+    '<div class="pwbox">' +
+      '<h3>幫你的角色取名字</h3>' +
+      '<p>最多 8 個字，留白就用職業本來的名字</p>' +
+      '<input id="nmInput" maxlength="8" autocomplete="off" style="letter-spacing:2px;font-size:20px">' +
+      '<div class="pwmsg" id="nmMsg"></div>' +
+      '<div class="pwbtns"><button class="btn ghost" id="nmCancel">取 消</button>' +
+      '<button class="btn" id="nmOk">確 定</button></div>' +
+    '</div>';
+  document.body.appendChild(box);
+  const inp = box.querySelector('#nmInput');
+  inp.value = Save.d.pname || '';
+  setTimeout(() => { inp.focus(); inp.select(); }, 60);
+  const close = () => box.remove();
+  const ok = () => {
+    Save.d.pname = inp.value.trim().slice(0, 8);
+    Save.put();
+    close();
+    paintPlayer(); paintSlots();
+  };
+  box.querySelector('#nmOk').onclick = ok;
+  box.querySelector('#nmCancel').onclick = close;
+  inp.onkeydown = (e) => { if(e.key === 'Enter') ok(); };
+  box.onclick = (e) => { if(e.target === box) close(); };
+}
+$('renameBtn').onclick = askName;
+
+/* ---------- 玩法與題型 ---------- */
+function paintPlay(){
+  const arc = Mode.isArcade();
+  document.body.classList.toggle('arcade', arc);
+  $('topicbar').style.display  = arc ? 'none' : '';
+  $('arcadeHint').style.display = arc ? '' : 'none';
+  $('playSec').textContent = arc ? '娛樂模式' : '練習模式要出哪種題目';
+  $('goSub').textContent = arc ? '娛樂模式・不出題' : '練習模式・' + Topic.name();
+}
+Mode.bar($('modebar'), () => { paintPlay(); paintGames(); modeBadge(); });
+Topic.bar($('topicbar'), () => { paintPlay(); });
+
+function paintGames(){
+  const main = $('gamesMain'), sub = $('gamesSub');
+  main.innerHTML = ''; sub.innerHTML = '';
+  for(const g of GAMES) (g.main ? main : sub).appendChild(gameCard(g));
+}
+
+/* ---------- 數據統計 ---------- */
 function paintStats(){
   let ok = 0, bad = 0;
   for(const v of Object.values(Stats.data)){ ok += v.ok||0; bad += v.bad||0; }
@@ -543,15 +819,25 @@ function paintStats(){
   $('sWeak').innerHTML = Stats.weakHTML(8);
 }
 $('clearAll').onclick = () => {
-  if(!confirm('確定要清除所有紀錄嗎？等級、金幣、裝備、答題紀錄都會不見。')) return;
+  if(!confirm('確定要清除這個角色的所有紀錄嗎？等級、金幣、裝備、答題紀錄都會不見。')) return;
   Save.reset();
-  try{ localStorage.removeItem('mul99_stats'); }catch(e){}
+  try{ localStorage.removeItem(STORE_KEY + '_s' + curSlot()); }catch(e){}
   Stats.data = {};
-  paintPlayer(); paintGames(); paintStats();
+  paintPlayer(); paintSlots(); paintGames(); paintStats();
 };
 
+/* ---------- 開場 ---------- */
 startCoins();
-paintHeroes(); paintPlayer(); paintGames(); paintStats();
+paintUser();
+paintPlay(); modeBadge();
+paintPlayer(); paintSlots(); paintGames(); paintStats();
+
+/* 一個角色都還沒建過就直接開在角色頁，不然照上次停的那一頁 */
+let firstTab = 'start';
+try{ firstTab = sessionStorage.getItem(TAB_KEY) || 'start'; }catch(e){}
+let anyChar = false;
+for(let i = 1; i <= SLOT_MAX; i++){ if(Save.peek(i)){ anyChar = true; break; } }
+goTab(anyChar ? firstTab : 'hero');
 </script>
 <script src="assets/audio.js"></script>
 <script src="assets/lock.js"></script>

@@ -199,11 +199,16 @@ function playerName(){
 }
 
 /* ---------- 裝備 ---------- */
+/* 稀有度（2026-08-23 Steve 指定：**依稀有度降低機率**）。
+   原本是 52/28/14/6，傳說六分之一太甜，四種稀有度感覺差不多。
+   拉開成明顯的遞減曲線，「傳說」才配得上這兩個字。
+   ⚠ 這是「已經掉了」之後才擲的，實際機率還要乘上掉落率（見 battle.html 的 dropChance）。
+   Boss 會帶 bonus 加權精良以上，所以「打 Boss 拚傳說」是有意義的目標。 */
 const RARITY = [
-  {k:'普通', c:'#cbd5e1', mul:1.0,  w:52},
-  {k:'精良', c:'#6ea8ff', mul:1.45, w:28},
-  {k:'稀有', c:'#c084fc', mul:2.0,  w:14},
-  {k:'傳說', c:'#f6c453', mul:2.9,  w:6}
+  {k:'普通', c:'#cbd5e1', mul:1.0,  w:60},
+  {k:'精良', c:'#6ea8ff', mul:1.45, w:27},
+  {k:'稀有', c:'#c084fc', mul:2.0,  w:10},
+  {k:'傳說', c:'#f6c453', mul:2.9,  w:3}
 ];
 const GEAR_KINDS = [
   {slot:'weapon', icon:'🗡️', names:['虎牙法杖','烈焰長杖','碎星錘','風之短刃','雷紋權杖'], main:'atk'},
@@ -447,9 +452,15 @@ function rollTo(el, from, to, ms){
   })(t0);
 }
 /* 背景金幣 */
+/* 背景金幣的數量與間隔（2026-08-23 效能量測後下修）：
+   原本上限 14 顆、每 0.65 秒補一顆，八頁都在跑。改成 8 顆、0.95 秒，
+   分頁切到背景時直接停掉——看不到的東西沒有理由繼續畫。 */
 function startCoins(){
+  let hidden = false;
+  document.addEventListener('visibilitychange', () => { hidden = document.hidden; });
   setInterval(()=>{
-    if(document.querySelectorAll('.coin').length > 14) return;
+    if(hidden) return;
+    if(document.querySelectorAll('.coin').length > 8) return;
     const c = document.createElement('div');
     c.className = 'coin';
     c.style.left = (Math.random()*100) + 'vw';
@@ -458,7 +469,7 @@ function startCoins(){
     c.style.width = c.style.height = (12 + Math.random()*16) + 'px';
     document.body.appendChild(c);
     setTimeout(()=>c.remove(), dur*1000 + 200);
-  }, 650);
+  }, 950);
 }
 /* 版本切換列 */
 const VERSIONS = [
@@ -644,11 +655,16 @@ const Fx = {
     if(m === 'auto') this.watch();
   },
   /* 量測：連續 24 幀裡有一半以上超過 32ms（＝低於 30fps）就降級，只降不升，
-     免得在邊界上一直來回切、畫面忽好忽壞更難看 */
-  watch(){
+     免得在邊界上一直來回切、畫面忽好忽壞更難看。
+     ⚠ 2026-08-23 抓到的坑：這支原本**永遠不會停**——只要沒降級就一直掛著
+     requestAnimationFrame，等於逼瀏覽器每一頁、每一秒都跑滿 60 次完整的渲染流程，
+     頁面明明沒事也閒不下來（八頁都中）。改成最多量 6 個視窗（約 2.4 秒）就收工，
+     真的要重新判斷再由 recheck() 手動叫（例如開打的時候）。 */
+  watch(rounds){
     if(this._watching) return;
     this._watching = true;
-    let last = performance.now(), bad = 0, n = 0;
+    let last = performance.now(), bad = 0, n = 0, win = 0;
+    const maxWin = rounds || 6;
     const step = (t) => {
       const dt = t - last; last = t;
       if(dt > 32) bad++;
@@ -659,11 +675,14 @@ const Fx = {
           return;
         }
         n = 0; bad = 0;
+        if(++win >= maxWin){ this._watching = false; return; }   // 量夠了就停，不要一直掛著
       }
       if(this._watching) requestAnimationFrame(step);
     };
     requestAnimationFrame(step);
-  }
+  },
+  /* 情況變了（例如開打）想再判斷一次就叫這個 */
+  recheck(){ if(this.get() === 'auto' && !this.low()) this.watch(6); }
 };
 addEventListener('DOMContentLoaded', () => Fx.apply());
 

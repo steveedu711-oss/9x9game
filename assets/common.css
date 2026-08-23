@@ -26,9 +26,11 @@ body::before{
     radial-gradient(circle at 20% 30%,#f6c45322,transparent 45%),
     radial-gradient(circle at 80% 20%,#a855f733,transparent 40%),
     radial-gradient(circle at 60% 90%,#22d3ee1a,transparent 45%);
-  animation:drift 18s ease-in-out infinite alternate;
+  will-change:transform;animation:drift 18s ease-in-out infinite alternate;
 }
-@keyframes drift{to{transform:translate3d(2%,-2%,0) scale(1.06)}}
+/* ⚠ 這裡不要放 scale：整片是比視窗還大的一層，縮放會每一幀重新光柵化，
+   量出來單這一項就吃掉主執行緒 140ms/秒（CPU 節流 6 倍）。只留位移，看起來一樣。 */
+@keyframes drift{to{transform:translate3d(2%,-2%,0)}}
 
 h1{
   font-size:clamp(16px,2.4vw,22px);letter-spacing:3px;text-align:center;
@@ -85,12 +87,12 @@ h1{
 /* 背景金幣 */
 .coin{
   position:fixed;top:-40px;z-index:-1;pointer-events:none;width:22px;height:22px;border-radius:50%;
-  background:radial-gradient(circle at 35% 30%,#fff3c4,#f6c453 45%,#b8860b 100%);
-  box-shadow:0 0 10px #f6c45366;animation:fall linear forwards;
+  background:radial-gradient(circle at 35% 30%,#fff3c4,#f6c453 45%,#b8860b 78%,#f6c45300 100%);
+  will-change:transform,opacity;animation:fall linear forwards;
 }
 @keyframes fall{
-  0%{transform:translateY(0) rotate(0);opacity:0}10%{opacity:.85}
-  90%{opacity:.5}100%{transform:translateY(105vh) rotate(720deg) scaleX(.4);opacity:0}
+  0%{transform:translate3d(0,0,0) rotate(0);opacity:0}10%{opacity:.85}
+  90%{opacity:.5}100%{transform:translate3d(0,105vh,0) rotate(720deg);opacity:0}
 }
 
 /* 共用元件 */
