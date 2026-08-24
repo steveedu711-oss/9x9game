@@ -92,19 +92,33 @@ function expReq(lv){                     // 從 lv 升到 lv+1 需要多少經�
   return Math.round(at100 * (1 + (lv - EXP_S2_END + 1) * 0.10));
 }
 
+/* 裝備欄位（2026-08-24 Steve 指定：從四格擴成**剛好六格**，不要再多）。
+   順序就是畫面上的排法，所有地方一律讀這一份，不要各自寫死字串。 */
+const GEAR_SLOTS = ['weapon','armor','helmet','boots','ring','charm'];
+const SLOT_NAME  = {weapon:'武器', armor:'防具', helmet:'頭盔', boots:'鞋子', ring:'戒指', charm:'飾品'};
+
+function emptyGear(){ const g={}; for(const k of GEAR_SLOTS) g[k]=null; return g; }
+/* 舊存檔只有四格（沒有頭盔與戒指），載入時要補齊，
+   不然 Save.d.gear.helmet 是 undefined，畫面會少畫兩格 */
+function fixGear(d){
+  d.gear = Object.assign(emptyGear(), d.gear || {});
+  for(const k of Object.keys(d.gear)) if(!GEAR_SLOTS.includes(k)) delete d.gear[k];
+  return d;
+}
+
 const SAVE_KEY = 'mul99_save';
 const DEFAULT_SAVE = {
   lv:1, exp:0, gold:0, hero:'royal', pname:'',   // pname＝玩家自己取的名字，空的就用角色本名
   scroll:0,                                      // 強化卷軸：打怪會掉，也能用金幣買
-  gear:{weapon:null, armor:null, boots:null, charm:null},
+  gear:{weapon:null, armor:null, helmet:null, boots:null, ring:null, charm:null},
   bag:[],
   round:1, wave:0,
   totalKill:0, playCount:0, lastPlay:''
 };
 const Save = {
   d: (() => {
-    try{ return Object.assign({}, DEFAULT_SAVE, JSON.parse(localStorage.getItem(sk(SAVE_KEY))) || {}); }
-    catch(e){ return Object.assign({}, DEFAULT_SAVE); }
+    try{ return fixGear(Object.assign({}, DEFAULT_SAVE, JSON.parse(localStorage.getItem(sk(SAVE_KEY))) || {})); }
+    catch(e){ return fixGear(Object.assign({}, DEFAULT_SAVE)); }
   })(),
   put(){
     this.d.lastPlay = new Date().toISOString().slice(0,10);
@@ -116,7 +130,7 @@ const Save = {
     try{
       const raw = localStorage.getItem(SAVE_KEY + '_s' + n);
       if(!raw) return null;
-      return Object.assign({}, DEFAULT_SAVE, JSON.parse(raw));
+      return fixGear(Object.assign({}, DEFAULT_SAVE, JSON.parse(raw)));
     }catch(e){ return null; }
   },
   wipe(n){
@@ -128,7 +142,7 @@ const Save = {
     }catch(e){}
   },
   reset(){
-    this.d = Object.assign({}, DEFAULT_SAVE, {gear:{weapon:null,armor:null,boots:null,charm:null}, bag:[]});
+    this.d = Object.assign({}, DEFAULT_SAVE, {gear:emptyGear(), bag:[]});
     this.put();
   },
   needExp(){ return expReq(this.d.lv); },
@@ -139,7 +153,7 @@ const Save = {
     let hp  = 100 + (this.d.lv-1)*12 + h.hp;
     let crit = 5 + h.crit, ult = 11 + h.ult;
     let cdr = 0;
-    for(const k of ['weapon','armor','boots','charm']){
+    for(const k of GEAR_SLOTS){
       const it = g[k]; if(!it) continue;
       atk += gearStat(it,'atk'); hp += gearStat(it,'hp');
       crit += gearStat(it,'crit'); ult += gearStat(it,'ult'); cdr += gearStat(it,'cdr');
@@ -172,25 +186,32 @@ const Save = {
 const HEROES = [
   {key:'royal',  name:'王者',      icon:'👑', img:'assets/fx_hero_ready.webp', frames:true,
    desc:'帶頭的那一個', buff:'金幣 +35%、卷軸更常掉',
+   play:'抓節奏連點：命中的瞬間再點一下，接出二連斬',
    atk:2, hp:10, crit:2, ult:2, spell:1.1, gold:0.35, scrollLuck:1},   // scrollLuck 1＝掉落率翻倍
-  {key:'knight', name:'鐵壁衛士',  icon:'🛡️', img:'assets/char_knight.webp',
-   desc:'站在最前面的那個', buff:'受到傷害 -20%，被打會回必殺',
-   atk:-1, hp:36, crit:0, ult:0, spell:1, reduce:0.20, hitUlt:10},
-  {key:'elf',    name:'疾風獵手',  icon:'🏹', img:'assets/char_archer.webp',
-   desc:'箭無虛發', buff:'爆擊 +15%，爆擊回必殺',
-   atk:1, hp:-8, crit:15, ult:2, spell:1, critBack:8},
   {key:'mage',   name:'星辰術士',  icon:'🔮', img:'assets/char_mage.webp',
    desc:'魔法就是暴力', buff:'魔法 ×1.7，連擊魔法提早兩連',
-   atk:-2, hp:-12, crit:0, ult:4, spell:1.7, spellEarly:2},
-  {key:'dragon', name:'巨劍鬥士',  icon:'🐉', img:'assets/char_berserk.webp',
-   desc:'又硬又痛', buff:'攻擊 +8、血量 +60，但技能比較慢',
-   atk:8, hp:60, crit:0, ult:-2, spell:0.9, cdMul:1.3},
-  {key:'sage',   name:'光影使者',  icon:'✨', img:'assets/char_sage.webp',
-   desc:'技能不用等', buff:'技能冷卻 -35%，必殺充得快',
-   atk:-2, hp:-4, crit:2, ult:8, spell:1.35, cdMul:0.65}
+   play:'長按蓄力再滑出：光圈縮到綠區時放手，打出雙倍威力',
+   atk:-2, hp:-12, crit:0, ult:4, spell:1.7, spellEarly:2}
 ];
-/* 舊存檔的角色代號要對到新職業，不然換版之後角色會被打回預設 */
-const HERO_ALIAS = {tiger:'royal', archer:'elf', berserk:'dragon'};
+/* 敬請期待的四個（2026-08-24 職業六砍二）。
+   只有剪影與一句預告，**不寫解鎖條件**——寫了卻做不出來，小孩打到那一關會更失望。
+   要開放時把資料搬回 HEROES、拿掉這裡那一筆，並把 HERO_ALIAS 對應的那一行刪掉就好。 */
+const LOCKED_HEROES = [
+  {key:'knight', icon:'🛡️', shape:'盾',   hint:'牆一樣站在最前面，誰都過不去⋯⋯'},
+  {key:'elf',    icon:'🏹', shape:'弓',   hint:'箭離弦的時候，你還沒看到牠出手⋯⋯'},
+  {key:'dragon', icon:'🐉', shape:'大劍', hint:'一劍下去，地都會裂開⋯⋯'},
+  {key:'sage',   icon:'✨', shape:'法杖', hint:'技能好像永遠不用等⋯⋯'}
+];
+/* 舊存檔的角色代號要對到新職業，不然換版之後角色會被打回預設。
+   2026-08-24 六砍二：被收起來的四個職業一律轉成留下來的兩個之一
+   （前排與大劍走近戰的王者，遠程與法系走星辰術士），等級／裝備／金幣一格都不會動。
+   偵測與「免費換一次職業」的說明視窗在 index.html 的 reclassNotice()。 */
+const HERO_ALIAS = {
+  tiger:'royal', berserk:'royal', knight:'royal', dragon:'royal',
+  archer:'mage', elf:'mage', sage:'mage'
+};
+/* 這個存檔的職業是不是被收起來的那四個之一（用來決定要不要跳轉職說明） */
+const isRetiredHero = k => !!HERO_ALIAS[k] && !HEROES.some(h => h.key === k);
 const heroOf = k => HEROES.find(h => h.key === (HERO_ALIAS[k] || k)) || HEROES[0];
 /* 畫面上要顯示的名字：玩家取過名字就用他的，沒取就用角色本名 */
 function playerName(){
@@ -214,7 +235,11 @@ const GEAR_KINDS = [
   {slot:'weapon', icon:'🗡️', names:['虎牙法杖','烈焰長杖','碎星錘','風之短刃','雷紋權杖'], main:'atk'},
   {slot:'armor',  icon:'🛡️', names:['虎紋護甲','石心胸鎧','花繡披風','鱗光戰袍','守心軟甲'], main:'hp'},
   {slot:'boots',  icon:'👢', names:['疾風戰靴','貓步軟鞋','追風長靴','輕羽踏靴','迅雷戰靴'], main:'cdr'},
-  {slot:'charm',  icon:'📿', names:['幸運鈴鐺','貓瞳墜飾','金幣護符','疾風羽飾','虎魂符'],  main:'crit'}
+  {slot:'charm',  icon:'📿', names:['幸運鈴鐺','貓瞳墜飾','金幣護符','疾風羽飾','虎魂符'],  main:'crit'},
+  /* 2026-08-24 新增的兩格。頭盔跟防具同樣加血，但只有六成五，
+     不然兩格都是大血量、玩家會覺得防具白拿；戒指專吃必殺充能，是唯一的必殺主屬性來源 */
+  {slot:'helmet', icon:'⛑️', names:['虎耳頭盔','星鐵盔','羽冠戰盔','石紋頭巾','守心圓盔'], main:'hp',  k:0.65},
+  {slot:'ring',   icon:'💍', names:['虎眼戒','星火指環','雷紋戒','風痕戒指','月光戒'],     main:'ult'}
 ];
 function rollRarity(bonus){
   const list = RARITY.map(r => ({...r, w: r.w * (r.mul > 1.3 ? (1 + (bonus||0)) : 1)}));
@@ -234,12 +259,14 @@ function rollGear(level, bonus){
     rarity: r.k, color: r.c,
     atk:0, hp:0, crit:0, ult:0, cdr:0
   };
-  if(kind.main === 'atk') it.atk = Math.max(1, Math.round(base*2.2*r.mul));
-  if(kind.main === 'hp')  it.hp  = Math.max(3, Math.round(base*9*r.mul));
-  if(kind.main === 'crit'){ it.crit = Math.max(1, Math.round(base*1.6*r.mul)); }
+  const kk = kind.k || 1;                      // 同屬性不同部位的強弱差（頭盔的血量比防具少）
+  if(kind.main === 'atk') it.atk = Math.max(1, Math.round(base*2.2*r.mul*kk));
+  if(kind.main === 'hp')  it.hp  = Math.max(3, Math.round(base*9*r.mul*kk));
+  if(kind.main === 'crit'){ it.crit = Math.max(1, Math.round(base*1.6*r.mul*kk)); }
+  if(kind.main === 'ult') it.ult = Math.max(1, Math.round(base*1.3*r.mul*kk));
   /* 鞋子：技能冷卻縮短，上限 30%（避免疊到冷卻歸零）。跟等級關係壓得比較平，
      不然後期隨便一雙鞋就把冷卻砍光，技能連段的節奏感會被削光 */
-  if(kind.main === 'cdr') it.cdr = Math.min(30, Math.max(2, Math.round((3 + level*0.05) * r.mul)));
+  if(kind.main === 'cdr') it.cdr = Math.min(30, Math.max(2, Math.round((3 + level*0.05) * r.mul * kk)));
   // 稀有度高的多帶一條副屬性
   if(r.mul >= 1.45){
     const sub = ['atk','hp','ult'][(Math.random()*3)|0];
@@ -289,6 +316,31 @@ function gearStat(it, key){
 function gearScore(it){
   return gearStat(it,'atk')*3 + gearStat(it,'hp')*0.6 + gearStat(it,'crit')*2 + gearStat(it,'ult')*1.5
        + gearStat(it,'cdr')*4;
+}
+/* ---------- 一鍵裝備（2026-08-24 Steve 指定）----------
+   每一格各自從背包挑分數最高的那件，比身上這件好才換；換下來的收回背包。
+   分數就是 gearScore（含強化加成），跟背包列表上那個 ⬆ 標記同一套標準，
+   小孩不用自己一件一件比。回傳換上去的清單，好讓畫面說「換了幾件」。 */
+function autoEquip(){
+  const changed = [];
+  for(const slot of GEAR_SLOTS){
+    let bi = -1, best = -1;
+    for(let i = 0; i < Save.d.bag.length; i++){
+      const it = Save.d.bag[i];
+      if(it.slot !== slot) continue;
+      const sc = gearScore(it);
+      if(sc > best){ best = sc; bi = i; }
+    }
+    if(bi < 0) continue;
+    const cur = Save.d.gear[slot];
+    if(cur && gearScore(cur) >= best) continue;
+    const it = Save.d.bag.splice(bi,1)[0];
+    if(cur) Save.d.bag.push(cur);
+    Save.d.gear[slot] = it;
+    changed.push(it);
+  }
+  if(changed.length) Save.put();
+  return changed;
 }
 function enhTag(it){ return enhLv(it) ? ' <span class="enh">+' + enhLv(it) + '</span>' : ''; }
 function gearLine(it){
@@ -685,6 +737,21 @@ const Fx = {
   recheck(){ if(this.get() === 'auto' && !this.low()) this.watch(6); }
 };
 addEventListener('DOMContentLoaded', () => Fx.apply());
+
+/* ---------- 頁面控制小按鈕：返回上一頁／重新整理，固定左上角，八頁共用 ---------- */
+addEventListener('DOMContentLoaded', () => {
+  const box = document.createElement('div');
+  box.className = 'pagectrl';
+  box.innerHTML =
+    '<button type="button" class="pcbtn" data-act="back" aria-label="返回上一頁" title="返回上一頁">←</button>' +
+    '<button type="button" class="pcbtn" data-act="reload" aria-label="重新整理" title="重新整理">⟳</button>';
+  box.addEventListener('click', e => {
+    const b = e.target.closest('.pcbtn'); if(!b) return;
+    if(b.dataset.act === 'back') history.back();
+    else location.reload();
+  });
+  document.body.appendChild(box);
+});
 
 /* ---------- 雲端帳號（2026-08-23 Steve：帳號密碼不能放前端，一定要後端） ----------
    **帳號跟「小綸出題小幫手」(lunquiz) 共用同一套**（Steve 指定），

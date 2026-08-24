@@ -43,6 +43,18 @@ body{padding-bottom:16px}
 .field.sc4 .scene{--s1:#3a2c12;--s2:#2a1f0d;--s3:#1a1408;--far:#5c4416;--mid:#3d2d0f;--sg:#f6c453}
 .scene>*{position:absolute;inset:0}
 .scene .sky{background:linear-gradient(180deg,var(--s1) 0%,var(--s2) 58%,var(--s3) 100%)}
+/* 2026-08-24：四大關各一張手繪背景（Gemini 生的，無角色無怪物，下三分之一是空地）。
+   圖蓋在漸層上面，底下那層漸層留著當備援：圖沒載到也不會變成一片黑。
+   對齊地面用 `center 78%`，角色與怪物的腳才會踩在畫面裡的地上。 */
+.scene .pic{background-position:center 78%;background-size:cover;background-repeat:no-repeat}
+.field.sc1 .scene .pic{background-image:url(assets/bg_sc1.webp)}
+.field.sc2 .scene .pic{background-image:url(assets/bg_sc2.webp)}
+.field.sc3 .scene .pic{background-image:url(assets/bg_sc3.webp)}
+.field.sc4 .scene .pic{background-image:url(assets/bg_sc4.webp)}
+/* 有實拍背景之後，原本用 CSS 疊出來的遠山／中景樹／星星就不需要了（會跟圖裡的山打架）。
+   留著程式碼不刪，要退回純 CSS 版只要把這一條拿掉 */
+.scene .far,.scene .mid,.scene .stars{display:none}
+.scene .glow{mix-blend-mode:screen}
 .scene .glow{background:radial-gradient(70% 55% at 50% 104%,var(--sg) 0%,transparent 68%);opacity:.55;
   animation:sceneGlow 5.5s ease-in-out infinite alternate}
 @keyframes sceneGlow{to{opacity:.85}}
@@ -648,7 +660,14 @@ body.lowfx .shard{animation-duration:.35s}
   padding:6px 2px;text-align:center;font-size:13px;font-weight:800;color:var(--gold2)}
 .power div b{display:block;font-size:10px;color:var(--dim);font-weight:500}
 .slots{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
-@media (min-width:420px){ .slots{grid-template-columns:repeat(4,1fr)} }
+@media (min-width:420px){ .slots{grid-template-columns:repeat(3,1fr)} }
+/* 一鍵裝備：放在背包上面，按了就把每一格換成背包裡最好的那件 */
+.autobar{display:flex;align-items:center;gap:8px;margin-top:12px}
+.autobar button{
+  flex:1;padding:10px;border-radius:10px;border:1px solid var(--gold);cursor:pointer;
+  background:linear-gradient(180deg,#4a2f6e,#33204d);color:var(--gold);font-size:14px;font-weight:800;
+}
+.autobar button.no{opacity:.45;border-color:var(--line);color:var(--dim);cursor:default}
 .slot{
   background:#241638;border:1px dashed var(--line);border-radius:12px;padding:8px;text-align:center;
   min-height:86px;display:flex;flex-direction:column;justify-content:center;gap:2px;cursor:pointer;
@@ -903,7 +922,7 @@ body.playing #pauseBtn{display:flex}
     </div>
     <div id="world">
     <div class="scene">
-      <div class="sky"></div><div class="glow"></div><div class="stars"></div>
+      <div class="sky"></div><div class="pic"></div><div class="glow"></div><div class="stars"></div>
       <div class="far"></div><div class="mid"></div><div class="ground"></div><div class="motes"></div>
     </div>
     <div class="gshadow" id="shHero"></div>
@@ -1015,6 +1034,7 @@ body.playing #pauseBtn{display:flex}
     <div class="power" id="power"></div>
     <div class="scrollbar" id="scrollBar"></div>
     <div class="slots" id="slots"></div>
+    <div class="autobar"><button id="autoEq">✨ 一鍵裝備（自動換上更好的）</button></div>
     <div class="baglist" id="baglist"></div>
     <button class="btn" id="closeGear" style="width:100%;margin-top:14px">關 閉</button>
     <button class="btn ghost" id="resetSave" style="width:100%;margin-top:8px;height:40px">清除存檔重新開始</button>
@@ -1672,7 +1692,7 @@ function paintTop(){
 function hasBetter(){
   return Save.d.bag.some(it => {
     const cur = Save.d.gear[it.slot];
-    return !cur || it.score > cur.score;
+    return !cur || gearScore(it) > gearScore(cur);   // 用含強化的分數，跟一鍵裝備同一套標準
   });
 }
 function paintGear(){
@@ -1683,8 +1703,8 @@ function paintGear(){
     '<div><b>爆擊</b>' + P.crit + '%</div>' +
     '<div><b>必殺充能</b>' + P.ult + '</div>' +
     (P.cdr ? '<div><b>技能冷卻</b>-' + P.cdr + '%</div>' : '');
-  const slotName = {weapon:'武器', armor:'防具', boots:'鞋子', charm:'飾品'};
-  $('slots').innerHTML = ['weapon','armor','boots','charm'].map(k => {
+  const slotName = SLOT_NAME;
+  $('slots').innerHTML = GEAR_SLOTS.map(k => {
     const it = Save.d.gear[k];
     if(!it) return '<div class="slot empty"><div class="ic">➕</div><div class="nm">' +
       slotName[k] + '</div><div class="st2">還沒有裝備</div></div>';
@@ -1704,6 +1724,8 @@ function paintGear(){
             (risky ? '成功 ' + rate + '%，失敗會爆' : '一定成功') + '</small></button>') +
       '</div>';
   }).join('');
+
+  $('autoEq').classList.toggle('no', !hasBetter());
 
   const sp = scrollPrice();
   $('scrollBar').innerHTML =
@@ -1814,7 +1836,10 @@ function equip(id){
   Save.d.gear[it.slot] = it;
   Save.put(); paintGear();
   Sfx.ok(3);
-  // 換裝會改變最大血量，戰鬥中同步補上差額
+  afterGearChange();
+}
+/* 換裝會改變最大血量，戰鬥中要同步補上差額 */
+function afterGearChange(){
   const np = Save.power();
   if(running){ heroHp = Math.min(np.hp, heroHp + Math.max(0, np.hp - maxHp)); }
   maxHp = np.hp;
@@ -1858,6 +1883,14 @@ $('baglist').addEventListener('click', e => {
   if(eq) equip(eq.dataset.eq);
   else if(sl) sell(sl.dataset.sell);
 });
+$('autoEq').onclick = () => {
+  const changed = autoEquip();
+  if(!changed.length){ enhShout('身上這六件已經是最好的了', '#a5b4fc'); Sfx.tick(); return; }
+  paintGear();
+  afterGearChange();
+  Sfx.ok(3);
+  enhShout('換上 ' + changed.length + ' 件更好的裝備', '#ffe066');
+};
 $('bagBtn').onclick = () => { paintGear(); $('gearwin').classList.add('on'); };
 $('closeGear').onclick = () => $('gearwin').classList.remove('on');
 $('resetSave').onclick = () => {
@@ -2374,6 +2407,7 @@ function killMob(){
   const ups = Save.addExp(exp);
 
   deathBurst();
+  mobDieAt = Date.now();
   $('mob').classList.add('die');
   $('shMob').classList.remove('hit'); $('shMob').classList.add('gone');
   F().classList.add('slowmo');
@@ -2470,6 +2504,12 @@ function setMob(){
   weakOpenUntil = 0; $('mobWrap').classList.remove('weakopen');
   $('mobWrap').classList.remove('shielded');
   const mel = $('mob');
+  /* 2026-08-24 修「空戰鬥畫面」：`mobDie` 是 forwards 動畫，最後一格 opacity:0。
+     原本只靠打倒之後那個 setTimeout 把 .die 拿掉——手機切到背景、中途暫停或重開時
+     那個 timer 會被延後甚至來不及跑，新的一隻怪就頂著上一隻的死亡動畫出場，
+     玩家看到的就是「只有血條、沒有怪物」。換怪時一律先把演出用的 class 全部清乾淨。 */
+  mel.classList.remove('die','hit','attack','blink');
+  $('shMob').classList.remove('gone','hit');
   mobImgRetried = false; mel.classList.remove('imgfail');   // 換怪就重新給圖片一次機會
   $('mobWrap').classList.remove('imgfail');
   const warn = document.getElementById('mobImgWarn'); if(warn) warn.remove();
@@ -2515,8 +2555,16 @@ function useUlt(){
     setTimeout(newQ, 500);
   }, 900);
 }
+let mobDieAt = 0;                    // 上一次播死亡動畫的時間，看門狗用
 function tick(){
   paintSkills();                     // 技能冷卻倒數跟著這個 100ms 的計時器跑
+  /* 看門狗：死亡動畫最長 0.9 秒，加上掉寶演出也不該超過 2.5 秒還掛著 .die。
+     真的掛著就代表換怪的 timer 出事了，直接清掉，寧可少一段演出也不要對著空氣打怪 */
+  if(mobDieAt && Date.now() - mobDieAt > 2500){
+    mobDieAt = 0;
+    $('mob').classList.remove('die');
+    $('shMob').classList.remove('gone');
+  }
   $('mobWrap').classList.toggle('marked', mobMarkedUntil > performance.now());
   if(!running || locked){ paintTimer(); return; }
   mobTimer = Math.max(0, mobTimer - 0.1);

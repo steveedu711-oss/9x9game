@@ -330,9 +330,29 @@ h1{
   .lv{padding:11px 4px}
   .btn{height:56px}
 }
+/* 左上角固定小按鈕：返回上一頁／重新整理（這頁不吃 common.js，樣式另存一份） */
+.pagectrl{
+  position:fixed;left:10px;top:10px;z-index:40;display:flex;gap:6px;
+  padding-top:env(safe-area-inset-top,0);
+}
+.pcbtn{
+  width:36px;height:36px;border-radius:50%;border:1px solid var(--line);cursor:pointer;
+  background:#1d1230cc;color:var(--gold2);font-size:17px;line-height:1;
+  display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);
+  box-shadow:0 4px 12px #0006;
+}
+.pcbtn:active{transform:translateY(2px)}
+@media (max-width:480px){
+  .pagectrl{left:8px;top:8px;gap:5px}
+  .pcbtn{width:32px;height:32px;font-size:15px}
+}
 </style>
 </head>
 <body>
+<div class="pagectrl">
+  <button type="button" class="pcbtn" onclick="history.back()" aria-label="返回上一頁" title="返回上一頁">←</button>
+  <button type="button" class="pcbtn" onclick="location.reload()" aria-label="重新整理" title="重新整理">⟳</button>
+</div>
 <img class="hero" id="hero" src="assets/princess.webp" alt="" loading="lazy" decoding="async" fetchpriority="low">
 <div class="say" id="say"></div>
 <h1>找 答 案 挑 戰</h1>

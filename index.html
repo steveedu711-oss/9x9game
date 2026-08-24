@@ -213,6 +213,24 @@ body{gap:12px;padding-bottom:calc(var(--tabh) + 26px + env(safe-area-inset-botto
   background:linear-gradient(180deg,#523775,#2c1b42);border-color:var(--gold);
   box-shadow:0 0 0 2px #f6c45344,0 10px 24px #0009;
 }
+/* 敬請期待的四個職業：不要只放一個鎖頭，小孩看到純鎖頭是失望，看到剪影才是期待 */
+.hcard.lock{cursor:default;background:linear-gradient(180deg,#1b1230,#140c22)}
+.hcard.lock:hover{transform:none;border-color:var(--line)}
+.hcard.lock .sil{
+  height:78px;display:flex;align-items:flex-end;justify-content:center;font-size:44px;
+  filter:brightness(0) saturate(0) opacity(.62) drop-shadow(0 0 10px #f6c45355);
+}
+.hcard.lock b{color:#6b578a;letter-spacing:4px}
+.hcard.lock .hint{font-size:10px;color:#8a75ab;line-height:1.5;margin-top:3px;min-height:30px}
+.hcard.lock .soon{font-size:10px;color:var(--gold2);margin-top:5px;
+  padding-top:4px;border-top:1px dashed #ffffff1f}
+/* 邊框跑一圈流動的金光 */
+.hcard.lock::after{
+  content:"";position:absolute;inset:-1px;border-radius:16px;pointer-events:none;
+  background:linear-gradient(115deg,transparent 38%,#f6c4534d 50%,transparent 62%);
+  background-size:280% 100%;animation:silShine 3.6s linear infinite;
+}
+@keyframes silShine{from{background-position:180% 0}to{background-position:-80% 0}}
 
 /* ---------- 遊戲卡 ---------- */
 .games{display:flex;flex-direction:column;gap:10px}
@@ -706,7 +724,7 @@ async function switchSlot(n){
 }
 async function createChar(n, heroKey, name){
   const d = Object.assign({}, DEFAULT_SAVE, {
-    gear:{weapon:null, armor:null, boots:null, charm:null}, bag:[],
+    gear:emptyGear(), bag:[],
     hero: heroKey, pname: name
   });
   try{ localStorage.setItem(SAVE_KEY + '_s' + n, JSON.stringify(d)); }catch(e){}
@@ -757,9 +775,21 @@ function paintHeroes(){
     card.append(b, sm, bf, sp);
     box.appendChild(card);
   }
+  /* 被收起來的四個：剪影＋一句預告。**故意不寫解鎖條件**——
+     寫了卻做不出來，小孩打到那一關發現沒東西會更失望（企劃書 5.2） */
+  for(const h of LOCKED_HEROES){
+    const card = document.createElement('div');
+    card.className = 'hcard lock';
+    card.innerHTML =
+      '<div class="sil">' + h.icon + '</div>' +
+      '<b>？？？</b>' +
+      '<div class="hint">' + h.hint + '</div>' +
+      '<div class="soon">🔒 ' + h.shape + '之戰士・準備中</div>';
+    box.appendChild(card);
+  }
 }
 $('heroes').addEventListener('click', e => {
-  const c = e.target.closest('.hcard'); if(!c) return;
+  const c = e.target.closest('.hcard'); if(!c || c.classList.contains('lock')) return;
   hpHero = c.dataset.h;
   paintHeroes();
   Sfx.ok(3);
@@ -825,8 +855,8 @@ function paintPlayer(){
   $('pexpText').textContent = full
     ? '已經滿等 Lv ' + MAX_LV
     : '經驗 ' + d.exp + ' / ' + Save.needExp();
-  const g = d.gear, names = {weapon:'武器', armor:'防具', charm:'飾品'};
-  $('pgear').innerHTML = ['weapon','armor','charm'].map(k => {
+  const g = d.gear || {}, names = SLOT_NAME;
+  $('pgear').innerHTML = GEAR_SLOTS.map(k => {
     const it = g[k];
     return it ? '<span style="color:' + it.color + '">' + it.icon + ' ' + it.name + '</span>'
               : '<span style="color:#6b578a">' + names[k] + '：無</span>';

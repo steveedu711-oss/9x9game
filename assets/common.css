@@ -118,6 +118,23 @@ h1{
 }
 .btn:active{transform:translateY(4px);box-shadow:0 1px 0 #a97a12}
 .btn.ghost{background:#2a1a40;color:var(--gold2);border:1px solid var(--line);box-shadow:none;font-weight:700}
+
+/* 左上角固定小按鈕：返回上一頁／重新整理，八頁共用（見 common.js） */
+.pagectrl{
+  position:fixed;left:10px;top:10px;z-index:40;display:flex;gap:6px;
+  padding-top:env(safe-area-inset-top,0);
+}
+.pcbtn{
+  width:36px;height:36px;border-radius:50%;border:1px solid var(--line);cursor:pointer;
+  background:#1d1230cc;color:var(--gold2);font-size:17px;line-height:1;
+  display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);
+  box-shadow:0 4px 12px #0006;
+}
+.pcbtn:active{transform:translateY(2px)}
+@media (max-width:480px){
+  .pagectrl{left:8px;top:8px;gap:5px}
+  .pcbtn{width:32px;height:32px;font-size:15px}
+}
 .levels{display:flex;gap:8px;width:min(96vw,560px)}
 .lv{
   flex:1;padding:9px 4px;border-radius:12px;cursor:pointer;font-size:13px;font-weight:700;
