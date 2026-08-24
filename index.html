@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>小虎乘法大冒險</title>
+<title>數學練習大冒險</title>
 <meta name="theme-color" content="#120b1c">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="assets/icon-192.png">
 <link rel="apple-touch-icon" href="assets/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="小虎乘法">
+<meta name="apple-mobile-web-app-title" content="數學練習">
 <link rel="stylesheet" href="assets/common.css">
 <style>
 /* ---------- 大廳改成底部五個分頁（2026-08-23 Steve：不要一頁滑到底，每一頁都要乾淨） ----------
@@ -352,6 +352,7 @@ body{gap:12px;padding-bottom:calc(var(--tabh) + 26px + env(safe-area-inset-botto
 /* ---------- 手機 ---------- */
 @media (max-width:520px){
   .wrap{gap:12px}
+  .welcome .big{font-size:clamp(20px,6vw,40px);letter-spacing:3px;white-space:nowrap}
   .logo h1{letter-spacing:4px}
   .player{padding:13px;gap:11px}
   .face img{width:64px;height:64px}
@@ -413,8 +414,8 @@ body{gap:12px;padding-bottom:calc(var(--tabh) + 26px + env(safe-area-inset-botto
   <!-- 第一步：歡迎 ＋ 選玩法 ＋ 帳號 -->
   <section class="step" id="s1">
     <div class="welcome">
-      <div class="big">小虎乘法大冒險</div>
-      <div class="sub">九九乘法闖關 ・ 邊玩邊變強</div>
+      <div class="big">歡迎來到數學練習大冒險</div>
+      <div class="sub">加減乘法闖關 ・ 邊玩邊變強</div>
       <img id="wimg" src="assets/fx_hero_ready.webp" alt="">
     </div>
 
@@ -459,6 +460,10 @@ body{gap:12px;padding-bottom:calc(var(--tabh) + 26px + env(safe-area-inset-botto
     <div id="topicwrap">
       <div class="sec"><h2>要練哪一種題目</h2><i></i></div>
       <div id="topicbar"></div>
+    </div>
+    <div id="rangewrap">
+      <div class="sec"><h2>加減法數字範圍</h2><i></i></div>
+      <div id="rangebar"></div>
     </div>
     <div class="panel" id="arcadeHint" style="display:none">
       <div class="hint">
@@ -900,11 +905,13 @@ function paintPlay(){
   const arc = Mode.isArcade();
   document.body.classList.toggle('arcade', arc);
   $('topicwrap').style.display  = arc ? 'none' : '';   // 娛樂模式不出題，整段題型收起來
+  $('rangewrap').style.display  = (arc || !Topic.needsRange()) ? 'none' : '';  // 純九九乘法不用挑範圍
   $('arcadeHint').style.display = arc ? '' : 'none';
   if(typeof paintNav === 'function') paintNav();
 }
 Mode.bar($('modebar'), () => { paintPlay(); paintGames(); modeBadge(); });
 Topic.bar($('topicbar'), () => { paintPlay(); });
+Range.bar($('rangebar'), () => { Topic.bar($('topicbar'), () => { paintPlay(); }); });   // 換範圍要重畫題型按鈕上的數字
 
 function paintGames(){
   const main = $('gamesMain'), sub = $('gamesSub');

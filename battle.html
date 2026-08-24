@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>小虎乘法大冒險・勇者出擊</title>
+<title>數學練習大冒險・勇者出擊</title>
 <meta name="theme-color" content="#120b1c">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="assets/icon-192.png">
 <link rel="apple-touch-icon" href="assets/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="小虎乘法">
+<meta name="apple-mobile-web-app-title" content="數學練習">
 <link rel="stylesheet" href="assets/common.css">
 <style>
 body{padding-bottom:16px}
@@ -793,6 +793,7 @@ body.arcade .qbox,body.arcade #ans{display:none}
 .setup{display:flex;flex-direction:column;gap:10px;width:min(96vw,560px)}
 .setlab{font-size:12px;color:var(--dim);letter-spacing:1px;margin-bottom:-2px}
 body.arcade #topicwrap{display:none}
+body.arcade #rangewrap{display:none}
 body:not(.arcade) #diffwrap{display:none}
 body.playing .setup{display:none}
 /* 開打之後「開始冒險」就收起來，戰鬥畫面才乾淨；
@@ -952,6 +953,10 @@ body.playing #pauseBtn{display:flex}
     <div id="topicwrap">
       <div class="setlab">練習模式要出哪種題目</div>
       <div id="topicbar"></div>
+    </div>
+    <div id="rangewrap">
+      <div class="setlab">加減法數字範圍</div>
+      <div id="rangebar"></div>
     </div>
     <div id="diffwrap">
       <div class="setlab">娛樂模式的難度</div>
@@ -2705,7 +2710,10 @@ document.addEventListener('keydown', e => {
   }
 });
 Mode.readonly($('modebar'));
-Topic.bar($('topicbar'));
+function paintRangeVis(){ $('rangewrap').style.display = Topic.needsRange() ? '' : 'none'; }
+Topic.bar($('topicbar'), () => paintRangeVis());
+Range.bar($('rangebar'), () => Topic.bar($('topicbar'), () => paintRangeVis()));
+paintRangeVis();
 $('difbar').onclick = (e) => {
   const d = e.target.closest('.lv'); if(!d) return;
   try{ localStorage.setItem(DIFF_KEY, d.dataset.d); }catch(err){}

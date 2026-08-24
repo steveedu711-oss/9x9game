@@ -1,4 +1,4 @@
-/* 小虎乘法大冒險 共用程式：角色演出、音效、背景金幣、答題紀錄、飄分粒子
+/* 數學練習大冒險 共用程式：角色演出、音效、背景金幣、答題紀錄、飄分粒子
    三個玩法版本共用同一份，改這裡三版一起改 */
 
 const $ = id => document.getElementById(id);
@@ -627,24 +627,47 @@ const Mode = {
    Stats 的 key 直接用算式（「7＋8」「12－5」「5×3」），三種題型的統計自然分開。 */
 const TOPIC_KEY = 'mul99_topic';
 const TOPICS = {
-  mul:    {n:'九九乘法', d:'2×2 到 9×9'},
-  add:    {n:'加法',     d:'20 以內'},
-  sub:    {n:'減法',     d:'20 以內，不會出負數'},
-  addsub: {n:'加減混合', d:'20 以內'},
+  mul:    {n:'九九乘法', d:'1～9 乘法'},
+  add:    {n:'加法',     d:'{r} 以內'},
+  sub:    {n:'減法',     d:'{r} 以內，不會出負數'},
+  addsub: {n:'加減混合', d:'{r} 以內'},
   all:    {n:'全部混合', d:'加減乘一起來'}
+};
+/* 加減法數字範圍（2026-08-24 Steve：家長要能自己選，不是固定 20 以內） */
+const RANGE_KEY = 'mul99_range';
+const RANGES = [10, 20, 50, 100];
+const Range = {
+  get(){ try{ const v = parseInt(localStorage.getItem(RANGE_KEY), 10); return RANGES.includes(v) ? v : 20; }catch(e){ return 20; } },
+  set(v){ try{ localStorage.setItem(RANGE_KEY, String(v)); }catch(e){} },
+  /* 畫出範圍選單；onChange 回傳新範圍。只有加／減／加減混合／全部混合用得到 */
+  bar(el, onChange){
+    if(!el) return;
+    el.className = 'topicbar';
+    el.innerHTML = RANGES.map(v =>
+      '<button data-v="' + v + '">' + v + ' 以內</button>').join('');
+    const paint = () => [...el.children].forEach(b => b.classList.toggle('on', +b.dataset.v === Range.get()));
+    el.onclick = (e) => {
+      const b = e.target.closest('button'); if(!b) return;
+      Range.set(+b.dataset.v); paint(); onChange && onChange(Range.get());
+    };
+    paint();
+  }
 };
 const Topic = {
   get(){ try{ const t = localStorage.getItem(TOPIC_KEY); return TOPICS[t] ? t : 'mul'; }catch(e){ return 'mul'; } },
   set(t){ try{ localStorage.setItem(TOPIC_KEY, t); }catch(e){} },
   name(){ return TOPICS[this.get()].n; },
   isMul(){ return this.get() === 'mul'; },
+  needsRange(){ return this.get() !== 'mul'; },   // 只有純九九乘法不用挑數字範圍
   /* 畫出題型選單；onChange 回傳新題型 */
   bar(el, onChange){
     if(!el) return;
     el.className = 'topicbar';
-    el.innerHTML = Object.keys(TOPICS).map(k =>
-      '<button data-t="' + k + '">' + TOPICS[k].n + '<b>' + TOPICS[k].d + '</b></button>').join('');
-    const paint = () => [...el.children].forEach(b => b.classList.toggle('on', b.dataset.t === Topic.get()));
+    const paint = () => {
+      el.innerHTML = Object.keys(TOPICS).map(k =>
+        '<button data-t="' + k + '">' + TOPICS[k].n + '<b>' + TOPICS[k].d.replace('{r}', Range.get()) + '</b></button>').join('');
+      [...el.children].forEach(b => b.classList.toggle('on', b.dataset.t === Topic.get()));
+    };
     el.onclick = (e) => {
       const b = e.target.closest('button'); if(!b) return;
       Topic.set(b.dataset.t); paint(); onChange && onChange(Topic.get());
@@ -660,11 +683,13 @@ function makeQ(weak){
   if(t === 'all')    t = ['add','sub','mul'][(Math.random()*3)|0];
   let a, b, op, ans;
   if(t === 'add'){
-    a = 1 + (Math.random()*15|0);
-    b = 1 + (Math.random()*(20 - a)|0);
+    const r = Range.get();
+    a = 1 + (Math.random()*(r - 5)|0);
+    b = 1 + (Math.random()*(r - a)|0);
     op = '＋'; ans = a + b;
   }else if(t === 'sub'){
-    a = 3 + (Math.random()*18|0);          // 被減數 3～20
+    const r = Range.get();
+    a = 3 + (Math.random()*(r - 2)|0);     // 被減數 3～r
     b = 1 + (Math.random()*(a - 1)|0);     // 減數比它小，答案不會是負的
     op = '－'; ans = a - b;
   }else{

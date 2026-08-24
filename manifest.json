@@ -1,7 +1,7 @@
 {
-  "name": "小虎乘法大冒險",
-  "short_name": "小虎乘法",
-  "description": "九九乘法闖關，一個大廳加七個小遊戲",
+  "name": "數學練習大冒險",
+  "short_name": "數學練習",
+  "description": "加減乘法闖關，一個大廳加七個小遊戲",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",

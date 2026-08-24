@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>小虎乘法大冒險・找答案挑戰</title>
+<title>數學練習大冒險・找答案挑戰</title>
 <meta name="theme-color" content="#120b1c">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="assets/icon-192.png">
 <link rel="apple-touch-icon" href="assets/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="小虎乘法">
+<meta name="apple-mobile-web-app-title" content="數學練習">
 <style>
 :root{
   --bg:#120b1c; --bg2:#241634; --panel:#1d1230; --line:#573a7d;
@@ -391,6 +391,8 @@ h1{
   <div class="topicbar" id="modebar"></div>
   <div id="topicwrap"><div class="setlab2">要出哪種題目</div>
   <div class="topicbar" id="topicbar"></div></div>
+  <div id="rangewrap"><div class="setlab2">加減法數字範圍</div>
+  <div class="topicbar" id="rangebar"></div></div>
   <div class="setlab2">難度</div>
   <div class="levels" id="levels">
     <button class="lv on" data-lv="0">初級<b>2～5 的乘法</b></button>
@@ -493,16 +495,22 @@ function topicNow(){
   try{ const t = localStorage.getItem(TOPIC_KEY2); return TOPICS2[t] ? t : 'mul'; }catch(e){ return 'mul'; }
 }
 let qop = '×';
+const RANGE_KEY2 = 'mul99_range', RANGES2 = [10, 20, 50, 100];
+function rangeNow(){
+  try{ const v = parseInt(localStorage.getItem(RANGE_KEY2), 10); return RANGES2.includes(v) ? v : 20; }catch(e){ return 20; }
+}
 function pickQ(L){
   let t = topicNow();
   if(t === 'addsub') t = Math.random() < .5 ? 'add' : 'sub';
   if(t === 'all')    t = ['add','sub','mul'][(Math.random()*3)|0];
   if(t === 'add'){
-    const a = 1 + (Math.random()*15|0), b = 1 + (Math.random()*(20-a)|0);
+    const r = rangeNow();
+    const a = 1 + (Math.random()*(r-5)|0), b = 1 + (Math.random()*(r-a)|0);
     return {a:a, b:b, op:'＋', ans:a+b};
   }
   if(t === 'sub'){
-    const a = 3 + (Math.random()*18|0), b = 1 + (Math.random()*(a-1)|0);
+    const r = rangeNow();
+    const a = 3 + (Math.random()*(r-2)|0), b = 1 + (Math.random()*(a-1)|0);
     return {a:a, b:b, op:'－', ans:a-b};
   }
   const a = L.a[(Math.random()*L.a.length)|0], b = L.b[(Math.random()*L.b.length)|0];
@@ -831,14 +839,29 @@ function end(){
 /* 題型選單（這頁自己畫一份，選擇跟其他頁共用同一把 localStorage） */
 (function(){
   const el = $('topicbar');
-  const D = {mul:'2×2 到 9×9', add:'20 以內', sub:'20 以內，不會出負數', addsub:'20 以內', all:'加減乘一起來'};
-  el.innerHTML = Object.keys(TOPICS2).map(k =>
-    '<button data-t="' + k + '">' + TOPICS2[k] + '<b>' + D[k] + '</b></button>').join('');
-  const paint = () => [...el.children].forEach(b => b.classList.toggle('on', b.dataset.t === topicNow()));
+  const rel = $('rangebar');
+  const D = {mul:'1～9 乘法', add:'{r} 以內', sub:'{r} 以內，不會出負數', addsub:'{r} 以內', all:'加減乘一起來'};
+  const paintRange = () => {
+    if(!rel) return;
+    rel.innerHTML = RANGES2.map(v => '<button data-v="' + v + '">' + v + ' 以內</button>').join('');
+    [...rel.children].forEach(b => b.classList.toggle('on', +b.dataset.v === rangeNow()));
+    $('rangewrap').style.display = topicNow() === 'mul' ? 'none' : '';
+  };
+  const paint = () => {
+    el.innerHTML = Object.keys(TOPICS2).map(k =>
+      '<button data-t="' + k + '">' + TOPICS2[k] + '<b>' + D[k].replace('{r}', rangeNow()) + '</b></button>').join('');
+    [...el.children].forEach(b => b.classList.toggle('on', b.dataset.t === topicNow()));
+    paintRange();
+  };
   el.onclick = (e) => {
     const b = e.target.closest('button'); if(!b) return;
     try{ localStorage.setItem(TOPIC_KEY2, b.dataset.t); }catch(err){}
     paint();
+  };
+  if(rel) rel.onclick = (e) => {
+    const b = e.target.closest('button'); if(!b) return;
+    try{ localStorage.setItem(RANGE_KEY2, b.dataset.v); }catch(err){}
+    paint();          // 範圍變了，題型按鈕上的「20 以內」字樣也要一起重畫
   };
   paint();
 })();
@@ -849,6 +872,7 @@ function end(){
   el.className = 'modeshow';
   el.innerHTML = '<b>' + (arcadeNow() ? '娛樂模式' : '練習模式') + '</b><span>要換模式請回大廳</span>';
   document.getElementById('topicwrap').style.display = arcadeNow() ? 'none' : '';
+  if(arcadeNow()) document.getElementById('rangewrap').style.display = 'none';
 })();
 
 $('start').onclick = start;
