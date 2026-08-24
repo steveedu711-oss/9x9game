@@ -19,11 +19,16 @@
 :root{--tabh:64px}
 body{gap:12px;padding-bottom:calc(var(--tabh) + 26px + env(safe-area-inset-bottom,0px))}
 .wrap{width:min(96vw,620px);display:flex;flex-direction:column;gap:14px}
+/* 第一步內容比較少，垂直置中比讓下面空一大片好看（只有第一步這樣，別的步驟內容多，維持頂對齊） */
+body.atRoot .wrap{min-height:calc(100dvh - 190px);justify-content:center}
 
 /* 一步一頁：一次只顯示一步，不要全部擠在同一頁 */
 .step{display:none;flex-direction:column;gap:14px;animation:pgIn .22s ease-out}
 .step.on{display:flex}
 @keyframes pgIn{from{opacity:0;transform:translateY(8px)}}
+
+/* 第一步已經是大廳最上層，左上角返回鍵在這裡沒有更上一層可回，變暗表示按了沒反應 */
+body.atRoot .pagectrl .pcbtn[data-act="back"]{opacity:.35;pointer-events:none}
 
 /* 上面的進度：現在走到第幾步、還有幾步 */
 .stepbar{display:flex;align-items:center;gap:6px;justify-content:center;margin:2px 0 2px}
@@ -61,24 +66,29 @@ body{gap:12px;padding-bottom:calc(var(--tabh) + 26px + env(safe-area-inset-botto
 .zoomtip{bottom:calc(var(--tabh) + 28px + env(safe-area-inset-bottom,0px)) !important}
 
 /* ---------- 第一步：歡迎畫面 ---------- */
-.welcome{text-align:center;padding:6px 0 2px}
+.welcome{text-align:center;padding:4px 0 2px;position:relative}
 .welcome .big{
-  font-size:clamp(26px,7vw,40px);font-weight:900;letter-spacing:6px;color:var(--gold2);
-  text-shadow:0 3px 0 #7a4a00,0 8px 26px #000a;
+  font-size:clamp(24px,6.6vw,38px);font-weight:900;letter-spacing:5px;color:var(--gold2);
+  text-shadow:0 3px 0 #7a4a00,0 8px 26px #000a;position:relative;z-index:2;
 }
-.welcome .sub{font-size:13px;color:var(--dim);letter-spacing:2px;margin-top:6px}
-.welcome img{
-  width:min(52vw,190px);height:auto;margin:10px auto 2px;display:block;
+.welcome .sub{font-size:13px;color:var(--dim);letter-spacing:2px;margin-top:6px;position:relative;z-index:2}
+
+/* 傳送門：角色站在會慢慢轉的金色符文環裡出場，呼應出擊頁戰場的拱門 */
+.portal{position:relative;width:min(56vw,210px);height:min(56vw,210px);margin:16px auto 0}
+.portal::before{
+  content:"";position:absolute;inset:4%;border-radius:50%;
+  background:radial-gradient(circle,#f6c4532e 0%,#a855f724 52%,transparent 74%);
+}
+.portal::after{
+  content:"";position:absolute;inset:0;border-radius:50%;border:2px dashed #f6c45359;
+  animation:portalspin 24s linear infinite;
+}
+.portal img{
+  position:relative;z-index:2;width:80%;height:auto;display:block;margin:10% auto 0;
   filter:drop-shadow(0 10px 22px #000a);animation:wfloat 3.4s ease-in-out infinite alternate;
 }
+@keyframes portalspin{to{transform:rotate(360deg)}}
 @keyframes wfloat{to{transform:translateY(-8px)}}
-.quickbtn{
-  width:100%;min-height:56px;border-radius:16px;cursor:pointer;font-family:inherit;
-  font-size:15px;font-weight:800;letter-spacing:2px;color:var(--gold2);
-  background:linear-gradient(180deg,#3a2456,#241638);border:1px solid var(--gold);
-}
-.quickbtn small{display:block;font-size:11px;font-weight:700;color:var(--dim);letter-spacing:1px;margin-top:3px}
-.quickbtn:active{transform:translateY(3px)}
 .statlink{
   width:100%;height:44px;border-radius:12px;cursor:pointer;
   background:#251739;border:1px solid var(--line);color:var(--dim);font-size:13px;font-weight:700;
@@ -416,7 +426,9 @@ body{gap:12px;padding-bottom:calc(var(--tabh) + 26px + env(safe-area-inset-botto
     <div class="welcome">
       <div class="big">歡迎來到數學練習大冒險</div>
       <div class="sub">加減乘法闖關 ・ 邊玩邊變強</div>
-      <img id="wimg" src="assets/fx_hero_ready.webp" alt="">
+      <div class="portal">
+        <img id="wimg" src="assets/fx_hero_ready.webp" alt="">
+      </div>
     </div>
 
     <div class="sec"><h2>要怎麼玩</h2><i></i></div>
@@ -424,8 +436,6 @@ body{gap:12px;padding-bottom:calc(var(--tabh) + 26px + env(safe-area-inset-botto
 
     <div class="sec"><h2>帳號</h2><i></i></div>
     <div id="userbar" class="userbar"></div>
-
-    <button class="quickbtn" id="quickBtn" style="display:none">⚡ 快 速 開 始<small></small></button>
   </section>
 
   <!-- 第二步：選角色 -->
@@ -602,7 +612,8 @@ function gameCard(g){
 /* ---------- 一步一頁的流程（2026-08-24 Steve：不要全部擠在一頁） ----------
    ① 歡迎＋選玩法＋帳號 → ② 選角色 → ③ 選主線或小遊戲 → 進戰鬥（battle.html）
    跟原本的底部分頁不一樣：分頁是「隨時亂跳」，流程是「一步一步走」，
-   對小學生直觀得多。代價是熟練的玩家每次都要走三步——所以第一步給老玩家「快速開始」。 */
+   對小學生直觀得多。2026-08-24 Steve：拿掉「快速開始」，就是要每個人都走完三步，
+   不要留跳過引導的後門。 */
 const STEPS = ['s1','s2','s3'];
 const STEP_NAME = ['開始', '角色', '玩什麼'];
 let step = 0;
@@ -629,24 +640,17 @@ function paintNav(){
 function goStep(k){
   step = Math.max(0, Math.min(STEPS.length - 1, k));
   STEPS.forEach((id, n) => $(id).classList.toggle('on', n === step));
+  document.body.classList.toggle('atRoot', step === 0);   // 第一步已經是最上層，左上角返回鍵要跟著變暗
   paintStepBar(); paintNav();
   window.scrollTo({top:0, behavior:'instant'});
 }
+/* 左上角「返回上一層」在大廳的意思是「上一步」，不是瀏覽器上一頁（見 common.js pagectrl） */
+window.appBack = () => { if(step > 0){ goStep(step - 1); Sfx.ok(1); } };
 $('navBack').onclick = () => { goStep(step - 1); Sfx.ok(1); };
 $('navNext').onclick = () => {
   if(step < STEPS.length - 1){ goStep(step + 1); Sfx.ok(2); }
   else location.href = 'battle.html';
 };
-/* 老玩家不用每次都走三步 */
-$('quickBtn').onclick = () => { location.href = 'battle.html'; };
-function paintQuick(){
-  const d = Save.peek(curSlot());
-  const btn = $('quickBtn');
-  if(!d){ btn.style.display = 'none'; return; }
-  btn.style.display = '';
-  btn.querySelector('small').textContent =
-    (d.pname || heroOf(d.hero).name) + '　Lv ' + d.lv + '　直接進主線';
-}
 
 /* 練習狀況：不放進主流程（那是給大人看的），要看才打開 */
 $('statBtn').onclick = () => { paintStats(); $('statwin').classList.add('on'); };
@@ -941,7 +945,7 @@ $('clearAll').onclick = () => {
 startCoins();
 paintUser();
 paintPlay(); modeBadge();
-paintPlayer(); paintSlots(); paintGames(); paintStats(); paintQuick();
+paintPlayer(); paintSlots(); paintGames(); paintStats();
 
 /* 一個角色都還沒建過就直接停在「選角色」那一步（不然按下一步也沒得選）；
    其餘照上次停的地方，離開再回來不用重走 */

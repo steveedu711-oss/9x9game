@@ -569,8 +569,8 @@ const Mode = {
     if(!el) return;
     el.className = 'modebar';
     el.innerHTML =
-      '<button data-m="practice"><b>練習模式</b><small>會出算術題</small></button>' +
-      '<button data-m="arcade"><b>娛樂模式</b><small>不出題，需要密碼</small></button>';
+      '<button data-m="practice"><i>📖</i><b>練習模式</b><small>會出算術題</small></button>' +
+      '<button data-m="arcade"><i>🎮</i><b>娛樂模式</b><small>不出題，需要密碼</small></button>';
     const paint = () => [...el.children].forEach(b =>
       b.classList.toggle('on', b.dataset.m === Mode.get()));
     el.onclick = (e) => {
@@ -763,17 +763,24 @@ const Fx = {
 };
 addEventListener('DOMContentLoaded', () => Fx.apply());
 
-/* ---------- 頁面控制小按鈕：返回上一頁／重新整理，固定左上角，八頁共用 ---------- */
+/* ---------- 頁面控制小按鈕：返回上一層／重新整理，固定左上角，八頁共用 ----------
+   2026-08-24 Steve 糾正：「返回上一層」是遊戲裡的上一層，不是瀏覽器的上一頁
+   （history.back() 會跳出遊戲去瀏覽器歷史，行為不受控）。
+   預設＝回大廳（index.html 就是最上層，這裡沒有更上一層可回）；
+   大廳自己（有一步一頁流程）要回上一步時，蓋掉 window.appBack 就好。 */
 addEventListener('DOMContentLoaded', () => {
   const box = document.createElement('div');
   box.className = 'pagectrl';
+  const isLobby = /(^|\/)index\.html$/.test(location.pathname) || /\/$/.test(location.pathname);
   box.innerHTML =
-    '<button type="button" class="pcbtn" data-act="back" aria-label="返回上一頁" title="返回上一頁">←</button>' +
+    '<button type="button" class="pcbtn" data-act="back" aria-label="返回上一層" title="返回上一層">←</button>' +
     '<button type="button" class="pcbtn" data-act="reload" aria-label="重新整理" title="重新整理">⟳</button>';
   box.addEventListener('click', e => {
     const b = e.target.closest('.pcbtn'); if(!b) return;
-    if(b.dataset.act === 'back') history.back();
-    else location.reload();
+    if(b.dataset.act === 'back'){
+      if(typeof window.appBack === 'function') window.appBack();
+      else if(!isLobby) location.href = 'index.html';   // 子頁面沒定義就回大廳
+    }else location.reload();
   });
   document.body.appendChild(box);
 });

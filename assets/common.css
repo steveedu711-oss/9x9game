@@ -210,21 +210,28 @@ h1{
 }
 
 /* ---------- 模式切換（練習／純玩，八頁共用） ---------- */
-.modebar{display:flex;gap:8px;width:100%}
+.modebar{display:flex;gap:10px;width:100%}
 .modebar button{
-  flex:1;min-height:52px;padding:7px 10px;border-radius:14px;cursor:pointer;
-  background:#251739;border:1px solid var(--line);color:var(--dim);
-  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
-  transition:transform .14s ease,border-color .18s,background .18s;
+  position:relative;flex:1;min-height:52px;padding:14px 10px;border-radius:16px;cursor:pointer;
+  background:linear-gradient(180deg,#2a1a40,#1d1230);border:1px solid var(--line);color:var(--dim);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+  transition:transform .14s ease,border-color .18s,background .18s,box-shadow .18s;
 }
+.modebar button i{font-size:22px;font-style:normal;line-height:1;margin-bottom:2px;filter:grayscale(.5) opacity(.7)}
 .modebar button b{font-size:15px;font-weight:800;letter-spacing:1px}
 .modebar button small{font-size:11px;opacity:.85}
 .modebar button:hover{transform:translateY(-2px);border-color:#8a63c9}
 .modebar button.on{
   background:linear-gradient(180deg,#523775,#2c1b42);border-color:var(--gold);color:var(--text);
-  box-shadow:0 0 0 2px #f6c45333,0 8px 20px #0009;
+  box-shadow:0 0 0 2px #f6c45333,0 10px 24px #0009;
 }
+.modebar button.on i{filter:none}
 .modebar button.on b{color:var(--gold2)}
+.modebar button.on::after{
+  content:"✓";position:absolute;top:8px;right:10px;width:18px;height:18px;border-radius:50%;
+  background:var(--gold);color:#3a2400;font-size:11px;font-weight:900;
+  display:flex;align-items:center;justify-content:center;
+}
 
 /* ---------- 題型選單 ---------- */
 .topicbar{display:flex;gap:6px;width:100%;flex-wrap:wrap}
