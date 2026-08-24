@@ -234,9 +234,12 @@ h1{
 }
 
 /* ---------- 題型選單 ---------- */
-.topicbar{display:flex;gap:6px;width:100%;flex-wrap:wrap}
+/* 2026-08-24 Steve 回報：題型鈕在寬一點的螢幕會 5 顆硬擠一排，「減法」字幕比較長
+   就被擠到換行、看起來亂。改用 grid＋固定最小寬度，塞不下就整顆換到下一排，
+   不會有「同一排裡有的擠、有的鬆」的問題。 */
+.topicbar{display:grid;grid-template-columns:repeat(auto-fit,minmax(116px,1fr));gap:8px;width:100%}
 .topicbar button{
-  flex:1 1 88px;min-height:46px;padding:6px 8px;border-radius:12px;cursor:pointer;
+  min-height:46px;padding:8px 8px;border-radius:12px;cursor:pointer;
   background:#2a1a40;border:1px solid var(--line);color:var(--gold2);
   font-size:13px;font-weight:700;line-height:1.35;
 }

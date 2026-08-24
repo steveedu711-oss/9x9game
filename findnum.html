@@ -307,9 +307,9 @@ h1{
 .modeshow b{font-size:14px;color:#ffe9a8;letter-spacing:1px}
 .modeshow span{font-size:11px;color:#a894c4}
 .setlab2{font-size:12px;color:#a894c4;letter-spacing:1px;width:min(96vw,560px);margin-bottom:-4px}
-.topicbar{display:flex;gap:6px;width:min(96vw,560px);flex-wrap:wrap}
+.topicbar{display:grid;grid-template-columns:repeat(auto-fit,minmax(116px,1fr));gap:8px;width:min(96vw,560px)}
 .topicbar button{
-  flex:1 1 88px;min-height:46px;padding:6px 8px;border-radius:12px;cursor:pointer;
+  min-height:46px;padding:8px 8px;border-radius:12px;cursor:pointer;
   background:#2a1a40;border:1px solid #573a7d;color:#ffe9a8;font-size:13px;font-weight:700;
   line-height:1.35;font-family:inherit;
 }

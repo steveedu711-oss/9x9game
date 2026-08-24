@@ -42,7 +42,13 @@ body.atRoot .pagectrl .pcbtn[data-act="back"]{opacity:.35;pointer-events:none}
 .stepbar b.done{background:#3a2456;color:var(--gold2);border-color:#8a63c9}
 .stepbar i{flex:0 1 34px;height:2px;background:#2e1c47;border-radius:2px}
 .stepbar i.done{background:#8a63c9}
-.stepbar span{font-size:12px;color:var(--dim);letter-spacing:1px;margin-left:6px}
+/* 2026-08-24 Steve 回報：這個字太小、顏色又暗，飄過的背景金幣一蓋過去就看不清是中文字。
+   加個底色小標籤，不管金幣飄到哪都還是看得清楚現在是哪一步。 */
+.stepbar span{
+  font-size:12px;color:var(--gold2);font-weight:700;letter-spacing:1px;margin-left:4px;
+  padding:4px 10px;border-radius:999px;background:#2a1a40;border:1px solid var(--line);
+  position:relative;z-index:1;white-space:nowrap;
+}
 
 /* 底下的上一步／下一步 */
 .navbar{
