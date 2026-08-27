@@ -448,6 +448,10 @@ body.atRoot .pagectrl .pcbtn[data-act="back"]{opacity:.35;pointer-events:none}
       <div class="sec"><h2>加減法數字範圍</h2><i></i></div>
       <div id="rangebar"></div>
     </div>
+    <div id="voicewrap">
+      <div class="sec"><h2>題目要不要唸出來</h2><i></i></div>
+      <div id="voicebar"></div>
+    </div>
     <div class="panel" id="arcadeHint" style="display:none">
       <div class="hint">
         娛樂模式<b>不出題</b>，按攻擊與閃避自己打怪。<br>
@@ -536,6 +540,7 @@ body.atRoot .pagectrl .pcbtn[data-act="back"]{opacity:.35;pointer-events:none}
 </div>
 
 <script src="assets/common.js"></script>
+<script>Topic.lang = true;   /* 這一頁做得起注音／字母題（2026-08-27） */</script>
 <script>
 /* 遊戲清單：要加新遊戲只改這一份，卡片與紀錄都會自己長出來 */
 const GAMES = [
@@ -921,11 +926,13 @@ function paintPlay(){
   $('topicwrap').style.display  = arc ? 'none' : '';   // 娛樂模式不出題，整段題型收起來
   $('rangewrap').style.display  = (arc || !Topic.needsRange()) ? 'none' : '';  // 純九九乘法不用挑範圍
   $('arcadeHint').style.display = arc ? '' : 'none';
+  $('voicewrap').style.display  = arc ? 'none' : '';   // 娛樂模式不出題，也就沒有題目要唸
   if(typeof paintNav === 'function') paintNav();
 }
 Mode.bar($('modebar'), () => { paintPlay(); paintGames(); modeBadge(); });
 Topic.bar($('topicbar'), () => { paintPlay(); });
 Range.bar($('rangebar'), () => { Topic.bar($('topicbar'), () => { paintPlay(); }); });   // 換範圍要重畫題型按鈕上的數字
+Voice.bar($('voicebar'));
 
 function paintGames(){
   const main = $('gamesMain'), sub = $('gamesSub');

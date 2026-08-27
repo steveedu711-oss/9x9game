@@ -627,12 +627,16 @@ const Mode = {
    Stats 的 key 直接用算式（「7＋8」「12－5」「5×3」），三種題型的統計自然分開。 */
 const TOPIC_KEY = 'mul99_topic';
 const TOPICS = {
-  mul:    {n:'九九乘法', d:'1～9 乘法'},
-  add:    {n:'加法',     d:'{r} 以內'},
-  sub:    {n:'減法',     d:'{r} 以內，不會出負數'},
-  addsub: {n:'加減混合', d:'{r} 以內'},
-  all:    {n:'全部混合', d:'加減乘一起來'}
+  mul:    {n:'九九乘法', d:'1～9 乘法',           g:'math'},
+  add:    {n:'加法',     d:'{r} 以內',            g:'math'},
+  sub:    {n:'減法',     d:'{r} 以內，不會出負數', g:'math'},
+  addsub: {n:'加減混合', d:'{r} 以內',            g:'math'},
+  all:    {n:'全部混合', d:'加減乘一起來',        g:'math'},
+  /* 2026-08-27 Steve：低年級還不會算數學，先練聽發音認符號 */
+  zhuyin: {n:'注音符號', d:'聽發音選 ㄅㄆㄇ',     g:'lang'},
+  abc:    {n:'英文字母', d:'聽發音選 A～Z',       g:'lang'}
 };
+const TOPIC_GROUPS = [{k:'math', n:'數學'}, {k:'lang', n:'語文'}];
 /* 加減法數字範圍（2026-08-24 Steve：家長要能自己選，不是固定 20 以內） */
 const RANGE_KEY = 'mul99_range';
 const RANGES = [10, 20, 50, 100];
@@ -654,19 +658,29 @@ const Range = {
   }
 };
 const Topic = {
+  /* 語文題（注音／字母）只有勇者出擊做得起來，別的小遊戲玩法綁死數字。
+     支援的頁面自己把這個打開（battle.html 開頭那一行），沒開的頁面會退回九九乘法，
+     題型選單也不會畫出語文那一組——選了卻沒用才是最糟的。 */
+  lang: false,
   get(){ try{ const t = localStorage.getItem(TOPIC_KEY); return TOPICS[t] ? t : 'mul'; }catch(e){ return 'mul'; } },
   set(t){ try{ localStorage.setItem(TOPIC_KEY, t); }catch(e){} },
   name(){ return TOPICS[this.get()].n; },
   isMul(){ return this.get() === 'mul'; },
-  needsRange(){ return this.get() !== 'mul'; },   // 只有純九九乘法不用挑數字範圍
-  /* 畫出題型選單；onChange 回傳新題型 */
+  /* 語文題（注音／字母）：答案是符號不是數字，數字範圍與怪物弱點都用不到 */
+  isLang(t){ return TOPICS[t || this.get()].g === 'lang'; },
+  needsRange(){ const t = this.get(); return t !== 'mul' && !this.isLang(t); },
+  /* 畫出題型選單；onChange 回傳新題型。題型多了以後分「數學／語文」兩組，不然手機上擠成一團 */
   bar(el, onChange){
     if(!el) return;
-    el.className = 'topicbar';
+    el.className = 'topicbar grouped';
     const paint = () => {
-      el.innerHTML = Object.keys(TOPICS).map(k =>
-        '<button data-t="' + k + '">' + TOPICS[k].n + '<b>' + TOPICS[k].d.replace('{r}', Range.get()) + '</b></button>').join('');
-      [...el.children].forEach(b => b.classList.toggle('on', b.dataset.t === Topic.get()));
+      el.innerHTML = TOPIC_GROUPS.filter(g => Topic.lang || g.k !== 'lang').map(g =>
+        '<div class="tgname">' + g.n + '</div><div class="tgrow">' +
+        Object.keys(TOPICS).filter(k => TOPICS[k].g === g.k).map(k =>
+          '<button data-t="' + k + '">' + TOPICS[k].n + '<b>' +
+          TOPICS[k].d.replace('{r}', Range.get()) + '</b></button>').join('') +
+        '</div>').join('');
+      [...el.querySelectorAll('button')].forEach(b => b.classList.toggle('on', b.dataset.t === Topic.get()));
     };
     el.onclick = (e) => {
       const b = e.target.closest('button'); if(!b) return;
@@ -675,12 +689,37 @@ const Topic = {
     paint();
   }
 };
+/* ---------- 語文題的符號池（2026-08-27） ----------
+   注音 37 個照教育部順序排，索引 +1 就是音檔編號（zy_01～zy_37），
+   順序必須跟 tools/make_voice.py 的 ZHUYIN 一模一樣，改一邊要改兩邊。 */
+const ZHUYIN_LIST = [
+  'ㄅ','ㄆ','ㄇ','ㄈ','ㄉ','ㄊ','ㄋ','ㄌ','ㄍ','ㄎ','ㄏ','ㄐ','ㄑ','ㄒ',
+  'ㄓ','ㄔ','ㄕ','ㄖ','ㄗ','ㄘ','ㄙ','ㄚ','ㄛ','ㄜ','ㄝ','ㄞ','ㄟ','ㄠ',
+  'ㄡ','ㄢ','ㄣ','ㄤ','ㄥ','ㄦ','ㄧ','ㄨ','ㄩ'
+];
+const ABC_LIST = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+
 /* 出一題。weak＝這隻怪害怕的乘法表（只有乘法題用得到，別的題型忽略）
    回傳 {a, b, op, ans, text, key, weak}；text 已經是可以直接放進畫面的字串 */
 function makeQ(weak){
   let t = Topic.get();
+  if(!Topic.lang && Topic.isLang(t)) t = 'mul';   // 這一頁不支援語文題就照舊出乘法
   if(t === 'addsub') t = Math.random() < .5 ? 'add' : 'sub';
   if(t === 'all')    t = ['add','sub','mul'][(Math.random()*3)|0];
+  /* 語文題：答案是符號不是數字，也沒有弱點加倍那回事 */
+  if(t === 'zhuyin'){
+    const i = (Math.random()*ZHUYIN_LIST.length)|0, s = ZHUYIN_LIST[i];
+    return {a:null, b:null, op:'', ans:s, text:s, key:s, kind:t,
+            weak:false, sym:true, clip:'zy_' + String(i+1).padStart(2,'0')};
+  }
+  if(t === 'abc'){
+    const i = (Math.random()*ABC_LIST.length)|0, c = ABC_LIST[i];
+    /* 大小寫都要練，但同一題四個選項一定同一種寫法，才不會出現兩個都對 */
+    const up = Math.random() < .5;
+    const s = up ? c : c.toLowerCase();
+    return {a:null, b:null, op:'', ans:s, text:s, key:c, kind:t, upper:up,
+            weak:false, sym:true, clip:'ab_' + c.toLowerCase()};
+  }
   let a, b, op, ans;
   if(t === 'add'){
     const r = Range.get();
@@ -704,6 +743,16 @@ function makeQ(weak){
 /* 幫一題湊出 n 個選項（含正解），數字都不重複也不會是負的 */
 function makeOptions(q, n){
   n = n || 4;
+  /* 符號題：從同一個池子裡抽幾個不一樣的來當混淆項 */
+  if(q.sym){
+    const pool = q.kind === 'zhuyin'
+      ? ZHUYIN_LIST
+      : (q.upper ? ABC_LIST : ABC_LIST.map(c => c.toLowerCase()));
+    const cand = new Set([q.ans]);
+    let guard = 0;
+    while(cand.size < n && guard++ < 400) cand.add(pool[(Math.random()*pool.length)|0]);
+    return [...cand].slice(0, n).sort(()=>Math.random()-.5);
+  }
   const cand = new Set([q.ans]);
   const near = q.op === '×'
     ? [q.a*(q.b+1), q.a*(q.b-1), (q.a+1)*q.b, (q.a-1)*q.b, q.ans+q.a, q.ans-q.b, q.ans+2, q.ans-3]
@@ -716,6 +765,92 @@ function makeOptions(q, n){
   while(cand.size < n){ if(!cand.has(q.ans + extra)) cand.add(q.ans + extra); extra++; }
   return [...cand].slice(0, n).sort(()=>Math.random()-.5);
 }
+
+/* ---------- 唸題目（2026-08-27 Steve：低年級還不認得字，題目要唸出來） ----------
+   音檔在 assets/voice/，由 tools/make_voice.py 用 edge-tts 產好放著，玩的時候不連網。
+   數學題沒辦法每一題都預錄（組合太多），改成數字與運算詞現場接起來唸。
+   三段開關：全部唸／只唸注音字母（預設）／全關——數學題每題都唸會拖慢戰鬥節奏。 */
+const VOICE_KEY = 'mul99_voice';
+const VOICE_MODES = [
+  {k:'all',  n:'全部唸',       d:'數學題也唸'},
+  {k:'lang', n:'只唸注音字母', d:'數學題安靜'},
+  {k:'off',  n:'關閉',         d:'完全不出聲'}
+];
+const Voice = {
+  _cache: {},
+  _cur: null,        // 目前正在播的那一串，換題時要能中斷
+  _seq: 0,
+  get(){ try{ const v = localStorage.getItem(VOICE_KEY); return VOICE_MODES.some(m=>m.k===v) ? v : 'lang'; }catch(e){ return 'lang'; } },
+  set(v){ try{ localStorage.setItem(VOICE_KEY, v); }catch(e){} },
+  /* 這一題該不該唸。符號題只要沒關就唸，數學題只有「全部唸」才唸 */
+  on(q){ const m = this.get(); return m !== 'off' && (m === 'all' || !!(q && q.sym)); },
+  el(clip){
+    let a = this._cache[clip];
+    if(!a){ a = this._cache[clip] = new Audio('assets/voice/' + clip + '.mp3'); a.preload = 'auto'; }
+    return a;
+  },
+  stop(){
+    this._seq++;
+    if(this._cur){ try{ this._cur.pause(); this._cur.currentTime = 0; }catch(e){} this._cur = null; }
+  },
+  /* 一串音檔接著播。中途換題就整串放棄 */
+  async play(clips){
+    this.stop();
+    const my = this._seq;
+    for(const c of clips){
+      if(my !== this._seq) return;
+      const a = this.el(c);
+      this._cur = a;
+      try{
+        a.currentTime = 0;
+        await a.play();
+        await new Promise(res => {
+          const done = () => { a.removeEventListener('ended', done); res(); };
+          a.addEventListener('ended', done);
+          setTimeout(done, 2500);           // 音檔壞掉或被擋住也不能卡住整局
+        });
+      }catch(e){ return; }                  // 還沒互動過會被瀏覽器擋，安靜跳過
+    }
+    if(my === this._seq) this._cur = null;
+  },
+  /* 把一題拆成要播的音檔清單 */
+  clips(q){
+    if(!q) return [];
+    if(q.sym) return [q.clip];
+    const OP = {'＋':'op_add', '－':'op_sub', '×':'op_mul'};
+    const num = v => (v >= 0 && v <= 100 && Number.isInteger(v)) ? ['n_' + v] : [];
+    const op = OP[q.op];
+    if(!op) return [];
+    return [...num(q.a), op, ...num(q.b), 'op_eq'];
+  },
+  /* 唸題目。forced＝按喇叭手動重聽，這時不管開關是哪一段都要唸 */
+  say(q, forced){
+    /* 不唸的時候也要把上一題還在唸的停掉，不然換題了聲音還接著跑 */
+    if(!forced && !this.on(q)) return this.stop();
+    if(this.get() === 'off' && !forced) return this.stop();
+    const c = this.clips(q);
+    if(c.length) this.play(c);
+  },
+  /* 答錯時再唸一次正解 */
+  sayAns(q){
+    if(!this.on(q)) return;
+    if(q.sym) return this.play([q.clip]);
+    if(q.ans >= 0 && q.ans <= 100) this.play(['n_' + q.ans]);
+  },
+  /* 畫出三段開關；onChange 回傳新設定 */
+  bar(el, onChange){
+    if(!el) return;
+    el.className = 'topicbar';
+    el.innerHTML = VOICE_MODES.map(m =>
+      '<button data-v="' + m.k + '">' + m.n + '<b>' + m.d + '</b></button>').join('');
+    const paint = () => [...el.children].forEach(b => b.classList.toggle('on', b.dataset.v === Voice.get()));
+    el.onclick = (e) => {
+      const b = e.target.closest('button'); if(!b) return;
+      Voice.set(b.dataset.v); paint(); onChange && onChange(Voice.get());
+    };
+    paint();
+  }
+};
 
 /* ---------- 效能自動降級（2026-08-23 Steve：手機跟電腦玩起來都很卡） ----------
    每台機器的體質差很多，與其猜，不如量：連續掉幀就自己把吃效能的東西關掉。

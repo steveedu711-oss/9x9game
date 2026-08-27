@@ -572,6 +572,20 @@ body.lowfx .shard{animation-duration:.35s}
   text-shadow:0 3px 0 #7a4a00,0 8px 22px #000a;letter-spacing:2px}
 .qbox .q em{font-style:normal;color:var(--gold)}
 .qbox .weak{font-size:12px;color:#ffd0a8;margin-top:2px}
+/* 語文題（注音／字母）：畫面上看不到答案，只有這顆喇叭可以重聽 */
+.qbox .spk{
+  position:absolute;right:9px;top:50%;transform:translateY(-50%);
+  width:44px;height:44px;border-radius:50%;cursor:pointer;
+  border:1px solid var(--gold);color:#3a2400;font-size:20px;
+  background:linear-gradient(180deg,var(--gold2),var(--gold));
+  display:none;align-items:center;justify-content:center;box-shadow:0 3px 0 #7a4a00;
+}
+.qbox.hasvoice .spk{display:flex}
+.qbox .spk:active{transform:translateY(calc(-50% + 3px));box-shadow:0 1px 0 #7a4a00}
+.qbox .spk.on{animation:spkpulse .5s ease}
+@keyframes spkpulse{50%{transform:translateY(-50%) scale(1.18)}}
+/* 聽發音的題目，題目區只放一顆大耳朵，不能把答案寫出來 */
+.qbox .q.listen{font-size:clamp(30px,7vw,44px);letter-spacing:6px}
 .qbox.in{animation:qin .3s cubic-bezier(.2,1.5,.4,1)}
 @keyframes qin{from{transform:translateY(-14px) scale(.94);opacity:0}}
 
@@ -586,6 +600,8 @@ body.lowfx .shard{animation-duration:.35s}
 .ans button.right{background:linear-gradient(180deg,#86efac,#16a34a);color:#04240f;box-shadow:0 5px 0 #0d5c26}
 .ans button.wrong{background:linear-gradient(180deg,#fca5a5,#dc2626);color:#3a0505;box-shadow:0 5px 0 #7f1d1d}
 .ans button:disabled{cursor:default}
+/* 符號題的選項字要更大，低年級才看得清楚 */
+.ans.sym button{font-size:clamp(34px,9vw,48px);letter-spacing:0}
 
 /* 必殺技 */
 .ult{
@@ -958,6 +974,10 @@ body.playing #pauseBtn{display:flex}
       <div class="setlab">加減法數字範圍</div>
       <div id="rangebar"></div>
     </div>
+    <div id="voicewrap">
+      <div class="setlab">題目要不要唸出來</div>
+      <div id="voicebar"></div>
+    </div>
     <div id="diffwrap">
       <div class="setlab">娛樂模式的難度</div>
       <div class="levels" id="difbar">
@@ -970,6 +990,7 @@ body.playing #pauseBtn{display:flex}
 
   <div class="qbox" id="qbox">
     <div class="q" id="q">準備好了嗎？</div>
+    <button class="spk" id="spkBtn" type="button" title="再唸一次" aria-label="再唸一次">🔊</button>
     <div class="weak" id="weakTip"></div>
   </div>
 
@@ -1061,6 +1082,7 @@ body.playing #pauseBtn{display:flex}
 </div>
 
 <script src="assets/common.js"></script>
+<script>Topic.lang = true;   /* 這一頁做得起注音／字母題（2026-08-27） */</script>
 <script>
 /* ---------- 敵人：每隻怕不同的乘法表，打弱點兩倍傷害 ---------- */
 const MOBS = [
@@ -2069,16 +2091,26 @@ function castSpell(sp){
 /* ---------- 出題 ---------- */
 function newQ(){
   if(arcade) return newTurn();
-  QQ = makeQ(mob.weak);                       // 題型（乘法／加法／減法）是大廳與這裡都能選的
+  QQ = makeQ(mob.weak);                       // 題型（乘法／加法／減法／注音／字母）是大廳與這裡都能選的
   qa = QQ.a; qb = QQ.b; ans = QQ.ans;
-  $('q').innerHTML = QQ.a + ' <em>' + QQ.op + '</em> ' + QQ.b + ' <em>=</em> ?';
+  const box = $('qbox');
+  if(QQ.sym){
+    /* 聽發音的題目：答案不能寫在畫面上，只給一顆耳朵 */
+    $('q').innerHTML = '👂 <em>聽聽看</em>';
+    $('q').classList.add('listen');
+  }else{
+    $('q').innerHTML = QQ.a + ' <em>' + QQ.op + '</em> ' + QQ.b + ' <em>=</em> ?';
+    $('q').classList.remove('listen');
+  }
+  /* 喇叭：符號題一定要有；數學題只有「全部唸」那一段才需要 */
+  box.classList.toggle('hasvoice', QQ.sym || Voice.get() === 'all');
   $('weakTip').textContent = QQ.weak
     ? '⚡ 這題打中 ' + mob.name + ' 的弱點，傷害兩倍' : '';
-  const box = $('qbox');
   box.classList.remove('in'); void box.offsetWidth; box.classList.add('in');
 
   const list = makeOptions(QQ, 4);
   const box2 = $('ans');
+  box2.classList.toggle('sym', !!QQ.sym);
   box2.innerHTML = '';
   for(const v of list){
     const b = document.createElement('button');
@@ -2086,6 +2118,7 @@ function newQ(){
     b.onclick = () => answer(v, b);
     box2.appendChild(b);
   }
+  Voice.say(QQ);
   qStart = performance.now();
   turnTime = ANSWER_TIME * (mob.fast || 1);      // 衝鋒型出手比較快，思考時間就比較短
   telegraphed = false;
@@ -2252,8 +2285,13 @@ function answer(v, btn){
     comboAura(0);
     Stats.mark(QQ.key, false);
     btn.classList.add('wrong');
-    [...$('ans').children].forEach(b => { if(+b.textContent === ans) b.classList.add('right'); });
+    /* 符號題的答案是字串，不能用 +b.textContent 轉數字去比 */
+    [...$('ans').children].forEach(b => {
+      const same = QQ.sym ? (b.textContent === ans) : (+b.textContent === ans);
+      if(same) b.classList.add('right');
+    });
     Sfx.bad();
+    Voice.sayAns(QQ);      // 答錯就把正解再唸一次，學注音最重要的就是這一下
     setTimeout(mobAttack, 420);
   }
 }
@@ -2633,6 +2671,7 @@ function start(){
 }
 function over(win){
   running = false; paused = false; clearInterval(loop); loop = null;
+  Voice.stop();
   document.body.classList.remove('paused');
   $('pausewin').classList.remove('on');
   clearTimeout(weakSpotTimer); clearTimeout(comboDecayTimer);
@@ -2694,6 +2733,7 @@ function setPause(on){
   $('pausewin').classList.toggle('on', on);
   if(on){
     clearInterval(loop); loop = null;
+    Voice.stop();                       // 暫停時把還在唸的題目也停掉
     try{ fieldAnims().forEach(a => a.pause()); }catch(e){}
   }else{
     try{ fieldAnims().forEach(a => a.play()); }catch(e){}
@@ -2714,6 +2754,15 @@ function paintRangeVis(){ $('rangewrap').style.display = Topic.needsRange() ? ''
 Topic.bar($('topicbar'), () => paintRangeVis());
 Range.bar($('rangebar'), () => Topic.bar($('topicbar'), () => paintRangeVis()));
 paintRangeVis();
+Voice.bar($('voicebar'));
+/* 喇叭：再唸一次，不扣分也不重算時間 */
+$('spkBtn').onclick = (e) => {
+  e.stopPropagation();
+  if(!QQ) return;
+  const b = $('spkBtn');
+  b.classList.remove('on'); void b.offsetWidth; b.classList.add('on');
+  Voice.say(QQ, true);
+};
 $('difbar').onclick = (e) => {
   const d = e.target.closest('.lv'); if(!d) return;
   try{ localStorage.setItem(DIFF_KEY, d.dataset.d); }catch(err){}

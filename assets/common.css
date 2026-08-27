@@ -238,6 +238,15 @@ h1{
    就被擠到換行、看起來亂。改用 grid＋固定最小寬度，塞不下就整顆換到下一排，
    不會有「同一排裡有的擠、有的鬆」的問題。 */
 .topicbar{display:grid;grid-template-columns:repeat(auto-fit,minmax(116px,1fr));gap:8px;width:100%}
+/* 題型多了以後分「數學／語文」兩組（2026-08-27）：整排七顆在 390px 手機上會擠成一團 */
+.topicbar.grouped{display:block}
+.topicbar.grouped .tgname{
+  font-size:11px;color:var(--dim);letter-spacing:3px;text-align:left;
+  margin:2px 0 5px;padding-left:2px}
+.topicbar.grouped .tgname + .tgrow{margin-bottom:11px}
+.topicbar.grouped .tgrow:last-child{margin-bottom:0}
+.topicbar.grouped .tgrow{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:8px}
 .topicbar button{
   min-height:46px;padding:8px 8px;border-radius:12px;cursor:pointer;
   background:#2a1a40;border:1px solid var(--line);color:var(--gold2);
