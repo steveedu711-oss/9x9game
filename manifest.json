@@ -1,7 +1,7 @@
 {
-  "name": "數學練習大冒險",
-  "short_name": "數學練習",
-  "description": "加減乘法闖關，一個大廳加七個小遊戲",
+  "name": "邊玩邊變強",
+  "short_name": "邊玩邊變強",
+  "description": "九九乘法、加減法、注音符號與英文字母的答題闖關遊戲，一個大廳加七個小遊戲",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
