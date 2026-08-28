@@ -190,11 +190,15 @@ h1{
      手機實測光這一項就把打怪頁從 60fps 砍到 30fps。看不太出來的東西先關掉 */
   body::before{animation:none}
 
-  /* 八個遊戲擠成兩三行很難按：改成一行、可以左右滑，每顆也做大一點 */
+  /* 八個遊戲擠成兩三行很難按：改成一行、可以左右滑，每顆也做大一點。
+     右邊淡出＋切一半的字是刻意的「還有」提示，不是排版沒對齊——
+     不切一點看起來會像「就這樣而已」，小朋友不會知道要滑 */
   .vers{
     flex-wrap:nowrap;overflow-x:auto;justify-content:flex-start;width:100%;
     padding:2px 2px 6px;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch;
     scrollbar-width:none;-ms-overflow-style:none;
+    mask-image:linear-gradient(90deg,#000 calc(100% - 34px),#0000);
+    -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 34px),#0000);
   }
   .vers::-webkit-scrollbar{display:none}
   .vers a{flex:none;font-size:13px;padding:12px 15px;scroll-snap-align:center}

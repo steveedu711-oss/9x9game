@@ -809,6 +809,8 @@ const Voice = {
           a.addEventListener('ended', done);
           setTimeout(done, 2500);           // 音檔壞掉或被擋住也不能卡住整局
         });
+        if(my !== this._seq) return;
+        await new Promise(res => setTimeout(res, 150));   // 字與字之間留空隙，不然黏在一起小朋友聽不清楚
       }catch(e){ return; }                  // 還沒互動過會被瀏覽器擋，安靜跳過
     }
     if(my === this._seq) this._cur = null;

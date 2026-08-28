@@ -19,8 +19,9 @@
 :root{--tabh:64px}
 body{gap:12px;padding-bottom:calc(var(--tabh) + 26px + env(safe-area-inset-bottom,0px))}
 .wrap{width:min(96vw,620px);display:flex;flex-direction:column;gap:14px}
-/* 第一步內容比較少，垂直置中比讓下面空一大片好看（只有第一步這樣，別的步驟內容多，維持頂對齊） */
-body.atRoot .wrap{min-height:calc(100dvh - 190px);justify-content:center}
+/* 內容少的那幾步（玩法、帳號）垂直置中比讓下面空一大片好看；內容多的維持頂對齊不然要往下滑才看得到頂 */
+body.atRoot .wrap,
+body.thinStep .wrap{min-height:calc(100dvh - 190px);justify-content:center}
 
 /* 一步一頁：一次只顯示一步，不要全部擠在同一頁 */
 .step{display:none;flex-direction:column;gap:14px;animation:pgIn .22s ease-out}
@@ -90,11 +91,15 @@ body.atRoot .pagectrl .pcbtn[data-act="back"]{opacity:.35;pointer-events:none}
   animation:portalspin 24s linear infinite;
 }
 .portal img{
+  /* 角色圖都是「站左邊、武器往右揮」的構圖，實際畫的人物比圖片本身的畫布中心偏左約 20%——
+     用 margin:auto 置中的是整張圖（含右邊那塊空白），人物看起來就會偏左。往右position補回來。
+     量過現有兩個職業（王者、星辰術士）都差不多這個比例，新職業如果差很多要重量 */
   position:relative;z-index:2;width:80%;height:auto;display:block;margin:10% auto 0;
+  transform:translateX(18%);
   filter:drop-shadow(0 10px 22px #000a);animation:wfloat 3.4s ease-in-out infinite alternate;
 }
 @keyframes portalspin{to{transform:rotate(360deg)}}
-@keyframes wfloat{to{transform:translateY(-8px)}}
+@keyframes wfloat{to{transform:translateX(18%) translateY(-8px)}}
 .statlink{
   width:100%;height:44px;border-radius:12px;cursor:pointer;
   background:#251739;border:1px solid var(--line);color:var(--dim);font-size:13px;font-weight:700;
@@ -427,7 +432,7 @@ body.atRoot .pagectrl .pcbtn[data-act="back"]{opacity:.35;pointer-events:none}
 <div class="wrap">
   <div class="stepbar" id="stepbar"></div>
 
-  <!-- 第一步：歡迎 ＋ 選玩法 ＋ 帳號 -->
+  <!-- 第一步：歡迎 ＋ 選玩法 -->
   <section class="step" id="s1">
     <div class="welcome">
       <div class="big">歡迎來到「邊玩邊變強」</div>
@@ -439,7 +444,10 @@ body.atRoot .pagectrl .pcbtn[data-act="back"]{opacity:.35;pointer-events:none}
 
     <div class="sec"><h2>要怎麼玩</h2><i></i></div>
     <div class="modepanel"><div id="modebar"></div></div>
+  </section>
 
+  <!-- 第二步：出題設定（練習模式才要選；娛樂模式改看說明） -->
+  <section class="step" id="s2">
     <div id="topicwrap">
       <div class="sec"><h2>要練哪一種題目</h2><i></i></div>
       <div id="topicbar"></div>
@@ -458,13 +466,16 @@ body.atRoot .pagectrl .pcbtn[data-act="back"]{opacity:.35;pointer-events:none}
         難度（悠閒／普通／狠角色）在出擊畫面裡選。
       </div>
     </div>
+  </section>
 
+  <!-- 第三步：帳號 -->
+  <section class="step" id="s3">
     <div class="sec"><h2>帳號</h2><i></i></div>
     <div id="userbar" class="userbar"></div>
   </section>
 
-  <!-- 第二步：選角色 -->
-  <section class="step" id="s2">
+  <!-- 第四步：選角色 -->
+  <section class="step" id="s4">
     <div class="sec"><h2>誰要出戰？（一個帳號最多 4 個）</h2><i></i></div>
     <div class="slots" id="slots"></div>
     <div class="slotacts">
@@ -490,8 +501,8 @@ body.atRoot .pagectrl .pcbtn[data-act="back"]{opacity:.35;pointer-events:none}
     </div>
   </section>
 
-  <!-- 第三步：玩哪一個 -->
-  <section class="step" id="s3">
+  <!-- 第五步：玩哪一個 -->
+  <section class="step" id="s5">
     <div class="sec"><h2>主線冒險</h2><i></i></div>
     <div class="games" id="gamesMain"></div>
 
@@ -624,13 +635,13 @@ function gameCard(g){
   return a;
 }
 
-/* ---------- 一步一頁的流程（2026-08-24 Steve：不要全部擠在一頁） ----------
-   ① 歡迎＋選玩法＋帳號 → ② 選角色 → ③ 選主線或小遊戲 → 進戰鬥（battle.html）
-   跟原本的底部分頁不一樣：分頁是「隨時亂跳」，流程是「一步一步走」，
-   對小學生直觀得多。2026-08-24 Steve：拿掉「快速開始」，就是要每個人都走完三步，
-   不要留跳過引導的後門。 */
-const STEPS = ['s1','s2','s3'];
-const STEP_NAME = ['開始', '角色', '玩什麼'];
+/* ---------- 一步一頁的流程（2026-08-24 Steve：不要全部擠在一頁；2026-08-29 再拆細） ----------
+   ① 選玩法 → ② 出題設定 → ③ 帳號 → ④ 選角色 → ⑤ 選主線或小遊戲 → 進戰鬥（battle.html）
+   原本①把「歡迎＋選玩法＋題型＋範圍＋語音＋帳號」全塞同一步，要滑很久，字看起來擠成一團，
+   這次拆成三步，一步只問一件事。跟底部分頁不一樣：分頁是「隨時亂跳」，流程是「一步一步走」，
+   對小學生直觀得多。2026-08-24 Steve：拿掉「快速開始」，就是要每個人都走完，不留跳過引導的後門。 */
+const STEPS = ['s1','s2','s3','s4','s5'];
+const STEP_NAME = ['玩法', '設定', '帳號', '角色', '玩什麼'];
 let step = 0;
 
 function paintStepBar(){
@@ -656,6 +667,7 @@ function goStep(k){
   step = Math.max(0, Math.min(STEPS.length - 1, k));
   STEPS.forEach((id, n) => $(id).classList.toggle('on', n === step));
   document.body.classList.toggle('atRoot', step === 0);   // 第一步已經是最上層，左上角返回鍵要跟著變暗
+  document.body.classList.toggle('thinStep', STEPS[step] === 's3');   // 帳號那一步內容很少，置中比較好看
   paintStepBar(); paintNav();
   window.scrollTo({top:0, behavior:'instant'});
 }
@@ -753,8 +765,8 @@ async function createChar(n, heroKey, name){
   });
   try{ localStorage.setItem(SAVE_KEY + '_s' + n, JSON.stringify(d)); }catch(e){}
   setSlot(n);
-  /* 建好角色就直接帶到「玩什麼」——角色這一步已經完成了，不要再退回去 */
-  try{ sessionStorage.setItem('mul99_step', '2'); }catch(e){}
+  /* 建好角色就直接帶到「玩什麼」（現在是第 5 步，index 4）——角色這一步已經完成了，不要再退回去 */
+  try{ sessionStorage.setItem('mul99_step', '4'); }catch(e){}
   if(Cloud.logged()){ try{ await Cloud.push(n); }catch(e){} }
   location.reload();
 }
@@ -964,13 +976,13 @@ paintUser();
 paintPlay(); modeBadge();
 paintPlayer(); paintSlots(); paintGames(); paintStats();
 
-/* 一個角色都還沒建過就直接停在「選角色」那一步（不然按下一步也沒得選）；
+/* 一個角色都還沒建過就直接停在「選角色」那一步（不然按下一步也沒得選，現在是第 4 步 index 3）；
    其餘照上次停的地方，離開再回來不用重走 */
 let first = 0;
 try{ first = +(sessionStorage.getItem('mul99_step') || 0) || 0; }catch(e){}
 let anyChar = false;
 for(let i = 1; i <= SLOT_MAX; i++){ if(Save.peek(i)){ anyChar = true; break; } }
-goStep(anyChar ? first : 1);
+goStep(anyChar ? first : 3);
 /* 每走一步就記起來 */
 const _goStep = goStep;
 goStep = function(k){ _goStep(k); try{ sessionStorage.setItem('mul99_step', String(step)); }catch(e){} };
